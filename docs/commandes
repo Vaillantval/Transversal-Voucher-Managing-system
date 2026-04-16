@@ -5,3 +5,9 @@ git commit -m "first commit"
 git branch -M main
 git remote add origin https://github.com/Vaillantval/Transversal-Voucher-Managing-system.git
 git push -u origin main
+
+pip install -r requirements.txt
+cp .env.example .env   # remplir UNIFI_PASSWORD + DB
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
