@@ -1,0 +1,7 @@
+echo "# Transversal-Voucher-Managing-system" >> README.md
+git init
+git add .
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/Vaillantval/Transversal-Voucher-Managing-system.git
+git push -u origin main

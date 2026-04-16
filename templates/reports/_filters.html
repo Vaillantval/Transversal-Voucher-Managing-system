@@ -1,0 +1,21 @@
+<div class="mb-3 text-start">
+  <label class="form-label small fw-semibold">Site</label>
+  <select name="site" class="form-select form-select-sm mb-2">
+    <option value="">Tous les sites</option>
+    {% for s in sites %}
+    <option value="{{ s.unifi_site_id }}">{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <div class="row g-1">
+    <div class="col-6">
+      <label class="form-label small">Du</label>
+      <input type="date" name="from" class="form-control form-control-sm"
+             value="{{ today|date:'Y-m-01' }}">
+    </div>
+    <div class="col-6">
+      <label class="form-label small">Au</label>
+      <input type="date" name="to" class="form-control form-control-sm"
+             value="{{ today|date:'Y-m-d' }}">
+    </div>
+  </div>
+</div>

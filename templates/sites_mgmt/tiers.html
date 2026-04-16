@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Tarifs{% endblock %}
+{% block page_title %}Tranches tarifaires{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <p class="text-muted mb-0 small">Définissez les prix des vouchers selon leur durée de validité.</p>
+  <a href="{% url 'sites:tier_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus"></i> Nouvelle tranche
+  </a>
+</div>
+
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Label</th><th>Durée min</th><th>Durée max</th>
+          <th>Prix (HTG)</th><th>Statut</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for tier in tiers %}
+      <tr>
+        <td class="fw-semibold">{{ tier.label }}</td>
+        <td>{{ tier.min_minutes }} min ({{ tier.min_minutes|divisibleby:60 }})</td>
+        <td>{{ tier.max_minutes }} min</td>
+        <td class="fw-bold text-primary">{{ tier.price_htg }} HTG</td>
+        <td>
+          {% if tier.is_active %}
+          <span class="badge badge-active rounded-pill">Actif</span>
+          {% else %}
+          <span class="badge badge-expired rounded-pill">Inactif</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="post" action="{% url 'sites:tier_delete' tier.pk %}"
+                onsubmit="return confirm('Supprimer cette tranche ?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm py-0">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-muted py-4">Aucune tranche définie</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Quick add form -->
+<div class="card card-bn p-4 mt-4">
+  <h6 class="mb-3">Ajouter une tranche rapide</h6>
+  <form method="post" action="{% url 'sites:tier_create' %}" class="row g-2 align-items-end">
+    {% csrf_token %}
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">Label</label>
+      <input type="text" name="label" class="form-control form-control-sm" placeholder="Ex: Forfait 24h" required>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Min (minutes)</label>
+      <input type="number" name="min_minutes" class="form-control form-control-sm" placeholder="0" required>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Max (minutes)</label>
+      <input type="number" name="max_minutes" class="form-control form-control-sm" placeholder="1440" required>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Prix (HTG)</label>
+      <input type="number" name="price_htg" step="0.01" class="form-control form-control-sm" placeholder="50" required>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100">Créer</button>
+    </div>
+  </form>
+  <small class="text-muted mt-2 d-block">
+    Exemple : 0–720 min = 50 HTG (forfait jusqu'à 12h) · 721–1440 min = 75 HTG (jusqu'à 24h)
+  </small>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block extra_css %}
+<style>
+.kpi-val { font-size: 2rem; font-weight: 700; line-height: 1; }
+.kpi-label { font-size: .82rem; color: #6b7280; margin-top: .2rem; }
+.site-row { transition: background .15s; }
+.site-row:hover { background: #F9FAFB; }
+.device-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot-online { background: #10b981; }
+.dot-offline { background: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filtres période -->
+<form method="get" class="d-flex align-items-center gap-2 mb-4">
+  <span class="text-muted small">Période :</span>
+  {% for d, label in '7,7 jours|30,30 jours|90,90 jours|365,12 mois'|dictsort:0 %}{% endfor %}
+  {% for opt in "7|30|90|365"|split:"|" %}
+  <a href="?days={{ opt }}" class="btn btn-sm {% if days == opt|add:0 %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    {% if opt == "7" %}7j{% elif opt == "30" %}30j{% elif opt == "90" %}3 mois{% else %}1 an{% endif %}
+  </a>
+  {% endfor %}
+  <span class="text-muted small ms-2">Du {{ date_from }} à aujourd'hui</span>
+</form>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="stat-icon" style="background:#EBF5FF"><i class="bi bi-diagram-3 text-primary"></i></span>
+      </div>
+      <div class="kpi-val text-primary">{{ sites_count }}</div>
+      <div class="kpi-label">Sites actifs</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="stat-icon" style="background:#F0FDF4"><i class="bi bi-ticket-perforated text-success"></i></span>
+      </div>
+      <div class="kpi-val text-success">{{ total_vouchers }}</div>
+      <div class="kpi-label">Vouchers créés</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="stat-icon" style="background:#FEF9C3"><i class="bi bi-people text-warning"></i></span>
+      </div>
+      <div class="kpi-val text-warning">{{ total_clients }}</div>
+      <div class="kpi-label">Clients connectés (live)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="stat-icon" style="background:#FDF2F8"><i class="bi bi-currency-dollar" style="color:#9333ea"></i></span>
+      </div>
+      <div class="kpi-val" style="color:#9333ea">{{ total_revenue|floatformat:0 }}</div>
+      <div class="kpi-label">Revenu HTG ({{ used_vouchers }} vendus)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Graphes -->
+<div class="row g-3 mb-4">
+  <!-- Courbe revenu par jour -->
+  <div class="col-md-8">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">Revenu journalier (HTG)</h6>
+      <canvas id="revenueChart" height="80"></canvas>
+    </div>
+  </div>
+  <!-- Donut par tranche -->
+  <div class="col-md-4">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">Répartition par forfait</h6>
+      <canvas id="tierChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Revenu par site + état live -->
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">Revenu par site</h6>
+      <canvas id="siteChart" height="120"></canvas>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">État des sites (live)</h6>
+      <table class="table table-bn table-sm mb-0">
+        <thead><tr>
+          <th>Site</th><th>Clients</th><th>Devices</th><th>Offline</th>
+        </tr></thead>
+        <tbody>
+        {% for item in live_stats %}
+        <tr class="site-row">
+          <td class="fw-semibold">{{ item.site.name }}</td>
+          <td>
+            <span class="device-dot dot-online me-1"></span>{{ item.stats.client_count }}
+          </td>
+          <td>
+            <span class="device-dot dot-online me-1"></span>{{ item.stats.device_online }}
+          </td>
+          <td>
+            {% if item.stats.device_offline > 0 %}
+            <span class="device-dot dot-offline me-1"></span><span class="text-danger">{{ item.stats.device_offline }}</span>
+            {% else %}<span class="text-muted">0</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-muted text-center py-3">Aucune donnée live</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const revenueData = {{ revenue_by_day_json|safe }};
+const tierData = {{ by_tier_json|safe }};
+const siteData = {{ revenue_by_site_json|safe }};
+
+// Couleurs
+const colors = ['#1A56DB','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+
+// Revenu journalier
+new Chart(document.getElementById('revenueChart'), {
+  type: 'line',
+  data: {
+    labels: revenueData.map(d => d.day),
+    datasets: [{
+      label: 'Revenu HTG',
+      data: revenueData.map(d => d.revenue || 0),
+      borderColor: '#1A56DB',
+      backgroundColor: 'rgba(26,86,219,.1)',
+      fill: true,
+      tension: .4,
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } },
+    responsive: true,
+  }
+});
+
+// Donut tarifs
+new Chart(document.getElementById('tierChart'), {
+  type: 'doughnut',
+  data: {
+    labels: tierData.map(d => d.tier__label || 'Sans tranche'),
+    datasets: [{
+      data: tierData.map(d => d.count),
+      backgroundColor: colors,
+      borderWidth: 2,
+    }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, cutout: '65%' }
+});
+
+// Barres par site
+new Chart(document.getElementById('siteChart'), {
+  type: 'bar',
+  data: {
+    labels: siteData.map(d => d.site__name),
+    datasets: [{
+      label: 'Revenu (HTG)',
+      data: siteData.map(d => d.revenue || 0),
+      backgroundColor: colors,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } },
+    responsive: true,
+  }
+});
+</script>
+{% endblock %}

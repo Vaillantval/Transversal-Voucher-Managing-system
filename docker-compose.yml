@@ -1,0 +1,37 @@
+services:
+
+  # ── Base de données PostgreSQL ──────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bonnet_db
+      POSTGRES_USER: bonnet_user
+      POSTGRES_PASSWORD: bonnet_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bonnet_user -d bonnet_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Application Django ──────────────────────────────────────
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://bonnet_user:bonnet_password@db:5432/bonnet_db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media_files:/app/media
+
+volumes:
+  postgres_data:
+  media_files:

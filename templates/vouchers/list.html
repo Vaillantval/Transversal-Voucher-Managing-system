@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Vouchers{% endblock %}
+{% block page_title %}Vouchers{% endblock %}
+
+{% block content %}
+<!-- Filtres -->
+<div class="card card-bn p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">Site</label>
+      <select name="site" class="form-select form-select-sm">
+        <option value="">Tous les sites</option>
+        {% for s in sites %}
+        <option value="{{ s.unifi_site_id }}" {% if request.GET.site == s.unifi_site_id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Statut</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="">Tous</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Du</label>
+      <input type="date" name="from" class="form-control form-control-sm" value="{{ request.GET.from }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Au</label>
+      <input type="date" name="to" class="form-control form-control-sm" value="{{ request.GET.to }}">
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <a href="{% url 'vouchers:list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      <a href="{% url 'vouchers:create' %}" class="btn btn-success btn-sm ms-auto">
+        <i class="bi bi-plus"></i> Créer
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Résumé -->
+<div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-3">
+  <i class="bi bi-info-circle"></i>
+  <span>{{ vouchers|length }} voucher(s) trouvé(s) —
+    Revenu utilisés : <strong>{{ total_revenue|floatformat:2 }} HTG</strong>
+  </span>
+  <!-- Export rapide -->
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'reports:csv' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-filetype-csv"></i> CSV
+    </a>
+    <a href="{% url 'reports:excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-file-earmark-excel"></i> Excel
+    </a>
+    <a href="{% url 'reports:pdf' %}?{{ request.GET.urlencode }}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-file-earmark-pdf"></i> PDF
+    </a>
+  </div>
+</div>
+
+<!-- Tableau -->
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover mb-0">
+      <thead><tr>
+        <th>Code</th><th>Site</th><th>Forfait</th><th>Durée</th>
+        <th>Prix HTG</th><th>Statut</th><th>Créé par</th><th>Date</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for v in vouchers %}
+      <tr>
+        <td><code class="text-primary">{{ v.code }}</code></td>
+        <td>{{ v.site.name }}</td>
+        <td>{{ v.tier.label|default:"-" }}</td>
+        <td>{{ v.duration_hours }}h</td>
+        <td class="fw-semibold">{% if v.price_htg %}{{ v.price_htg }} HTG{% else %}-{% endif %}</td>
+        <td>
+          <span class="badge rounded-pill badge-{{ v.status }}">{{ v.get_status_display }}</span>
+        </td>
+        <td class="text-muted small">{{ v.created_by.username|default:"-" }}</td>
+        <td class="text-muted small">{{ v.created_at|date:"d/m/Y H:i" }}</td>
+        <td>
+          {% if v.status == 'active' %}
+          <form method="post" action="{% url 'vouchers:delete' v.unifi_id %}"
+                onsubmit="return confirm('Révoquer ce voucher ?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm py-0">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="text-center text-muted py-4">Aucun voucher trouvé</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

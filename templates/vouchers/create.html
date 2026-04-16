@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Créer vouchers{% endblock %}
+{% block page_title %}Créer des vouchers{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-md-7">
+<div class="card card-bn p-4">
+  <h5 class="mb-4"><i class="bi bi-ticket-perforated text-primary me-2"></i>Nouveau lot de vouchers</h5>
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Site <span class="text-danger">*</span></label>
+      <select name="site" class="form-select" required>
+        <option value="">— Choisir un site —</option>
+        {% for s in sites %}
+        <option value="{{ s.pk }}">{{ s.name }} ({{ s.location }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Forfait / Tranche tarifaire <span class="text-danger">*</span></label>
+      <div class="row g-2">
+        {% for tier in tiers %}
+        <div class="col-md-6">
+          <label class="d-flex align-items-center gap-2 p-3 border rounded-3 cursor-pointer tier-card"
+                 style="cursor:pointer">
+            <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0" required>
+            <div>
+              <div class="fw-semibold">{{ tier.label }}</div>
+              <div class="small text-muted">
+                {{ tier.min_minutes|divisibleby:60|yesno:"" }}
+                {{ tier.min_minutes }} – {{ tier.max_minutes }} min
+              </div>
+              <div class="text-primary fw-bold">{{ tier.price_htg }} HTG</div>
+            </div>
+          </label>
+        </div>
+        {% empty %}
+        <div class="col-12">
+          <div class="alert alert-warning py-2">
+            Aucune tranche tarifaire définie.
+            {% if user.is_superadmin %}
+            <a href="{% url 'sites:tier_create' %}">Créer une tranche</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Nombre de vouchers</label>
+      <div class="d-flex align-items-center gap-3">
+        <input type="number" name="count" value="1" min="1" max="100"
+               class="form-control" style="width:100px">
+        <span class="text-muted small">max 100 par lot</span>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label fw-semibold">Note / Référence <span class="text-muted small">(optionnel)</span></label>
+      <input type="text" name="note" class="form-control"
+             placeholder="Ex: Vente marché du 15/01">
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Créer les vouchers
+      </button>
+      <a href="{% url 'vouchers:list' %}" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.tier-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.tier-card').forEach(c => c.style.borderColor = '');
+    card.style.borderColor = '#1A56DB';
+    card.style.background = '#EBF5FF';
+  });
+});
+</script>
+{% endblock %}

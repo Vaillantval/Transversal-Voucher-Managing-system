@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Sites{% endblock %}
+{% block page_title %}Sites Hotspot{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ sites_data|length }} site(s)</span>
+  {% if user.is_superadmin %}
+  <a href="{% url 'sites:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Nouveau site
+  </a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+{% for item in sites_data %}
+<div class="col-md-6 col-lg-4">
+  <div class="card card-bn p-3 h-100">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <h6 class="mb-0 fw-700">{{ item.site.name }}</h6>
+        <small class="text-muted">{{ item.site.location }}</small>
+      </div>
+      {% if item.site.is_active %}
+      <span class="badge badge-active rounded-pill">Actif</span>
+      {% else %}
+      <span class="badge badge-revoked rounded-pill">Inactif</span>
+      {% endif %}
+    </div>
+
+    <hr class="my-2">
+
+    <div class="row text-center g-0">
+      <div class="col-4 border-end">
+        <div class="fw-bold text-success">{{ item.stats.client_count }}</div>
+        <div class="text-muted" style="font-size:.7rem">Clients</div>
+      </div>
+      <div class="col-4 border-end">
+        <div class="fw-bold text-primary">{{ item.stats.device_online }}</div>
+        <div class="text-muted" style="font-size:.7rem">Online</div>
+      </div>
+      <div class="col-4">
+        <div class="fw-bold {% if item.stats.device_offline > 0 %}text-danger{% endif %}">{{ item.stats.device_offline }}</div>
+        <div class="text-muted" style="font-size:.7rem">Offline</div>
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+      <a href="{% url 'vouchers:list' %}?site={{ item.site.unifi_site_id }}"
+         class="btn btn-outline-primary btn-sm flex-fill">
+        <i class="bi bi-ticket-perforated"></i> Vouchers
+      </a>
+      <a href="{% url 'vouchers:sync' item.site.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-repeat"></i>
+      </a>
+      {% if user.is_superadmin %}
+      <a href="{% url 'sites:edit' item.site.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="col-12"><div class="alert alert-info">Aucun site configuré.</div></div>
+{% endfor %}
+</div>
+{% endblock %}

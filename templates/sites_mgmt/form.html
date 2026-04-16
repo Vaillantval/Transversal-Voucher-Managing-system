@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-7">
+    <div class="card-panel">
+      <div class="panel-header"><i class="bi bi-geo-alt me-2 text-primary"></i>{{ page_title }}</div>
+      <form method="post" class="p-4">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nom du site <span class="text-danger">*</span></label>
+          <input type="text" name="name" class="form-control" value="{{ site.name|default:'' }}" required
+                 placeholder="Ex: Marché Pétion-Ville">
+        </div>
+
+        {% if not site %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">ID site UniFi <span class="text-danger">*</span></label>
+          <input type="text" name="unifi_site_id" class="form-control" required
+                 placeholder="Ex: default, site1, petionville">
+          <div class="form-text">Identifiant interne du site dans votre contrôleur UniFi.</div>
+          {% if unifi_sites %}
+          <div class="mt-2">
+            <div class="small fw-semibold text-muted mb-1">Sites UniFi disponibles :</div>
+            {% for us in unifi_sites %}
+            <button type="button" class="btn btn-sm btn-outline-secondary me-1 mb-1"
+                    onclick="document.querySelector('[name=unifi_site_id]').value='{{ us.name }}'">
+              {{ us.desc }} <code class="ms-1">{{ us.name }}</code>
+            </button>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Localisation</label>
+          <input type="text" name="location" class="form-control" value="{{ site.location|default:'' }}"
+                 placeholder="Ex: Pétion-Ville, Ouest, Haiti">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Description</label>
+          <textarea name="description" class="form-control" rows="2"
+                    placeholder="Zone desservie, équipements installés...">{{ site.description|default:'' }}</textarea>
+        </div>
+
+        {% if site %}
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
+                   {% if site.is_active %}checked{% endif %}>
+            <label class="form-check-label fw-semibold" for="is_active">Site actif</label>
+          </div>
+        </div>
+
+        {% if site_admins %}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Administrateurs assignés</label>
+          <div class="border rounded p-2" style="max-height:180px; overflow-y:auto">
+            {% for admin in site_admins %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="admins" value="{{ admin.pk }}"
+                     id="admin_{{ admin.pk }}"
+                     {% if admin in site.admins.all %}checked{% endif %}>
+              <label class="form-check-label" for="admin_{{ admin.pk }}">
+                {{ admin.get_full_name|default:admin.username }}
+                <span class="text-muted small">({{ admin.username }})</span>
+              </label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check2-circle me-1"></i>{{ action }}
+          </button>
+          <a href="{% url 'sites:list' %}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
