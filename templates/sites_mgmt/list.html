@@ -11,7 +11,7 @@
       <div class="input-group input-group-sm">
         <span class="input-group-text"><i class="bi bi-search"></i></span>
         <input type="text" name="q" value="{{ search }}" class="form-control"
-               placeholder="Nom ou localisation…">
+               placeholder="Nom ou localisation…" id="site-search-input">
       </div>
     </div>
     <div class="col-md-3">
@@ -93,4 +93,16 @@
 <div class="col-12"><div class="alert alert-info">Aucun site configuré.</div></div>
 {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var t;
+  document.getElementById('site-search-input').addEventListener('input', function() {
+    clearTimeout(t);
+    t = setTimeout(function() { document.querySelector('form').submit(); }, 400);
+  });
+})();
+</script>
 {% endblock %}
