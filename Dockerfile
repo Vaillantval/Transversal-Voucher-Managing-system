@@ -44,6 +44,3 @@ RUN chown -R bonnet:bonnet /app
 USER bonnet
 
 EXPOSE 8000
-
-# Démarrage : migrations puis gunicorn
-CMD ["gunicorn", "bonnet.wsgi", "--bind", "0.0.0.0:8000"]
