@@ -11,7 +11,7 @@
       <select name="site" class="form-select form-select-sm">
         <option value="">Tous les sites</option>
         {% for s in sites %}
-        <option value="{{ s.unifi_site_id }}" {% if request.GET.site == s.unifi_site_id %}selected{% endif %}>{{ s.name }}</option>
+        <option value="{{ s.unifi_site_id }}" {% if site_filter == s.unifi_site_id %}selected{% endif %}>{{ s.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -19,18 +19,17 @@
       <label class="form-label small fw-semibold">Statut</label>
       <select name="status" class="form-select form-select-sm">
         <option value="">Tous</option>
-        {% for val, label in status_choices %}
-        <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actif</option>
+        <option value="used" {% if status_filter == 'used' %}selected{% endif %}>Utilisé</option>
       </select>
     </div>
     <div class="col-md-2">
-      <label class="form-label small fw-semibold">Du</label>
-      <input type="date" name="from" class="form-control form-control-sm" value="{{ request.GET.from }}">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label small fw-semibold">Au</label>
-      <input type="date" name="to" class="form-control form-control-sm" value="{{ request.GET.to }}">
+      <label class="form-label small fw-semibold">Afficher</label>
+      <select name="per_page" class="form-select form-select-sm">
+        {% for opt in per_page_options %}
+        <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }} par page</option>
+        {% endfor %}
+      </select>
     </div>
     <div class="col-md-3 d-flex gap-2">
       <button type="submit" class="btn btn-primary btn-sm">
@@ -47,10 +46,7 @@
 <!-- Résumé -->
 <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-3">
   <i class="bi bi-info-circle"></i>
-  <span>{{ vouchers|length }} voucher(s) trouvé(s) —
-    Revenu utilisés : <strong>{{ total_revenue|floatformat:2 }} HTG</strong>
-  </span>
-  <!-- Export rapide -->
+  <span>{{ total }} voucher(s) au total — page {{ page }}/{{ total_pages }}</span>
   <div class="ms-auto d-flex gap-2">
     <a href="{% url 'reports:csv' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-filetype-csv"></i> CSV
@@ -69,25 +65,30 @@
   <div class="table-responsive">
     <table class="table table-bn table-hover mb-0">
       <thead><tr>
-        <th>Code</th><th>Site</th><th>Forfait</th><th>Durée</th>
-        <th>Prix HTG</th><th>Statut</th><th>Créé par</th><th>Date</th><th></th>
+        <th>Code</th><th>Site</th><th>Durée</th><th>Quota</th>
+        <th>Utilisations</th><th>Statut</th><th>Note</th><th>Créé le</th><th></th>
       </tr></thead>
       <tbody>
       {% for v in vouchers %}
+      {% with used=v.used|default:0 quota=v.quota|default:1 %}
       <tr>
         <td><code class="text-primary">{{ v.code }}</code></td>
-        <td>{{ v.site.name }}</td>
-        <td>{{ v.tier.label|default:"-" }}</td>
+        <td>{{ v.site_name }}</td>
         <td>{{ v.duration_hours }}h</td>
-        <td class="fw-semibold">{% if v.price_htg %}{{ v.price_htg }} HTG{% else %}-{% endif %}</td>
+        <td>{{ quota }}</td>
+        <td>{{ used }}</td>
         <td>
-          <span class="badge rounded-pill badge-{{ v.status }}">{{ v.get_status_display }}</span>
+          {% if used >= quota %}
+            <span class="badge rounded-pill bg-secondary">Utilisé</span>
+          {% else %}
+            <span class="badge rounded-pill bg-success">Actif</span>
+          {% endif %}
         </td>
-        <td class="text-muted small">{{ v.created_by.username|default:"-" }}</td>
-        <td class="text-muted small">{{ v.created_at|date:"d/m/Y H:i" }}</td>
+        <td class="text-muted small">{{ v.note|default:"-" }}</td>
+        <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
         <td>
-          {% if v.status == 'active' %}
-          <form method="post" action="{% url 'vouchers:delete' v.unifi_id %}"
+          {% if used < quota %}
+          <form method="post" action="{% url 'vouchers:delete' v._id %}"
                 onsubmit="return confirm('Révoquer ce voucher ?')">
             {% csrf_token %}
             <button class="btn btn-outline-danger btn-sm py-0">
@@ -97,6 +98,7 @@
           {% endif %}
         </td>
       </tr>
+      {% endwith %}
       {% empty %}
       <tr><td colspan="9" class="text-center text-muted py-4">Aucun voucher trouvé</td></tr>
       {% endfor %}
@@ -104,4 +106,18 @@
     </table>
   </div>
 </div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-3 d-flex justify-content-center align-items-center gap-3">
+  {% if page > 1 %}
+  <a href="?site={{ site_filter }}&status={{ status_filter }}&per_page={{ per_page }}&page={{ page|add:'-1' }}" class="btn btn-outline-secondary btn-sm">‹ Précédent</a>
+  {% endif %}
+  <span class="text-muted small">Page {{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="?site={{ site_filter }}&status={{ status_filter }}&per_page={{ per_page }}&page={{ page|add:'1' }}" class="btn btn-outline-secondary btn-sm">Suivant ›</a>
+  {% endif %}
+</nav>
+{% endif %}
+
 {% endblock %}

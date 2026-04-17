@@ -16,39 +16,46 @@ def can_access_site(user, site):
 
 @login_required
 def voucher_list(request):
-    site_id = request.GET.get('site')
+    site_filter = request.GET.get('site', '')
     status_filter = request.GET.get('status', '')
-    date_from = request.GET.get('from', '')
-    date_to = request.GET.get('to', '')
+    per_page = int(request.GET.get('per_page', 100))
+    page = int(request.GET.get('page', 1))
 
-    if user := request.user:
-        if user.is_superadmin:
-            sites = HotspotSite.objects.filter(is_active=True)
-        else:
-            sites = user.managed_sites.filter(is_active=True)
+    if request.user.is_superadmin:
+        sites = HotspotSite.objects.filter(is_active=True)
+    else:
+        sites = request.user.managed_sites.filter(is_active=True)
 
-    vouchers = VoucherLog.objects.select_related('site', 'tier', 'created_by')
+    # Filtrer sur un site précis si demandé
+    sites_to_fetch = sites.filter(unifi_site_id=site_filter) if site_filter else sites
 
-    if not request.user.is_superadmin:
-        vouchers = vouchers.filter(site__in=sites)
+    # Récupérer depuis UniFi
+    all_vouchers = unifi.get_all_vouchers(sites_to_fetch)
 
-    if site_id:
-        vouchers = vouchers.filter(site__unifi_site_id=site_id)
-    if status_filter:
-        vouchers = vouchers.filter(status=status_filter)
-    if date_from:
-        vouchers = vouchers.filter(created_at__date__gte=date_from)
-    if date_to:
-        vouchers = vouchers.filter(created_at__date__lte=date_to)
+    # Filtre statut côté Python
+    STATUS_MAP = {'active': 0, 'used': 1}
+    if status_filter == 'active':
+        all_vouchers = [v for v in all_vouchers if v.get('used', 0) < v.get('quota', 1)]
+    elif status_filter == 'used':
+        all_vouchers = [v for v in all_vouchers if v.get('used', 0) >= v.get('quota', 1)]
 
-    total_revenue = vouchers.filter(status=VoucherLog.STATUS_USED).aggregate(
-        total=Sum('price_htg'))['total'] or 0
+    # Pagination manuelle
+    total = len(all_vouchers)
+    start = (page - 1) * per_page
+    end = start + per_page
+    vouchers_page = all_vouchers[start:end]
+    total_pages = max(1, (total + per_page - 1) // per_page)
 
     return render(request, 'vouchers/list.html', {
-        'vouchers': vouchers[:200],
+        'vouchers': vouchers_page,
         'sites': sites,
-        'total_revenue': total_revenue,
-        'status_choices': VoucherLog.STATUS_CHOICES,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': total_pages,
+        'per_page_options': [50, 100, 200, 500],
+        'status_filter': status_filter,
+        'site_filter': site_filter,
         'page_title': 'Vouchers',
     })
 

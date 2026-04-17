@@ -10,8 +10,8 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 
-def get_controller():
-    """Retourne une instance Controller UniFi connectée."""
+def get_controller(site_id: str = 'default'):
+    """Retourne une instance Controller UniFi connectée pour un site donné."""
     try:
         from pyunifi.controller import Controller
         c = Controller(
@@ -21,10 +21,11 @@ def get_controller():
             port=settings.UNIFI_PORT,
             ssl_verify=settings.UNIFI_VERIFY_SSL,
             version='v5',
+            site_id=site_id,
         )
         return c
     except Exception as e:
-        logger.error(f"Connexion UniFi échouée : {e}")
+        logger.error(f"Connexion UniFi échouée (site={site_id}) : {e}")
         return None
 
 
@@ -88,22 +89,31 @@ def get_devices(site_id: str):
 # ─── VOUCHERS ─────────────────────────────────────────────────────────────────
 
 def get_vouchers(site_id: str):
-    """
-    Liste tous les vouchers d'un site.
-    Retourne une liste de dicts avec : _id, code, duration, quota,
-    used, note, create_time, start_time, end_time, status.
-    """
-    c = get_controller()
+    """Liste tous les vouchers d'un site UniFi."""
+    c = get_controller(site_id)
     if not c:
         return []
     try:
-        vouchers = c.get_vouchers()
-        # Invalidate cache
-        cache.delete(f'unifi_vouchers_{site_id}')
-        return vouchers
+        return c.get_vouchers()
     except Exception as e:
         logger.error(f"get_vouchers({site_id}) : {e}")
         return []
+
+
+def get_all_vouchers(sites) -> list:
+    """Récupère les vouchers de tous les sites, enrichis de champs calculés."""
+    from datetime import datetime
+    all_vouchers = []
+    for site in sites:
+        vouchers = get_vouchers(site.unifi_site_id)
+        for v in vouchers:
+            v['site_name'] = site.name
+            v['site_unifi_id'] = site.unifi_site_id
+            v['duration_hours'] = round(v.get('duration', 0) / 60, 1)
+            ts = v.get('create_time')
+            v['created_dt'] = datetime.fromtimestamp(ts) if ts else None
+        all_vouchers.extend(vouchers)
+    return all_vouchers
 
 
 def create_vouchers(
