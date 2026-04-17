@@ -78,6 +78,7 @@ def index(request):
     context = {
         'page_title': 'Tableau de bord',
         'days': days,
+        'period_options': [(7, '7 jours'), (30, '30 jours'), (90, '90 jours'), (365, '12 mois')],
         'date_from': date_from,
         'sites': sites,
         'sites_count': sites.count(),

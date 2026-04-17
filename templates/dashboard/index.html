@@ -19,10 +19,9 @@
 <!-- Filtres période -->
 <form method="get" class="d-flex align-items-center gap-2 mb-4">
   <span class="text-muted small">Période :</span>
-  {% for d, label in '7,7 jours|30,30 jours|90,90 jours|365,12 mois'|dictsort:0 %}{% endfor %}
-  {% for opt in "7|30|90|365"|split:"|" %}
-  <a href="?days={{ opt }}" class="btn btn-sm {% if days == opt|add:0 %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-    {% if opt == "7" %}7j{% elif opt == "30" %}30j{% elif opt == "90" %}3 mois{% else %}1 an{% endif %}
+  {% for d, label in period_options %}
+  <a href="?days={{ d }}" class="btn btn-sm {% if days == d %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    {{ label }}
   </a>
   {% endfor %}
   <span class="text-muted small ms-2">Du {{ date_from }} à aujourd'hui</span>
