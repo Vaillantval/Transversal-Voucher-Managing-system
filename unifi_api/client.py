@@ -134,7 +134,7 @@ def get_all_vouchers(sites) -> list:
             all_vouchers.extend(cached)
             continue
         try:
-            c._site = site.unifi_site_id  # changer de site sans re-login
+            c.site_id = site.unifi_site_id  # changer de site sans re-login
             vouchers = [_enrich_voucher(v, site.name, site.unifi_site_id)
                         for v in c.get_vouchers()]
             cache.set(key, vouchers, _TTL_VOUCHERS)
