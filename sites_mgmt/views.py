@@ -41,10 +41,11 @@ def site_list(request):
     else:
         sites = request.user.managed_sites.filter(is_active=True)
 
-    sites_data = []
-    for site in sites:
-        stats = unifi.get_site_stats(site.unifi_site_id)
-        sites_data.append({'site': site, 'stats': stats})
+    all_stats = unifi.get_all_site_stats(sites)
+    sites_data = [
+        {'site': site, 'stats': all_stats.get(site.unifi_site_id, {})}
+        for site in sites
+    ]
 
     return render(request, 'sites_mgmt/list.html', {
         'sites_data': sites_data,

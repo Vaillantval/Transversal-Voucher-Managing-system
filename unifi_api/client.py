@@ -71,15 +71,16 @@ def get_sites():
 
 # ─── DEVICES / CLIENTS ────────────────────────────────────────────────────────
 
-def get_clients(site_id: str):
+def get_clients(site_id: str, _c=None):
     key = f'unifi_clients_{site_id}'
     cached = cache.get(key)
     if cached is not None:
         return cached
-    c = get_controller(site_id)
+    c = _c or get_controller(site_id)
     if not c:
         return []
     try:
+        c.site_id = site_id
         clients = c.get_clients()
         cache.set(key, clients, _TTL_CLIENTS)
         return clients
@@ -88,15 +89,16 @@ def get_clients(site_id: str):
         return []
 
 
-def get_devices(site_id: str):
+def get_devices(site_id: str, _c=None):
     key = f'unifi_devices_{site_id}'
     cached = cache.get(key)
     if cached is not None:
         return cached
-    c = get_controller(site_id)
+    c = _c or get_controller(site_id)
     if not c:
         return []
     try:
+        c.site_id = site_id
         devices = c.get_aps()
         cache.set(key, devices, _TTL_DEVICES)
         return devices
@@ -190,9 +192,9 @@ def delete_voucher(site_id: str, voucher_id: str) -> bool:
 
 # ─── STATISTIQUES ─────────────────────────────────────────────────────────────
 
-def get_site_stats(site_id: str) -> dict:
-    clients = get_clients(site_id)
-    devices = get_devices(site_id)
+def get_site_stats(site_id: str, _c=None) -> dict:
+    clients = get_clients(site_id, _c)
+    devices = get_devices(site_id, _c)
     online  = [d for d in devices if d.get('state') == 1]
     offline = [d for d in devices if d.get('state') != 1]
     return {
@@ -203,3 +205,12 @@ def get_site_stats(site_id: str) -> dict:
         'devices':         devices,
         'clients':         clients,
     }
+
+
+def get_all_site_stats(sites) -> dict:
+    """Stats de tous les sites en un seul login. Retourne {site_id: stats}."""
+    c = _connect()
+    result = {}
+    for site in sites:
+        result[site.unifi_site_id] = get_site_stats(site.unifi_site_id, c)
+    return result
