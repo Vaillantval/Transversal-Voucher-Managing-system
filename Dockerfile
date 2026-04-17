@@ -38,9 +38,4 @@ COPY . .
 # Collecter les fichiers statiques
 RUN python manage.py collectstatic --noinput
 
-# Utilisateur non-root pour la sécurité
-RUN addgroup --system bonnet && adduser --system --ingroup bonnet bonnet
-RUN chown -R bonnet:bonnet /app
-USER bonnet
-
 EXPOSE 8000
