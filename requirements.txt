@@ -1,9 +1,9 @@
-Django==6.0.4
+Django==5.0.14
 pyunifi==2.21
 python-dotenv==1.0.1
 dj-database-url==2.1.0
 requests==2.33.0
-Pillow==12.1.1
+Pillow==10.4.0
 
 # PostgreSQL (prod Railway uniquement — pas nécessaire en dev SQLite)
 psycopg2-binary>=2.9.9
