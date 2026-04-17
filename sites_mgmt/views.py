@@ -44,6 +44,16 @@ def site_list(request):
     else:
         sites = request.user.managed_sites.filter(is_active=True)
 
+    search = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '')
+
+    if search:
+        sites = sites.filter(name__icontains=search) | sites.filter(location__icontains=search)
+    if status_filter == 'active':
+        sites = sites.filter(is_active=True)
+    elif status_filter == 'inactive':
+        sites = sites.filter(is_active=False)
+
     all_stats = unifi.get_all_site_stats(sites)
     sites_data = [
         {'site': site, 'stats': all_stats.get(site.unifi_site_id, {})}
@@ -52,6 +62,8 @@ def site_list(request):
 
     return render(request, 'sites_mgmt/list.html', {
         'sites_data': sites_data,
+        'search': search,
+        'status_filter': status_filter,
         'page_title': 'Sites',
     })
 

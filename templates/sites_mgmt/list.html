@@ -3,13 +3,41 @@
 {% block page_title %}Sites Hotspot{% endblock %}
 
 {% block content %}
+<!-- Barre de recherche et filtres -->
+<div class="card card-bn p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label small fw-semibold">Recherche</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" value="{{ search }}" class="form-control"
+               placeholder="Nom ou localisation…">
+      </div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">Statut</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="">Tous</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actif</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactif</option>
+      </select>
+    </div>
+    <div class="col-md-4 d-flex gap-2 align-items-end">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <a href="{% url 'sites:list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      {% if user.is_superadmin %}
+      <a href="{% url 'sites:create' %}" class="btn btn-success btn-sm ms-auto">
+        <i class="bi bi-plus-circle me-1"></i>Nouveau
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <span class="text-muted small">{{ sites_data|length }} site(s)</span>
-  {% if user.is_superadmin %}
-  <a href="{% url 'sites:create' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-circle me-1"></i>Nouveau site
-  </a>
-  {% endif %}
+  <span class="text-muted small">{{ sites_data|length }} site(s) affiché(s)</span>
 </div>
 
 <div class="row g-3">
