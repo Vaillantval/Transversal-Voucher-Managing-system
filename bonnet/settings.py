@@ -13,6 +13,12 @@ RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')
 if RAILWAY_STATIC_URL:
     ALLOWED_HOSTS += [RAILWAY_STATIC_URL, '.railway.app']
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost').split(',')
+    if origin.strip()
+]
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
