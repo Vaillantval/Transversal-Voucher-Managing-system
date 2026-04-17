@@ -3,46 +3,274 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connexion — BonNet</title>
+<title>BonNet — Connexion</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <style>
-body { background: #111827; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.login-card { background: #fff; border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 400px; }
-.brand { font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: .25rem; }
-.brand span { color: #1A56DB; }
-.btn-login { background: #1A56DB; border: none; padding: .75rem; font-size: 1rem; }
-.btn-login:hover { background: #1140A6; }
+  /* ── Globals ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b1120; min-height: 100vh; overflow: hidden; }
+
+  /* ══════════════════════════════════════════
+     SPLASH SCREEN
+  ══════════════════════════════════════════ */
+  #splash {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0b1120;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2rem;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  #splash.hidden { opacity: 0; visibility: hidden; }
+
+  .splash-logo {
+    font-size: 2.8rem; font-weight: 800; letter-spacing: -1px;
+    color: #fff;
+  }
+  .splash-logo span { color: #3b82f6; }
+
+  .splash-subtitle {
+    font-size: .9rem; letter-spacing: .25em; text-transform: uppercase;
+    color: #64748b; margin-top: -.5rem;
+  }
+
+  /* Circular progress */
+  .progress-ring { position: relative; width: 64px; height: 64px; }
+  .progress-ring svg { transform: rotate(-90deg); }
+  .progress-ring__track { fill: none; stroke: #1e293b; stroke-width: 4; }
+  .progress-ring__bar   { fill: none; stroke: #3b82f6; stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 175.9; stroke-dashoffset: 175.9;
+    transition: stroke-dashoffset .05s linear; }
+  .progress-ring__pct {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem; font-weight: 700; color: #94a3b8;
+  }
+
+  /* ══════════════════════════════════════════
+     LOGIN PAGE
+  ══════════════════════════════════════════ */
+  #login-page {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem;
+    background: #0b1120;
+    opacity: 0; visibility: hidden;
+    transition: opacity .6s ease .1s, visibility .6s ease .1s;
+  }
+  #login-page.visible { opacity: 1; visibility: visible; }
+
+  /* Background glow */
+  #login-page::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 40%, rgba(59,130,246,.18) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 70%, rgba(99,102,241,.14) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .login-wrap {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 420px;
+  }
+
+  /* Card */
+  .login-card {
+    background: rgba(255,255,255,.04);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 20px;
+    padding: 2.5rem 2.5rem 2rem;
+    box-shadow: 0 25px 60px rgba(0,0,0,.5);
+  }
+
+  /* Brand */
+  .brand-block { text-align: center; margin-bottom: 2rem; }
+  .brand-icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: linear-gradient(135deg, #1d4ed8, #6366f1);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; color: #fff; margin-bottom: .9rem;
+    box-shadow: 0 8px 24px rgba(99,102,241,.4);
+  }
+  .brand-name { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; letter-spacing: -.5px; }
+  .brand-name span { color: #3b82f6; }
+  .brand-tagline { font-size: .8rem; color: #64748b; margin-top: .2rem; letter-spacing: .1em; text-transform: uppercase; }
+
+  /* Inputs */
+  .field-wrap { position: relative; margin-bottom: 1rem; }
+  .field-wrap .field-icon {
+    position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+    color: #475569; font-size: 1rem; pointer-events: none;
+  }
+  .field-wrap input {
+    width: 100%; padding: .75rem .9rem .75rem 2.5rem;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px;
+    color: #f1f5f9; font-size: .95rem;
+    transition: border-color .2s, box-shadow .2s;
+    outline: none;
+  }
+  .field-wrap input::placeholder { color: #475569; }
+  .field-wrap input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+    background: rgba(255,255,255,.09);
+  }
+
+  /* Toggle password */
+  .toggle-pw {
+    position: absolute; right: .9rem; top: 50%; transform: translateY(-50%);
+    color: #475569; cursor: pointer; font-size: 1rem;
+    background: none; border: none; padding: 0;
+  }
+  .toggle-pw:hover { color: #94a3b8; }
+
+  /* Remember */
+  .remember-row { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.4rem; }
+  .remember-row input[type="checkbox"] {
+    width: 1rem; height: 1rem; accent-color: #3b82f6; cursor: pointer;
+  }
+  .remember-row label { font-size: .83rem; color: #64748b; cursor: pointer; }
+
+  /* Submit */
+  .btn-login {
+    width: 100%; padding: .8rem;
+    background: linear-gradient(135deg, #1d4ed8, #6366f1);
+    border: none; border-radius: 10px;
+    color: #fff; font-size: 1rem; font-weight: 600;
+    cursor: pointer; letter-spacing: .02em;
+    transition: opacity .2s, transform .1s, box-shadow .2s;
+    box-shadow: 0 6px 20px rgba(99,102,241,.4);
+  }
+  .btn-login:hover  { opacity: .92; box-shadow: 0 8px 28px rgba(99,102,241,.55); }
+  .btn-login:active { transform: scale(.98); }
+
+  /* Alert */
+  .alert-error {
+    background: rgba(239,68,68,.12);
+    border: 1px solid rgba(239,68,68,.25);
+    border-radius: 10px;
+    color: #fca5a5; font-size: .85rem;
+    padding: .65rem .9rem; margin-bottom: 1.2rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+
+  /* Footer */
+  .login-footer { text-align: center; margin-top: 1.5rem; font-size: .75rem; color: #334155; }
 </style>
 </head>
 <body>
-<div class="login-card shadow-lg">
-  <div class="brand">Bon<span>Net</span></div>
-  <p class="text-center text-muted small mb-3">Gestion des vouchers WiFi</p>
 
-  {% if messages %}
-  {% for message in messages %}
-  <div class="alert alert-danger py-2">{{ message }}</div>
-  {% endfor %}
-  {% endif %}
-
-  <form method="post">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label class="form-label fw-semibold">Nom d'utilisateur</label>
-      <input type="text" name="username" class="form-control" autofocus required>
-    </div>
-    <div class="mb-3">
-      <label class="form-label fw-semibold">Mot de passe</label>
-      <input type="password" name="password" class="form-control" required>
-    </div>
-    <div class="mb-4 form-check">
-      <input type="checkbox" name="remember_me" id="remember_me" class="form-check-input">
-      <label for="remember_me" class="form-check-label text-muted small">Se souvenir de moi (30 jours)</label>
-    </div>
-    <button type="submit" class="btn btn-login btn-primary w-100 text-white rounded-3">
-      Se connecter
-    </button>
-  </form>
+<!-- ══ SPLASH ══ -->
+<div id="splash">
+  <div>
+    <div class="splash-logo">Bon<span>Net</span></div>
+    <div class="splash-subtitle">Voucher Management System</div>
+  </div>
+  <div class="progress-ring">
+    <svg viewBox="0 0 60 60" width="64" height="64">
+      <circle class="progress-ring__track" cx="30" cy="30" r="28"/>
+      <circle class="progress-ring__bar"   cx="30" cy="30" r="28" id="ring-bar"/>
+    </svg>
+    <div class="progress-ring__pct" id="ring-pct">0%</div>
+  </div>
 </div>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-page">
+  <div class="login-wrap">
+    <div class="login-card">
+
+      <div class="brand-block">
+        <div class="brand-icon"><i class="bi bi-wifi"></i></div>
+        <div class="brand-name">Bon<span>Net</span></div>
+        <div class="brand-tagline">Voucher Management System</div>
+      </div>
+
+      {% if messages %}
+      {% for message in messages %}
+      <div class="alert-error"><i class="bi bi-exclamation-circle-fill"></i>{{ message }}</div>
+      {% endfor %}
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <label style="font-size:.82rem;color:#94a3b8;font-weight:600;margin-bottom:.35rem;display:block">
+          Nom d'utilisateur
+        </label>
+        <div class="field-wrap">
+          <i class="bi bi-person field-icon"></i>
+          <input type="text" name="username" placeholder="Entrez votre identifiant" autofocus required>
+        </div>
+
+        <label style="font-size:.82rem;color:#94a3b8;font-weight:600;margin-bottom:.35rem;display:block">
+          Mot de passe
+        </label>
+        <div class="field-wrap">
+          <i class="bi bi-lock field-icon"></i>
+          <input type="password" name="password" id="pw-input" placeholder="••••••••" required>
+          <button type="button" class="toggle-pw" onclick="togglePw()" id="pw-eye">
+            <i class="bi bi-eye" id="eye-icon"></i>
+          </button>
+        </div>
+
+        <div class="remember-row">
+          <input type="checkbox" name="remember_me" id="remember_me">
+          <label for="remember_me">Se souvenir de moi (30 jours)</label>
+        </div>
+
+        <button type="submit" class="btn-login">
+          Se connecter &nbsp;<i class="bi bi-arrow-right-short"></i>
+        </button>
+      </form>
+    </div>
+
+    <div class="login-footer">© 2025 BonNet · Transversal</div>
+  </div>
+</div>
+
+<script>
+// ── Circular progress splash ──
+const bar  = document.getElementById('ring-bar');
+const pct  = document.getElementById('ring-pct');
+const circ = 2 * Math.PI * 28; // ≈ 175.9
+const DURATION = 2400; // ms
+let start = null;
+
+function animRing(ts) {
+  if (!start) start = ts;
+  const p = Math.min((ts - start) / DURATION, 1);
+  const offset = circ * (1 - p);
+  bar.style.strokeDashoffset = offset;
+  pct.textContent = Math.round(p * 100) + '%';
+  if (p < 1) { requestAnimationFrame(animRing); }
+  else { showLogin(); }
+}
+requestAnimationFrame(animRing);
+
+function showLogin() {
+  document.getElementById('splash').classList.add('hidden');
+  document.getElementById('login-page').classList.add('visible');
+  document.querySelector('input[name="username"]').focus();
+}
+
+// ── Toggle password visibility ──
+function togglePw() {
+  const inp  = document.getElementById('pw-input');
+  const icon = document.getElementById('eye-icon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'bi bi-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'bi bi-eye';
+  }
+}
+</script>
 </body>
 </html>
