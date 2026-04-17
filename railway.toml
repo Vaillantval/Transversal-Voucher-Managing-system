@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python manage.py migrate && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT"
+startCommand = "sh -c 'python manage.py migrate && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT'"
 healthcheckPath = "/accounts/login/"
 restartPolicyType = "on_failure"
