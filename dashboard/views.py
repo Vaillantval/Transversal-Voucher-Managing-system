@@ -73,6 +73,18 @@ def index(request):
     by_tier = [{'tier__label': k, 'count': c}
                for k, c in sorted(tier_counts.items(), key=lambda x: -x[1])]
 
+    # Breakdown par site : total / utilisés / non utilisés / revenu
+    site_breakdown = defaultdict(lambda: {'total': 0, 'used': 0, 'unused': 0, 'revenue': 0.0})
+    for v in period_vouchers:
+        name = v.get('site_name', '?')
+        site_breakdown[name]['total'] += 1
+        if v['is_used']:
+            site_breakdown[name]['used']    += 1
+            site_breakdown[name]['revenue'] += v['price']
+        else:
+            site_breakdown[name]['unused'] += 1
+    site_breakdown = sorted(site_breakdown.items(), key=lambda x: -x[1]['used'])
+
     # Stats live UniFi (10 premiers sites pour éviter timeout)
     live_stats = []
     for site in list(sites)[:10]:
@@ -101,5 +113,6 @@ def index(request):
         'total_clients':         total_clients,
         'total_devices_online':  total_devices_online,
         'total_devices_offline': total_devices_offline,
+        'site_breakdown': site_breakdown,
     }
     return render(request, 'dashboard/index.html', context)
