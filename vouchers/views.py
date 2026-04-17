@@ -6,6 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from sites_mgmt.models import HotspotSite, VoucherTier
+from sites_mgmt.views import sync_sites_from_unifi
 from .models import VoucherLog
 from unifi_api import client as unifi
 
@@ -22,6 +23,7 @@ def voucher_list(request):
     page = int(request.GET.get('page', 1))
 
     if request.user.is_superadmin:
+        sync_sites_from_unifi()
         sites = HotspotSite.objects.filter(is_active=True)
     else:
         sites = request.user.managed_sites.filter(is_active=True)

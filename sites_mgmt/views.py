@@ -21,20 +21,23 @@ def superadmin_required(view_func):
 
 # ─── SITES ────────────────────────────────────────────────────────────────────
 
+def sync_sites_from_unifi():
+    """Crée en DB les sites UniFi qui n'existent pas encore."""
+    for us in unifi.get_sites():
+        HotspotSite.objects.get_or_create(
+            unifi_site_id=us.get('name', us.get('_id', '')),
+            defaults={
+                'name': us.get('desc', us.get('name', '')),
+                'location': '',
+                'description': '',
+            },
+        )
+
+
 @login_required
 def site_list(request):
-    # Auto-sync : créer les sites UniFi manquants en base
     if request.user.is_superadmin:
-        unifi_sites = unifi.get_sites()
-        for us in unifi_sites:
-            HotspotSite.objects.get_or_create(
-                unifi_site_id=us.get('name', us.get('_id', '')),
-                defaults={
-                    'name': us.get('desc', us.get('name', '')),
-                    'location': '',
-                    'description': '',
-                },
-            )
+        sync_sites_from_unifi()
 
     if request.user.is_superadmin:
         sites = HotspotSite.objects.prefetch_related('admins').all()
