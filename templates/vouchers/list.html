@@ -88,7 +88,7 @@
         <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
         <td>
           {% if used < quota %}
-          <form method="post" action="{% url 'vouchers:delete' v._id %}"
+          <form method="post" action="{% url 'vouchers:delete' v.voucher_id %}"
                 onsubmit="return confirm('Révoquer ce voucher ?')">
             {% csrf_token %}
             <button class="btn btn-outline-danger btn-sm py-0">
