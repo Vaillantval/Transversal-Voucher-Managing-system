@@ -119,31 +119,41 @@ def _enrich_voucher(v: dict, site_name: str, site_unifi_id: str) -> dict:
     return v
 
 
-def get_all_vouchers(sites) -> list:
-    """
-    Récupère les vouchers de tous les sites en un seul login,
-    avec cache par site.
-    """
-    all_vouchers = []
-    c = _connect()  # 1 seul login pour tous les sites
+def _fetch_site_vouchers(site):
+    """Fetch vouchers pour un site (appelé depuis un thread)."""
+    key = f'unifi_vouchers_{site.unifi_site_id}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    c = get_controller(site.unifi_site_id)
     if not c:
         return []
+    try:
+        vouchers = [_enrich_voucher(v, site.name, site.unifi_site_id)
+                    for v in c.get_vouchers()]
+        cache.set(key, vouchers, _TTL_VOUCHERS)
+        return vouchers
+    except Exception as e:
+        logger.error(f"fetch_vouchers({site.unifi_site_id}) : {e}")
+        return []
 
-    for site in sites:
-        key = f'unifi_vouchers_{site.unifi_site_id}'
-        cached = cache.get(key)
-        if cached is not None:
-            all_vouchers.extend(cached)
-            continue
-        try:
-            c.site_id = site.unifi_site_id  # changer de site sans re-login
-            vouchers = [_enrich_voucher(v, site.name, site.unifi_site_id)
-                        for v in c.get_vouchers()]
-            cache.set(key, vouchers, _TTL_VOUCHERS)
-            all_vouchers.extend(vouchers)
-        except Exception as e:
-            logger.error(f"get_all_vouchers({site.unifi_site_id}) : {e}")
 
+def get_all_vouchers(sites) -> list:
+    """Récupère les vouchers de tous les sites en parallèle."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    sites_list = list(sites)
+    if not sites_list:
+        return []
+
+    all_vouchers = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(_fetch_site_vouchers, site): site
+                   for site in sites_list}
+        for future in as_completed(futures, timeout=45):
+            try:
+                all_vouchers.extend(future.result())
+            except Exception as e:
+                logger.error(f"Thread vouchers error: {e}")
     return all_vouchers
 
 
