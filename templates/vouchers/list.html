@@ -8,7 +8,7 @@
   <form method="get" class="row g-2 align-items-end">
     <div class="col-md-3">
       <label class="form-label small fw-semibold">Site</label>
-      <select name="site" class="form-select form-select-sm">
+      <select name="site" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">Tous les sites</option>
         {% for s in sites %}
         <option value="{{ s.unifi_site_id }}" {% if site_filter == s.unifi_site_id %}selected{% endif %}>{{ s.name }}</option>
@@ -17,7 +17,7 @@
     </div>
     <div class="col-md-2">
       <label class="form-label small fw-semibold">Statut</label>
-      <select name="status" class="form-select form-select-sm">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">Tous</option>
         <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actif</option>
         <option value="used" {% if status_filter == 'used' %}selected{% endif %}>Utilisé</option>
@@ -25,7 +25,7 @@
     </div>
     <div class="col-md-2">
       <label class="form-label small fw-semibold">Afficher</label>
-      <select name="per_page" class="form-select form-select-sm">
+      <select name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
         {% for opt in per_page_options %}
         <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }} par page</option>
         {% endfor %}

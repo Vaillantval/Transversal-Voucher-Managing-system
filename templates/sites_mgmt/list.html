@@ -16,7 +16,7 @@
     </div>
     <div class="col-md-3">
       <label class="form-label small fw-semibold">Statut</label>
-      <select name="status" class="form-select form-select-sm">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">Tous</option>
         <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actif</option>
         <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactif</option>
