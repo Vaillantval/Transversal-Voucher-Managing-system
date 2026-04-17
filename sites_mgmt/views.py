@@ -140,7 +140,7 @@ def tier_create(request):
         except Exception as e:
             messages.error(request, f'Erreur : {e}')
 
-    return render(request, 'sites_mgmt/tier_form.html', {'page_title': 'Nouvelle tranche'})
+    return redirect('sites:tiers')
 
 
 @login_required
