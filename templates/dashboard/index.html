@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% load dashboard_extras %}
 {% block title %}Dashboard{% endblock %}
-{% block page_title %}Tableau de bord{% endblock %}
+{% block page_title %}
+  {% if selected_site %}Stats — {{ selected_site.name }}{% else %}Tableau de bord{% endif %}
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -16,67 +18,101 @@
 {% endblock %}
 
 {% block content %}
-<!-- Filtres période -->
-<form method="get" class="d-flex align-items-center gap-2 mb-4">
-  <span class="text-muted small">Période :</span>
+
+<!-- Filtres -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <span class="text-muted small">Site :</span>
+  <select class="form-select form-select-sm" style="width:auto;min-width:180px"
+          onchange="location.href='?site='+this.value+'&days={{ days }}'">
+    <option value="">Tous les sites</option>
+    {% for s in all_sites %}
+    <option value="{{ s.unifi_site_id }}" {% if selected_site_id == s.unifi_site_id %}selected{% endif %}>
+      {{ s.name }}
+    </option>
+    {% endfor %}
+  </select>
+
+  <span class="text-muted small ms-2">Période :</span>
   {% for d, label in period_options %}
-  <a href="?days={{ d }}" class="btn btn-sm {% if days == d %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+  <a href="?days={{ d }}&site={{ selected_site_id }}"
+     class="btn btn-sm {% if days == d %}btn-primary{% else %}btn-outline-secondary{% endif %}">
     {{ label }}
   </a>
   {% endfor %}
   <span class="text-muted small ms-2">Du {{ date_from }} à aujourd'hui</span>
-</form>
+
+  {% if selected_site %}
+  <a href="?days={{ days }}" class="btn btn-sm btn-outline-secondary ms-auto">
+    <i class="bi bi-x-circle me-1"></i>Tous les sites
+  </a>
+  {% endif %}
+</div>
 
 <!-- KPIs -->
 <div class="row g-3 mb-4">
+  {% if not selected_site %}
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="stat-icon" style="background:#EBF5FF"><i class="bi bi-diagram-3 text-primary"></i></span>
-      </div>
-      <div class="kpi-val text-primary">{{ sites_count }}</div>
+      <span class="stat-icon" style="background:#EBF5FF"><i class="bi bi-diagram-3 text-primary"></i></span>
+      <div class="kpi-val text-primary mt-2">{{ sites_count }}</div>
       <div class="kpi-label">Sites actifs</div>
     </div>
   </div>
+  {% endif %}
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="stat-icon" style="background:#F0FDF4"><i class="bi bi-ticket-perforated text-success"></i></span>
-      </div>
-      <div class="kpi-val text-success">{{ total_vouchers }}</div>
+      <span class="stat-icon" style="background:#F0FDF4"><i class="bi bi-ticket-perforated text-success"></i></span>
+      <div class="kpi-val text-success mt-2">{{ total_vouchers }}</div>
       <div class="kpi-label">Vouchers créés</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="stat-icon" style="background:#FEF9C3"><i class="bi bi-people text-warning"></i></span>
-      </div>
-      <div class="kpi-val text-warning">{{ total_clients }}</div>
+      <span class="stat-icon" style="background:#F0FDF4"><i class="bi bi-check-circle text-success"></i></span>
+      <div class="kpi-val text-success mt-2">{{ used_vouchers }}</div>
+      <div class="kpi-label">Vouchers utilisés</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <span class="stat-icon" style="background:#FEF9C3"><i class="bi bi-people text-warning"></i></span>
+      <div class="kpi-val text-warning mt-2">{{ total_clients }}</div>
       <div class="kpi-label">Clients connectés (live)</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="stat-icon" style="background:#FDF2F8"><i class="bi bi-currency-dollar" style="color:#9333ea"></i></span>
-      </div>
-      <div class="kpi-val" style="color:#9333ea">{{ total_revenue|floatformat:0 }}</div>
-      <div class="kpi-label">Revenu HTG ({{ used_vouchers }} vendus)</div>
+      <span class="stat-icon" style="background:#FDF2F8"><i class="bi bi-currency-dollar" style="color:#9333ea"></i></span>
+      <div class="kpi-val mt-2" style="color:#9333ea">{{ total_revenue|floatformat:0 }}</div>
+      <div class="kpi-label">Revenu HTG</div>
     </div>
   </div>
+  {% if selected_site %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <span class="stat-icon" style="background:#EFF6FF"><i class="bi bi-router text-primary"></i></span>
+      <div class="kpi-val text-primary mt-2">{{ total_devices_online }}</div>
+      <div class="kpi-label">Devices online</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <span class="stat-icon" style="background:#FEF2F2"><i class="bi bi-router text-danger"></i></span>
+      <div class="kpi-val text-danger mt-2">{{ total_devices_offline }}</div>
+      <div class="kpi-label">Devices offline</div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
-<!-- Graphes -->
+<!-- Graphes communs : courbe + donut -->
 <div class="row g-3 mb-4">
-  <!-- Courbe revenu par jour -->
   <div class="col-md-8">
     <div class="card card-bn p-3">
       <h6 class="fw-600 mb-3">Revenu journalier (HTG)</h6>
       <canvas id="revenueChart" height="80"></canvas>
     </div>
   </div>
-  <!-- Donut par tranche -->
   <div class="col-md-4">
     <div class="card card-bn p-3">
       <h6 class="fw-600 mb-3">Répartition par forfait</h6>
@@ -85,20 +121,21 @@
   </div>
 </div>
 
-<!-- Breakdown vouchers par site -->
+{% if not selected_site %}
+<!-- Breakdown vouchers par site (mode tous les sites) -->
 <div class="card card-bn p-3 mb-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h6 class="fw-600 mb-0">Vouchers par site — période sélectionnée</h6>
-    <span class="text-muted small">{{ site_breakdown|length }} site(s) avec des vouchers</span>
+    <span class="text-muted small">{{ site_breakdown|length }} site(s)</span>
   </div>
   <div class="table-responsive">
     <table class="table table-bn table-hover table-sm mb-0">
       <thead><tr>
         <th>Site</th>
         <th class="text-center">Total créés</th>
-        <th class="text-center text-success">Utilisés</th>
+        <th class="text-center">Utilisés</th>
         <th class="text-center text-muted">Non utilisés</th>
-        <th class="text-end text-primary">Revenu (HTG)</th>
+        <th class="text-end">Revenu (HTG)</th>
       </tr></thead>
       <tbody>
       {% for site_name, stats in site_breakdown %}
@@ -106,11 +143,8 @@
         <td class="fw-semibold">{{ site_name }}</td>
         <td class="text-center">{{ stats.total }}</td>
         <td class="text-center">
-          {% if stats.used > 0 %}
-            <span class="badge bg-success rounded-pill">{{ stats.used }}</span>
-          {% else %}
-            <span class="text-muted">0</span>
-          {% endif %}
+          {% if stats.used > 0 %}<span class="badge bg-success rounded-pill">{{ stats.used }}</span>
+          {% else %}<span class="text-muted">0</span>{% endif %}
         </td>
         <td class="text-center text-muted">{{ stats.unused }}</td>
         <td class="text-end fw-semibold {% if stats.revenue > 0 %}text-primary{% else %}text-muted{% endif %}">
@@ -129,27 +163,21 @@
 <div class="row g-3">
   <div class="col-md-6">
     <div class="card card-bn p-3">
-      <h6 class="fw-600 mb-3">Revenu par site</h6>
+      <h6 class="fw-600 mb-3">Revenu par site (top 10)</h6>
       <canvas id="siteChart" height="120"></canvas>
     </div>
   </div>
   <div class="col-md-6">
     <div class="card card-bn p-3">
-      <h6 class="fw-600 mb-3">État des sites (live)</h6>
+      <h6 class="fw-600 mb-3">État des sites (live — 10 premiers)</h6>
       <table class="table table-bn table-sm mb-0">
-        <thead><tr>
-          <th>Site</th><th>Clients</th><th>Devices</th><th>Offline</th>
-        </tr></thead>
+        <thead><tr><th>Site</th><th>Clients</th><th>Online</th><th>Offline</th></tr></thead>
         <tbody>
         {% for item in live_stats %}
         <tr class="site-row">
           <td class="fw-semibold">{{ item.site.name }}</td>
-          <td>
-            <span class="device-dot dot-online me-1"></span>{{ item.stats.client_count }}
-          </td>
-          <td>
-            <span class="device-dot dot-online me-1"></span>{{ item.stats.device_online }}
-          </td>
+          <td><span class="device-dot dot-online me-1"></span>{{ item.stats.client_count }}</td>
+          <td><span class="device-dot dot-online me-1"></span>{{ item.stats.device_online }}</td>
           <td>
             {% if item.stats.device_offline > 0 %}
             <span class="device-dot dot-offline me-1"></span><span class="text-danger">{{ item.stats.device_offline }}</span>
@@ -164,70 +192,148 @@
     </div>
   </div>
 </div>
+
+{% else %}
+<!-- ── Mode site unique ── -->
+<div class="row g-3">
+
+  <!-- Clients connectés live -->
+  <div class="col-md-6">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">Clients connectés (live)</h6>
+      {% if site_clients_list %}
+      <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+        <table class="table table-bn table-sm mb-0">
+          <thead><tr><th>Nom / IP</th><th>MAC</th><th>Signal</th></tr></thead>
+          <tbody>
+          {% for c in site_clients_list %}
+          <tr>
+            <td>{{ c.hostname|default:c.ip }}</td>
+            <td class="text-muted small">{{ c.mac }}</td>
+            <td>
+              {% if c.rssi %}<span class="small">{{ c.rssi }} dBm</span>{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0">Aucun client connecté en ce moment.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Devices -->
+  <div class="col-md-6">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">Équipements réseau</h6>
+      {% if site_devices_list %}
+      <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+        <table class="table table-bn table-sm mb-0">
+          <thead><tr><th>Nom</th><th>Modèle</th><th>IP</th><th>Statut</th></tr></thead>
+          <tbody>
+          {% for d in site_devices_list %}
+          <tr>
+            <td class="fw-semibold">{{ d.name|default:"—" }}</td>
+            <td class="text-muted small">{{ d.model|default:"—" }}</td>
+            <td class="text-muted small">{{ d.ip|default:"—" }}</td>
+            <td>
+              {% if d.state == 1 %}
+              <span class="badge bg-success rounded-pill" style="font-size:.7rem">Online</span>
+              {% else %}
+              <span class="badge bg-danger rounded-pill" style="font-size:.7rem">Offline</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0">Aucun équipement détecté.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Vouchers du site sur la période -->
+  <div class="col-12">
+    <div class="card card-bn p-3">
+      <h6 class="fw-600 mb-3">Vouchers — {{ selected_site.name }} (période sélectionnée)</h6>
+      <div class="table-responsive">
+        <table class="table table-bn table-hover table-sm mb-0">
+          <thead><tr>
+            <th>Code</th><th>Forfait</th><th>Durée</th><th>Statut</th><th>Créé le</th>
+          </tr></thead>
+          <tbody>
+          {% for v in period_vouchers %}
+          <tr>
+            <td><code class="text-primary">{{ v.code }}</code></td>
+            <td>{{ v.tier_label }}</td>
+            <td>{{ v.duration_hours }}h</td>
+            <td>
+              {% if v.is_used %}
+              <span class="badge bg-secondary rounded-pill" style="font-size:.7rem">Utilisé</span>
+              {% else %}
+              <span class="badge bg-success rounded-pill" style="font-size:.7rem">Actif</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-3">Aucun voucher sur la période</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const revenueData = {{ revenue_by_day_json|safe }};
-const tierData = {{ by_tier_json|safe }};
-const siteData = {{ revenue_by_site_json|safe }};
-
-// Couleurs
+const tierData    = {{ by_tier_json|safe }};
+const siteData    = {{ revenue_by_site_json|safe }};
 const colors = ['#1A56DB','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 
-// Revenu journalier
 new Chart(document.getElementById('revenueChart'), {
   type: 'line',
   data: {
     labels: revenueData.map(d => d.day),
-    datasets: [{
-      label: 'Revenu HTG',
-      data: revenueData.map(d => d.revenue || 0),
-      borderColor: '#1A56DB',
-      backgroundColor: 'rgba(26,86,219,.1)',
-      fill: true,
-      tension: .4,
-      pointRadius: 3,
-    }]
+    datasets: [{ label: 'Revenu HTG', data: revenueData.map(d => d.revenue || 0),
+      borderColor: '#1A56DB', backgroundColor: 'rgba(26,86,219,.1)',
+      fill: true, tension: .4, pointRadius: 3 }]
   },
-  options: {
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true } },
-    responsive: true,
-  }
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } }, responsive: true }
 });
 
-// Donut tarifs
 new Chart(document.getElementById('tierChart'), {
   type: 'doughnut',
   data: {
     labels: tierData.map(d => d.tier__label || 'Sans tranche'),
-    datasets: [{
-      data: tierData.map(d => d.count),
-      backgroundColor: colors,
-      borderWidth: 2,
-    }]
+    datasets: [{ data: tierData.map(d => d.count), backgroundColor: colors, borderWidth: 2 }]
   },
   options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, cutout: '65%' }
 });
 
-// Barres par site
-new Chart(document.getElementById('siteChart'), {
-  type: 'bar',
-  data: {
-    labels: siteData.map(d => d.site__name),
-    datasets: [{
-      label: 'Revenu (HTG)',
-      data: siteData.map(d => d.revenue || 0),
-      backgroundColor: colors,
-      borderRadius: 6,
-    }]
-  },
-  options: {
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true } },
-    responsive: true,
-  }
-});
+{% if not selected_site %}
+const siteChartEl = document.getElementById('siteChart');
+if (siteChartEl) {
+  new Chart(siteChartEl, {
+    type: 'bar',
+    data: {
+      labels: siteData.map(d => d.site__name),
+      datasets: [{ label: 'Revenu (HTG)', data: siteData.map(d => d.revenue || 0),
+        backgroundColor: colors, borderRadius: 6 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } }, responsive: true }
+  });
+}
+{% endif %}
 </script>
 {% endblock %}

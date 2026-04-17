@@ -78,6 +78,10 @@
          class="btn btn-outline-primary btn-sm flex-fill">
         <i class="bi bi-ticket-perforated"></i> Vouchers
       </a>
+      <a href="{% url 'dashboard:index' %}?site={{ item.site.unifi_site_id }}"
+         class="btn btn-outline-success btn-sm" title="Statistiques">
+        <i class="bi bi-bar-chart-line"></i>
+      </a>
       <a href="{% url 'vouchers:sync' item.site.pk %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-repeat"></i>
       </a>
