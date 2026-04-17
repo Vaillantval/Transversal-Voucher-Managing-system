@@ -10,6 +10,23 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+def debug_vouchers(request):
+    from unifi_api.client import get_controller
+    site_id = request.GET.get('site', 'ng3dxydx')
+    result = {"site_id": site_id}
+    try:
+        c = get_controller(site_id)
+        if c:
+            vouchers = c.get_vouchers()
+            result["voucher_count"] = len(vouchers)
+            result["sample"] = vouchers[:2] if vouchers else []
+        else:
+            result["error"] = "controller is None"
+    except Exception as e:
+        result["error"] = str(e)
+    return JsonResponse(result)
+
+
 def unifi_debug(request):
     from django.conf import settings
     from unifi_api.client import _connect, get_sites
@@ -43,6 +60,7 @@ def unifi_debug(request):
 urlpatterns = [
     path('health/', health_check),
     path('debug/unifi/', unifi_debug),
+    path('debug/vouchers/', debug_vouchers),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('dashboard/', include('dashboard.urls')),
