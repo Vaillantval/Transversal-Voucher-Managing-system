@@ -1,8 +1,9 @@
 [build]
 builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --noinput"
 
 [deploy]
-startCommand = "sh -c 'python manage.py migrate && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT'"
+startCommand = "python manage.py migrate --noinput && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
 healthcheckPath = "/accounts/login/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
