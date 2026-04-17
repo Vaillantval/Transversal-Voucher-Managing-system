@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(python -m venv venv)",
-      "Bash(venv/Scripts/pip install *)"
+      "Bash(venv/Scripts/pip install *)",
+      "WebFetch(domain:bonnet.up.railway.app)",
+      "Bash(curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt -X POST https://bonnet.up.railway.app/ -d 'username=unifitransversalht&password=xamA??1974' -L -w '\\\\nHTTP_STATUS:%{http_code}\\\\nFINAL_URL:%{url_effective}' -H 'Content-Type: application/x-www-form-urlencoded')",
+      "Bash(curl -v -c /tmp/cookies.txt -b /tmp/cookies.txt -X POST https://bonnet.up.railway.app/ --data-urlencode username=unifitransversalht --data-urlencode 'password=xamA??1974' -L)",
+      "Bash(curl -sk -c /tmp/cookies.txt -b /tmp/cookies.txt --data-urlencode username=unifitransversalht --data-urlencode 'password=xamA??1974' https://bonnet.up.railway.app/ -L -w '\\\\nHTTP_STATUS:%{http_code}\\\\nFINAL_URL:%{url_effective}')",
+      "Bash(curl -sk -c /tmp/cookies.txt \"https://bonnet.up.railway.app/\" -D /tmp/headers.txt)",
+      "Read(//tmp/**)",
+      "Bash(xargs grep *)"
     ]
   }
 }
