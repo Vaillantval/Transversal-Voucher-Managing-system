@@ -12,20 +12,25 @@ def health_check(request):
 
 def unifi_debug(request):
     from django.conf import settings
-    from unifi_api.client import _connect
+    from unifi_api.client import _connect, get_sites
+    from sites_mgmt.models import HotspotSite
     result = {
         "host": settings.UNIFI_HOST,
         "port": settings.UNIFI_PORT,
         "username": settings.UNIFI_USERNAME,
         "password_set": bool(settings.UNIFI_PASSWORD),
+        "user": str(request.user),
+        "is_authenticated": request.user.is_authenticated,
+        "user_role": getattr(request.user, 'role', 'N/A'),
+        "is_superadmin": getattr(request.user, 'is_superadmin', False),
+        "db_sites_count": HotspotSite.objects.count(),
     }
     try:
         c = _connect()
         if c:
             sites = c.get_sites()
             result["connected"] = True
-            result["sites_count"] = len(sites)
-            result["sites"] = [s.get('desc', s.get('name')) for s in sites[:5]]
+            result["unifi_sites_count"] = len(sites)
         else:
             result["connected"] = False
             result["error"] = "controller is None"
