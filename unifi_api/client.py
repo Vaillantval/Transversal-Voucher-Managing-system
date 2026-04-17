@@ -130,7 +130,7 @@ def _fetch_site_vouchers(site):
         return []
     try:
         vouchers = [_enrich_voucher(v, site.name, site.unifi_site_id)
-                    for v in c.get_vouchers()]
+                    for v in c.list_vouchers()]
         cache.set(key, vouchers, _TTL_VOUCHERS)
         return vouchers
     except Exception as e:
@@ -155,6 +155,18 @@ def get_all_vouchers(sites) -> list:
             except Exception as e:
                 logger.error(f"Thread vouchers error: {e}")
     return all_vouchers
+
+
+def get_vouchers(site_id: str) -> list:
+    """Liste les vouchers d'un site (usage ponctuel)."""
+    c = get_controller(site_id)
+    if not c:
+        return []
+    try:
+        return c.list_vouchers()
+    except Exception as e:
+        logger.error(f"get_vouchers({site_id}) : {e}")
+        return []
 
 
 def create_vouchers(
@@ -192,7 +204,7 @@ def delete_voucher(site_id: str, voucher_id: str) -> bool:
     if not c:
         return False
     try:
-        c.revoke_voucher(voucher_id)
+        c.delete_voucher(voucher_id)
         cache.delete(f'unifi_vouchers_{site_id}')
         return True
     except Exception as e:

@@ -17,7 +17,7 @@ def debug_vouchers(request):
     try:
         c = get_controller(site_id)
         if c:
-            vouchers = c.get_vouchers()
+            vouchers = c.list_vouchers()
             result["voucher_count"] = len(vouchers)
             result["sample"] = vouchers[:2] if vouchers else []
         else:
