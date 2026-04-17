@@ -45,18 +45,18 @@ def index(request):
     for v in period_vouchers:
         t = tier_for(v.get('duration', 0))
         v['tier_label'] = t.label if t else 'Sans tranche'
-        v['price']   = float(t.price_htg) if t else 0
-        v['is_used'] = v.get('used', 0) > 0
+        v['price']      = float(t.price_htg) if t else 0
 
-    total_vouchers  = len(period_vouchers)
-    used_vouchers   = sum(1 for v in period_vouchers if v['is_used'])
-    active_vouchers = total_vouchers - used_vouchers
-    total_revenue   = sum(v['price'] for v in period_vouchers if v['is_used'])
+    total_vouchers   = len(period_vouchers)
+    sold_vouchers    = sum(1 for v in period_vouchers if v['is_sold'])
+    active_sessions  = sum(1 for v in period_vouchers if v['is_active_session'])
+    available_vouchers = sum(1 for v in period_vouchers if v['is_available'])
+    total_revenue    = sum(v['price'] for v in period_vouchers if v['is_sold'])
 
     # Revenu par jour
     rev_day = defaultdict(float)
     for v in period_vouchers:
-        if v['is_used'] and v.get('created_dt'):
+        if v['is_sold'] and v.get('created_dt'):
             rev_day[v['created_dt'].strftime('%Y-%m-%d')] += v['price']
     revenue_by_day = [{'day': k, 'revenue': r} for k, r in sorted(rev_day.items())]
 
@@ -68,15 +68,17 @@ def index(request):
                for k, c in sorted(tier_counts.items(), key=lambda x: -x[1])]
 
     # Breakdown par site
-    site_bd = defaultdict(lambda: {'total': 0, 'used': 0, 'unused': 0, 'revenue': 0.0})
+    site_bd = defaultdict(lambda: {'total': 0, 'sold': 0, 'active_sessions': 0, 'available': 0, 'revenue': 0.0})
     for v in period_vouchers:
         name = v.get('site_name', '?')
         site_bd[name]['total'] += 1
-        if v['is_used']:
-            site_bd[name]['used']    += 1
+        if v['is_sold']:
+            site_bd[name]['sold']    += 1
             site_bd[name]['revenue'] += v['price']
-        else:
-            site_bd[name]['unused'] += 1
+        if v['is_active_session']:
+            site_bd[name]['active_sessions'] += 1
+        if v['is_available']:
+            site_bd[name]['available'] += 1
     site_breakdown = sorted(site_bd.items(), key=lambda x: -x[1]['used'])
 
     # ── Mode tous les sites ──────────────────────────────────────────────────
@@ -85,7 +87,7 @@ def index(request):
     if not selected_site:
         rev_site = defaultdict(float)
         for v in period_vouchers:
-            if v['is_used']:
+            if v['is_sold']:
                 rev_site[v.get('site_name', '?')] += v['price']
         revenue_by_site = [
             {'site__name': k, 'revenue': r}
@@ -122,10 +124,11 @@ def index(request):
         'selected_site': selected_site,
         'selected_site_id': site_filter_id,
         'sites_count': sites.count(),
-        'total_vouchers':  total_vouchers,
-        'used_vouchers':   used_vouchers,
-        'active_vouchers': active_vouchers,
-        'total_revenue':   total_revenue,
+        'total_vouchers':     total_vouchers,
+        'sold_vouchers':      sold_vouchers,
+        'active_sessions':    active_sessions,
+        'available_vouchers': available_vouchers,
+        'total_revenue':      total_revenue,
         'revenue_by_site_json': json.dumps(revenue_by_site),
         'revenue_by_day_json':  json.dumps(revenue_by_day),
         'by_tier_json':         json.dumps(by_tier),

@@ -78,16 +78,12 @@
         <td>{{ quota }}</td>
         <td>{{ used }}</td>
         <td>
-          {% if used >= quota %}
-            <span class="badge rounded-pill bg-secondary">Utilisé</span>
-          {% else %}
-            <span class="badge rounded-pill bg-success">Actif</span>
-          {% endif %}
+          <span class="badge rounded-pill bg-{{ v.status_color }}">{{ v.status_label }}</span>
         </td>
         <td class="text-muted small">{{ v.note|default:"-" }}</td>
         <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
         <td>
-          {% if used < quota %}
+          {% if v.is_available %}
           <form method="post" action="{% url 'vouchers:delete' v.voucher_id %}"
                 onsubmit="return confirm('Révoquer ce voucher ?')">
             {% csrf_token %}

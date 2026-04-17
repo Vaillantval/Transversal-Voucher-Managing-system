@@ -68,9 +68,9 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <span class="stat-icon" style="background:#F0FDF4"><i class="bi bi-check-circle text-success"></i></span>
-      <div class="kpi-val text-success mt-2">{{ used_vouchers }}</div>
-      <div class="kpi-label">Vouchers utilisés</div>
+      <span class="stat-icon" style="background:#EFF6FF"><i class="bi bi-wifi text-primary"></i></span>
+      <div class="kpi-val text-primary mt-2">{{ active_sessions }}</div>
+      <div class="kpi-label">Sessions actives (live)</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
@@ -84,7 +84,7 @@
     <div class="stat-card">
       <span class="stat-icon" style="background:#FDF2F8"><i class="bi bi-currency-dollar" style="color:#9333ea"></i></span>
       <div class="kpi-val mt-2" style="color:#9333ea">{{ total_revenue|floatformat:0 }}</div>
-      <div class="kpi-label">Revenu HTG</div>
+      <div class="kpi-label">Revenu HTG ({{ sold_vouchers }} vendus)</div>
     </div>
   </div>
   {% if selected_site %}
@@ -132,9 +132,10 @@
     <table class="table table-bn table-hover table-sm mb-0">
       <thead><tr>
         <th>Site</th>
-        <th class="text-center">Total créés</th>
-        <th class="text-center">Utilisés</th>
-        <th class="text-center text-muted">Non utilisés</th>
+        <th class="text-center">Total</th>
+        <th class="text-center text-success">Disponibles</th>
+        <th class="text-center text-primary">Sessions actives</th>
+        <th class="text-center text-secondary">Vendus</th>
         <th class="text-end">Revenu (HTG)</th>
       </tr></thead>
       <tbody>
@@ -143,16 +144,23 @@
         <td class="fw-semibold">{{ site_name }}</td>
         <td class="text-center">{{ stats.total }}</td>
         <td class="text-center">
-          {% if stats.used > 0 %}<span class="badge bg-success rounded-pill">{{ stats.used }}</span>
+          {% if stats.available > 0 %}<span class="badge bg-success rounded-pill">{{ stats.available }}</span>
           {% else %}<span class="text-muted">0</span>{% endif %}
         </td>
-        <td class="text-center text-muted">{{ stats.unused }}</td>
+        <td class="text-center">
+          {% if stats.active_sessions > 0 %}<span class="badge bg-primary rounded-pill">{{ stats.active_sessions }}</span>
+          {% else %}<span class="text-muted">0</span>{% endif %}
+        </td>
+        <td class="text-center">
+          {% if stats.sold > 0 %}<span class="badge bg-secondary rounded-pill">{{ stats.sold }}</span>
+          {% else %}<span class="text-muted">0</span>{% endif %}
+        </td>
         <td class="text-end fw-semibold {% if stats.revenue > 0 %}text-primary{% else %}text-muted{% endif %}">
           {{ stats.revenue|floatformat:0 }}
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="5" class="text-center text-muted py-3">Aucun voucher sur la période</td></tr>
+      <tr><td colspan="6" class="text-center text-muted py-3">Aucun voucher sur la période</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -272,16 +280,12 @@
             <td>{{ v.tier_label }}</td>
             <td>{{ v.duration_hours }}h</td>
             <td>
-              {% if v.is_used %}
-              <span class="badge bg-secondary rounded-pill" style="font-size:.7rem">Utilisé</span>
-              {% else %}
-              <span class="badge bg-success rounded-pill" style="font-size:.7rem">Actif</span>
-              {% endif %}
+              <span class="badge bg-{{ v.status_color }} rounded-pill" style="font-size:.7rem">{{ v.status_label }}</span>
             </td>
             <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="text-center text-muted py-3">Aucun voucher sur la période</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-3">Aucun voucher sur la période</td></tr>
           {% endfor %}
           </tbody>
         </table>

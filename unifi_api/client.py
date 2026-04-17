@@ -110,12 +110,29 @@ def get_devices(site_id: str, _c=None):
 # ─── VOUCHERS ─────────────────────────────────────────────────────────────────
 
 def _enrich_voucher(v: dict, site_name: str, site_unifi_id: str) -> dict:
-    v['site_name'] = site_name
-    v['site_unifi_id'] = site_unifi_id
+    v['site_name']      = site_name
+    v['site_unifi_id']  = site_unifi_id
     v['duration_hours'] = round(v.get('duration', 0) / 60, 1)
-    v['voucher_id'] = v.get('_id', '')  # _id interdit dans les templates Django
+    v['voucher_id']     = v.get('_id', '')  # _id interdit dans les templates Django
     ts = v.get('create_time')
     v['created_dt'] = datetime.fromtimestamp(ts) if ts else None
+
+    # États précis
+    used           = v.get('used', 0)
+    status_expires = v.get('status_expires', 0)
+    v['is_sold']    = used > 0                          # vendu (activé au moins une fois)
+    v['is_active_session'] = used > 0 and status_expires > 0  # session WiFi en cours
+    v['is_available']      = used == 0                  # jamais activé
+    # Libellé statut
+    if used == 0:
+        v['status_label'] = 'Disponible'
+        v['status_color'] = 'success'
+    elif status_expires > 0:
+        v['status_label'] = 'En cours'
+        v['status_color'] = 'primary'
+    else:
+        v['status_label'] = 'Expiré'
+        v['status_color'] = 'secondary'
     return v
 
 
