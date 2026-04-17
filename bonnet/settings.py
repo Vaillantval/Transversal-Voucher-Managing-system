@@ -10,8 +10,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')
-if RAILWAY_STATIC_URL:
-    ALLOWED_HOSTS += [RAILWAY_STATIC_URL, '.railway.app']
+if RAILWAY_STATIC_URL or os.getenv('RAILWAY_ENVIRONMENT'):
+    ALLOWED_HOSTS += ['.railway.app', '.up.railway.app']
+    if RAILWAY_STATIC_URL:
+        ALLOWED_HOSTS.append(RAILWAY_STATIC_URL)
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -112,7 +114,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+_static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
