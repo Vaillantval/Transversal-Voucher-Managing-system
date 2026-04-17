@@ -46,4 +46,5 @@ USER bonnet
 EXPOSE 8000
 
 # Démarrage : migrations puis gunicorn
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn bonnet.wsgi --bind 0.0.0.0:8000 --workers 2 --timeout 60"]
+#CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn bonnet.wsgi --bind 0.0.0.0:8000 --workers 2 --timeout 60"]
+CMD ["sh", "-c", "python manage.py makemigrations --noinput && python manage.py migrate --noinput && gunicorn bonnet.wsgi --bind 0.0.0.0:8000 --workers 2 --timeout 60"]
