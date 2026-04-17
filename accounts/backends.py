@@ -20,7 +20,7 @@ class UniFiAuthBackend(BaseBackend):
                 password=password,
                 port=settings.UNIFI_PORT,
                 ssl_verify=settings.UNIFI_VERIFY_SSL,
-                version='UDMP-unifiOS',
+                version='v5',
             )
         except Exception as e:
             logger.warning(f"Échec auth UniFi pour '{username}' : {e}")

@@ -20,7 +20,7 @@ def get_controller():
             password=settings.UNIFI_PASSWORD,
             port=settings.UNIFI_PORT,
             ssl_verify=settings.UNIFI_VERIFY_SSL,
-            version='UDMP-unifiOS',
+            version='v5',
         )
         return c
     except Exception as e:
