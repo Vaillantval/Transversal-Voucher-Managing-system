@@ -31,9 +31,13 @@ body { background: #111827; display: flex; align-items: center; justify-content:
       <label class="form-label fw-semibold">Nom d'utilisateur</label>
       <input type="text" name="username" class="form-control" autofocus required>
     </div>
-    <div class="mb-4">
+    <div class="mb-3">
       <label class="form-label fw-semibold">Mot de passe</label>
       <input type="password" name="password" class="form-control" required>
+    </div>
+    <div class="mb-4 form-check">
+      <input type="checkbox" name="remember_me" id="remember_me" class="form-check-input">
+      <label for="remember_me" class="form-check-label text-muted small">Se souvenir de moi (30 jours)</label>
     </div>
     <button type="submit" class="btn btn-login btn-primary w-100 text-white rounded-3">
       Se connecter

@@ -14,6 +14,10 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user:
             login(request, user)
+            if not request.POST.get('remember_me'):
+                request.session.set_expiry(0)  # expire à la fermeture du navigateur
+            else:
+                request.session.set_expiry(60 * 60 * 24 * 30)  # 30 jours
             next_url = request.GET.get('next', '/dashboard/')
             return redirect(next_url)
         else:
