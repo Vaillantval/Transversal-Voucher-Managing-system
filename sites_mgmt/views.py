@@ -161,6 +161,24 @@ def tier_create(request):
 
 @login_required
 @superadmin_required
+def tier_edit(request, pk):
+    tier = get_object_or_404(VoucherTier, pk=pk)
+    if request.method == 'POST':
+        try:
+            tier.label        = request.POST['label']
+            tier.min_minutes  = int(request.POST['min_minutes'])
+            tier.max_minutes  = int(request.POST['max_minutes'])
+            tier.price_htg    = request.POST['price_htg']
+            tier.is_active    = request.POST.get('is_active') == 'on'
+            tier.save()
+            messages.success(request, 'Tranche mise à jour.')
+        except Exception as e:
+            messages.error(request, f'Erreur : {e}')
+    return redirect('sites:tiers')
+
+
+@login_required
+@superadmin_required
 def tier_delete(request, pk):
     tier = get_object_or_404(VoucherTier, pk=pk)
     if request.method == 'POST':

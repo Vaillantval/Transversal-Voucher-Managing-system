@@ -33,7 +33,17 @@
           <span class="badge badge-expired rounded-pill">Inactif</span>
           {% endif %}
         </td>
-        <td>
+        <td class="d-flex gap-1">
+          <button class="btn btn-outline-secondary btn-sm py-0"
+                  data-bs-toggle="modal" data-bs-target="#editModal"
+                  data-pk="{{ tier.pk }}"
+                  data-label="{{ tier.label }}"
+                  data-min="{{ tier.min_minutes }}"
+                  data-max="{{ tier.max_minutes }}"
+                  data-price="{{ tier.price_htg }}"
+                  data-active="{{ tier.is_active|yesno:'true,false' }}">
+            <i class="bi bi-pencil"></i>
+          </button>
           <form method="post" action="{% url 'sites:tier_delete' tier.pk %}"
                 onsubmit="return confirm('Supprimer cette tranche ?')">
             {% csrf_token %}
@@ -80,4 +90,62 @@
     Exemple : 0–720 min = 50 HTG (forfait jusqu'à 12h) · 721–1440 min = 75 HTG (jusqu'à 24h)
   </small>
 </div>
+
+<!-- Modal édition -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="editForm">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Modifier la tranche</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Label</label>
+            <input type="text" name="label" id="edit-label" class="form-control" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Min (minutes)</label>
+            <input type="number" name="min_minutes" id="edit-min" class="form-control" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Max (minutes)</label>
+            <input type="number" name="max_minutes" id="edit-max" class="form-control" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Prix (HTG)</label>
+            <input type="number" name="price_htg" id="edit-price" step="0.01" class="form-control" required>
+          </div>
+          <div class="col-6 d-flex align-items-end pb-1">
+            <div class="form-check">
+              <input type="checkbox" name="is_active" id="edit-active" class="form-check-input">
+              <label class="form-check-label small" for="edit-active">Actif</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('editModal').addEventListener('show.bs.modal', function(e) {
+  var btn = e.relatedTarget;
+  var form = document.getElementById('editForm');
+  form.action = '/sites/tarifs/' + btn.dataset.pk + '/modifier/';
+  document.getElementById('edit-label').value   = btn.dataset.label;
+  document.getElementById('edit-min').value     = btn.dataset.min;
+  document.getElementById('edit-max').value     = btn.dataset.max;
+  document.getElementById('edit-price').value   = btn.dataset.price;
+  document.getElementById('edit-active').checked = btn.dataset.active === 'true';
+});
+</script>
+{% endblock %}
 {% endblock %}
