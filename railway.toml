@@ -4,7 +4,7 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "python manage.py migrate --noinput && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
-healthcheckPath = "/accounts/login/"
-healthcheckTimeout = 300
+healthcheckPath = "/health/"
+healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10

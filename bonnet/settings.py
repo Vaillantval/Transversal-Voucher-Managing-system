@@ -11,7 +11,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')
 if RAILWAY_STATIC_URL or os.getenv('RAILWAY_ENVIRONMENT'):
-    ALLOWED_HOSTS += ['.railway.app', '.up.railway.app']
+    ALLOWED_HOSTS += ['.railway.app', '.up.railway.app', 'healthcheck.railway.app']
     if RAILWAY_STATIC_URL:
         ALLOWED_HOSTS.append(RAILWAY_STATIC_URL)
 
