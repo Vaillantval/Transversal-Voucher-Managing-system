@@ -208,7 +208,7 @@
           <tbody>
           {% for c in site_clients_list %}
           <tr>
-            <td>{{ c.hostname|default:c.last_ip }}</td>
+            <td>{{ c.display_name }}</td>
             <td class="text-muted small">{{ c.mac }}</td>
             <td>
               {% if c.signal %}<span class="small">{{ c.signal }} dBm</span>{% else %}—{% endif %}

@@ -110,6 +110,8 @@ def index(request):
         total_devices_offline = site_live.get('device_offline', 0)
         site_clients_list = site_live.get('clients', [])
         site_devices_list = site_live.get('devices', [])
+        for c in site_clients_list:
+            c['display_name'] = c.get('hostname') or c.get('last_ip') or c.get('mac', '?')
 
     context = {
         'page_title': 'Tableau de bord',
