@@ -196,7 +196,7 @@ def site_guests_json(request, site_id):
     if not request.user.is_superadmin and site not in request.user.managed_sites.all():
         return JsonResponse({'error': 'Accès refusé'}, status=403)
     guests = unifi.get_guests(site_id)
-    return JsonResponse({'count': len(guests), 'guests': guests[:5]})
+    return JsonResponse({'count': len(guests), 'guests': guests})
 
 
 @login_required
