@@ -93,13 +93,13 @@ def index(request):
             {'site__name': k, 'revenue': r}
             for k, r in sorted(rev_site.items(), key=lambda x: -x[1])[:10]
         ]
-        for site in list(all_sites)[:10]:
-            stats = unifi.get_site_stats(site.unifi_site_id)
-            live_stats.append({'site': site, 'stats': stats})
+        all_stats = unifi.get_all_site_stats(all_sites)
+        for site in all_sites:
+            live_stats.append({'site': site, 'stats': all_stats.get(site.unifi_site_id, {})})
 
-    total_clients         = sum(s['stats']['client_count']   for s in live_stats)
-    total_devices_online  = sum(s['stats']['device_online']  for s in live_stats)
-    total_devices_offline = sum(s['stats']['device_offline'] for s in live_stats)
+    total_clients         = sum(s['stats'].get('client_count', 0)   for s in live_stats)
+    total_devices_online  = sum(s['stats'].get('device_online', 0)  for s in live_stats)
+    total_devices_offline = sum(s['stats'].get('device_offline', 0) for s in live_stats)
 
     # ── Mode site unique : clients + devices live ────────────────────────────
     site_live = {}
