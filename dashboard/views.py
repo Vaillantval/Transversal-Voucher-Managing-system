@@ -79,7 +79,7 @@ def index(request):
             site_bd[name]['active_sessions'] += 1
         if v['is_available']:
             site_bd[name]['available'] += 1
-    site_breakdown = sorted(site_bd.items(), key=lambda x: -x[1]['used'])
+    site_breakdown = sorted(site_bd.items(), key=lambda x: -x[1]['sold'])
 
     # ── Mode tous les sites ──────────────────────────────────────────────────
     live_stats = []
