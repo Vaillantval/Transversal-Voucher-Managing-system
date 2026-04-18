@@ -13,65 +13,76 @@
 .device-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .dot-online  { background: #10b981; }
 .dot-offline { background: #ef4444; }
-
-/* Filter bar: horizontal scroll on very small screens */
-.filter-bar { overflow-x: auto; padding-bottom: 4px; flex-wrap: nowrap !important; }
-@media (max-width: 767.98px) {
-  .filter-bar { flex-wrap: wrap !important; }
-  .filter-bar .ms-auto { margin-left: 0 !important; width: 100%; }
-}
+.filter-label { font-size: .78rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Filtres -->
-<div class="d-flex align-items-center gap-2 mb-4 filter-bar">
-  <span class="text-muted small">Site :</span>
-  <select class="form-select form-select-sm" style="width:auto;min-width:180px"
-          onchange="location.href='?site='+this.value+'&cv={{ custom_value }}&cu={{ custom_unit }}'">
-    <option value="">Tous les sites</option>
-    {% for s in all_sites %}
-    <option value="{{ s.unifi_site_id }}" {% if selected_site_id == s.unifi_site_id %}selected{% endif %}>
-      {{ s.name }}
-    </option>
-    {% endfor %}
-  </select>
+<!-- ══ Panneau de filtres ══ -->
+<div class="card card-bn p-3 mb-4">
+  <div class="row g-3 align-items-end">
 
-  <span class="text-muted small ms-2">Période :</span>
-  {% for d, label in period_options %}
-  <a href="?days={{ d }}&site={{ selected_site_id }}"
-     class="btn btn-sm {% if days == d and custom_unit == 'days' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-    {{ label }}
-  </a>
-  {% endfor %}
+    <!-- Site -->
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="filter-label">Site</div>
+      <select class="form-select form-select-sm"
+              onchange="location.href='?site='+this.value+'&cv={{ custom_value }}&cu={{ custom_unit }}'">
+        <option value="">Tous les sites</option>
+        {% for s in all_sites %}
+        <option value="{{ s.unifi_site_id }}" {% if selected_site_id == s.unifi_site_id %}selected{% endif %}>
+          {{ s.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <!-- Période personnalisée -->
-  <form class="d-flex align-items-center gap-1 ms-1" method="get" id="custom-period-form">
-    <input type="hidden" name="site" value="{{ selected_site_id }}">
-    <input type="number" name="cv" min="1" max="9999"
-           value="{{ custom_value }}"
-           class="form-control form-control-sm" style="width:72px"
-           placeholder="Ex: 15">
-    <select name="cu" class="form-select form-select-sm" style="width:auto">
-      <option value="hours"  {% if custom_unit == 'hours'  %}selected{% endif %}>Heures</option>
-      <option value="days"   {% if custom_unit == 'days'   %}selected{% endif %}>Jours</option>
-      <option value="months" {% if custom_unit == 'months' %}selected{% endif %}>Mois</option>
-    </select>
-    <button type="submit" class="btn btn-sm btn-outline-primary">OK</button>
-  </form>
+    <!-- Période rapide -->
+    <div class="col-12 col-sm-6 col-lg-auto">
+      <div class="filter-label">Période</div>
+      <div class="d-flex flex-wrap gap-1">
+        {% for d, label in period_options %}
+        <a href="?days={{ d }}&site={{ selected_site_id }}"
+           class="btn btn-sm {% if days == d and custom_unit == 'days' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+          {{ label }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
 
-  <span class="text-muted small ms-2">Depuis {{ date_from }}</span>
+    <!-- Période personnalisée -->
+    <div class="col-12 col-sm-auto">
+      <div class="filter-label">Personnalisée</div>
+      <form class="d-flex align-items-center gap-1" method="get" id="custom-period-form">
+        <input type="hidden" name="site" value="{{ selected_site_id }}">
+        <input type="number" name="cv" min="1" max="9999" value="{{ custom_value }}"
+               class="form-control form-control-sm" style="width:70px" placeholder="15">
+        <select name="cu" class="form-select form-select-sm" style="width:auto">
+          <option value="hours"  {% if custom_unit == 'hours'  %}selected{% endif %}>Heures</option>
+          <option value="days"   {% if custom_unit == 'days'   %}selected{% endif %}>Jours</option>
+          <option value="months" {% if custom_unit == 'months' %}selected{% endif %}>Mois</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-primary">OK</button>
+      </form>
+    </div>
 
-  <div class="ms-auto d-flex gap-2">
-    {% if selected_site %}
-    <a href="?cv={{ custom_value }}&cu={{ custom_unit }}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-x-circle me-1"></i>Tous les sites
-    </a>
-    {% endif %}
-    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
-      <i class="bi bi-download me-1"></i>Exporter le rapport
-    </button>
+    <!-- Info période + actions -->
+    <div class="col-12 col-lg">
+      <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2 mt-1">
+        <span class="text-muted small">
+          <i class="bi bi-calendar3 me-1"></i>Depuis le {{ date_from }}
+        </span>
+        {% if selected_site %}
+        <a href="?cv={{ custom_value }}&cu={{ custom_unit }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-x-circle me-1"></i>Tous les sites
+        </a>
+        {% endif %}
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+          <i class="bi bi-download me-1"></i>Exporter
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
 
