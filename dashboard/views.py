@@ -11,11 +11,35 @@ from unifi_api import client as unifi
 
 @login_required
 def index(request):
-    today = date.today()
-    days = int(request.GET.get('days', 30))
     site_filter_id = request.GET.get('site', '')
-    date_from = today - timedelta(days=days)
-    date_from_ts = datetime(date_from.year, date_from.month, date_from.day).timestamp()
+
+    # Période : custom (cv + cu) ou bouton rapide (days)
+    cv_raw   = request.GET.get('cv', '').strip()
+    cu       = request.GET.get('cu', 'days')
+    days_raw = request.GET.get('days', '')
+
+    if cv_raw:
+        cv_int = max(1, int(cv_raw))
+        if cu == 'hours':
+            delta = timedelta(hours=cv_int)
+        elif cu == 'months':
+            delta = timedelta(days=cv_int * 30)
+        else:
+            cu = 'days'
+            delta = timedelta(days=cv_int)
+        custom_value = str(cv_int)
+    else:
+        days_int    = int(days_raw) if days_raw else 30
+        delta       = timedelta(days=days_int)
+        cu          = 'days'
+        custom_value = str(days_int)
+        cv_int      = days_int
+
+    now_dt       = datetime.now()
+    date_from_dt = now_dt - delta
+    date_from_ts = date_from_dt.timestamp()
+    date_from    = date_from_dt.date()
+    days         = cv_int  # kept for template backward-compat (period buttons)
 
     is_super = request.user.is_superadmin
     if is_super:
@@ -29,7 +53,7 @@ def index(request):
         selected_site = all_sites.filter(unifi_site_id=site_filter_id).first()
     sites = all_sites.filter(unifi_site_id=site_filter_id) if selected_site else all_sites
 
-    now_ts = datetime.now().timestamp()
+    now_ts = now_dt.timestamp()
 
     # Tiers pour matching prix
     tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
@@ -126,6 +150,8 @@ def index(request):
     context = {
         'page_title': 'Tableau de bord',
         'days': days,
+        'custom_value': custom_value,
+        'custom_unit': cu,
         'period_options': [(7, '7 jours'), (30, '30 jours'), (90, '90 jours'), (365, '12 mois')],
         'date_from': date_from,
         'all_sites': all_sites,
