@@ -177,5 +177,6 @@ def index(request):
         'site_devices_list':     site_devices_list,
         'period_vouchers':       period_vouchers,
         'sold_in_period':        sold_in_period,
+        'all_available_vouchers': [v for v in all_vouchers if v['is_available']],
     }
     return render(request, 'dashboard/index.html', context)
