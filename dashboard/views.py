@@ -49,9 +49,15 @@ def index(request):
     period_vouchers = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
 
     # Vouchers activés (vendus) dans la période → pour revenus et graphiques
-    # On utilise start_time (date réelle de vente) et non create_time
-    sold_in_period = [v for v in all_vouchers
-                      if v['is_sold'] and v.get('sold_ts', 0) >= date_from_ts]
+    # Si start_time est disponible (sold_ts > 0) on filtre dessus (date réelle de vente),
+    # sinon on replie sur create_time (UniFi ne remplit pas toujours start_time).
+    sold_in_period = [
+        v for v in all_vouchers
+        if v['is_sold'] and (
+            (v['sold_ts'] > 0 and v['sold_ts'] >= date_from_ts)
+            or (v['sold_ts'] == 0 and v.get('create_time', 0) >= date_from_ts)
+        )
+    ]
 
     total_vouchers     = len(period_vouchers)
     available_vouchers = sum(1 for v in period_vouchers if v['is_available'])
