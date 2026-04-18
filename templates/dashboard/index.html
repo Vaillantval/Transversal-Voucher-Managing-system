@@ -7,20 +7,26 @@
 
 {% block extra_css %}
 <style>
-.kpi-val { font-size: 2rem; font-weight: 700; line-height: 1; }
 .kpi-label { font-size: .82rem; color: #6b7280; margin-top: .2rem; }
 .site-row { transition: background .15s; }
 .site-row:hover { background: #F9FAFB; }
 .device-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.dot-online { background: #10b981; }
+.dot-online  { background: #10b981; }
 .dot-offline { background: #ef4444; }
+
+/* Filter bar: horizontal scroll on very small screens */
+.filter-bar { overflow-x: auto; padding-bottom: 4px; flex-wrap: nowrap !important; }
+@media (max-width: 767.98px) {
+  .filter-bar { flex-wrap: wrap !important; }
+  .filter-bar .ms-auto { margin-left: 0 !important; width: 100%; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
 <!-- Filtres -->
-<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+<div class="d-flex align-items-center gap-2 mb-4 filter-bar">
   <span class="text-muted small">Site :</span>
   <select class="form-select form-select-sm" style="width:auto;min-width:180px"
           onchange="location.href='?site='+this.value+'&cv={{ custom_value }}&cu={{ custom_unit }}'">
@@ -219,22 +225,20 @@
     <table class="table table-bn table-hover table-sm mb-0">
       <thead><tr>
         <th>Site</th>
-        <th class="text-center">Total</th>
-        <th class="text-center text-success">Disponibles</th>
-        <th class="text-center text-primary">Sessions actives</th>
-        <th class="text-center text-secondary">Vendus</th>
-        <th class="text-end">Revenu (HTG)</th>
+        <th class="text-center d-none d-sm-table-cell">Dispo.</th>
+        <th class="text-center d-none d-md-table-cell">Actives</th>
+        <th class="text-center">Vendus</th>
+        <th class="text-end">Revenu</th>
       </tr></thead>
       <tbody>
       {% for site_name, stats in site_breakdown %}
       <tr>
         <td class="fw-semibold">{{ site_name }}</td>
-        <td class="text-center">{{ stats.total }}</td>
-        <td class="text-center">
+        <td class="text-center d-none d-sm-table-cell">
           {% if stats.available > 0 %}<span class="badge bg-success rounded-pill">{{ stats.available }}</span>
           {% else %}<span class="text-muted">0</span>{% endif %}
         </td>
-        <td class="text-center">
+        <td class="text-center d-none d-md-table-cell">
           {% if stats.active_sessions > 0 %}<span class="badge bg-primary rounded-pill">{{ stats.active_sessions }}</span>
           {% else %}<span class="text-muted">0</span>{% endif %}
         </td>
@@ -363,10 +367,10 @@
           <thead><tr>
             <th>Forfait</th>
             <th class="text-center">Durée</th>
-            <th class="text-end">Prix (HTG)</th>
-            <th>MAC client</th>
+            <th class="text-end">Prix</th>
+            <th class="d-none d-md-table-cell">MAC</th>
             <th>Activé le</th>
-            <th>Expire le</th>
+            <th class="d-none d-lg-table-cell">Expire le</th>
             <th class="text-center">Statut</th>
           </tr></thead>
           <tbody>
@@ -375,9 +379,9 @@
             <td class="fw-semibold">{{ g.tier_label }}</td>
             <td class="text-center">{{ g.duration_minutes|smart_duration }}</td>
             <td class="text-end text-primary fw-semibold">{{ g.price|htg }}</td>
-            <td class="text-muted small font-monospace">{{ g.mac|default:"—" }}</td>
+            <td class="text-muted small font-monospace d-none d-md-table-cell">{{ g.mac|default:"—" }}</td>
             <td class="text-muted small">{{ g.sold_dt|date:"d/m/Y H:i" }}</td>
-            <td class="text-muted small">{{ g.end_dt|date:"d/m/Y H:i"|default:"—" }}</td>
+            <td class="text-muted small d-none d-lg-table-cell">{{ g.end_dt|date:"d/m/Y H:i"|default:"—" }}</td>
             <td class="text-center">
               {% if g.is_currently_active %}
               <span class="badge rounded-pill" style="font-size:.7rem;background:#10b981">Active</span>

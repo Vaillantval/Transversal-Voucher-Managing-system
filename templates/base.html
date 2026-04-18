@@ -14,16 +14,30 @@
 }
 body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 
-/* Sidebar */
+/* ── Sidebar ───────────────────────────────────────────────── */
 .sidebar {
   width: var(--bn-sidebar-w);
-  min-height: 100vh;
   background: #111827;
-  position: fixed;
-  top: 0; left: 0;
-  display: flex; flex-direction: column;
-  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
+/* On lg+ Bootstrap keeps the offcanvas visible as a regular element */
+@media (min-width: 992px) {
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 1000;
+    height: 100vh;
+  }
+  .main-content { margin-left: var(--bn-sidebar-w); }
+}
+/* On < lg Bootstrap hides offcanvas until toggled */
+@media (max-width: 991.98px) {
+  .sidebar { min-height: 100vh; }
+  .main-content { margin-left: 0; }
+}
+
 .sidebar-brand {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #1f2937;
@@ -31,9 +45,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 1px;
+  flex-shrink: 0;
 }
 .sidebar-brand span { color: var(--bn-blue); }
-.sidebar-nav { flex: 1; padding: 1rem 0; }
+.sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
 .sidebar-nav .nav-section {
   font-size: .7rem;
   text-transform: uppercase;
@@ -46,7 +61,6 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   padding: .55rem 1.5rem;
   color: #9ca3af;
   text-decoration: none;
-  border-radius: 0;
   transition: all .15s;
   font-size: .9rem;
 }
@@ -60,23 +74,25 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   border-top: 1px solid #1f2937;
   color: #9ca3af;
   font-size: .82rem;
+  flex-shrink: 0;
 }
 
-/* Main */
-.main-content {
-  margin-left: var(--bn-sidebar-w);
-  min-height: 100vh;
-}
+/* ── Main layout ───────────────────────────────────────────── */
+.main-content { min-height: 100vh; }
 .topbar {
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
-  padding: .75rem 1.5rem;
+  padding: .65rem 1.25rem;
   position: sticky; top: 0;
   z-index: 900;
 }
 .page-body { padding: 1.5rem; }
+@media (max-width: 767.98px) {
+  .page-body { padding: 1rem .75rem; }
+  .topbar   { padding: .5rem .75rem; }
+}
 
-/* Cards */
+/* ── Cards ─────────────────────────────────────────────────── */
 .stat-card {
   background: #fff;
   border-radius: 12px;
@@ -85,6 +101,9 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   transition: box-shadow .2s;
 }
 .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+@media (max-width: 575.98px) {
+  .stat-card { padding: 1rem; }
+}
 .stat-icon {
   width: 44px; height: 44px;
   border-radius: 10px;
@@ -93,13 +112,19 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 }
 .card-bn { border-radius: 12px; border: 1px solid #e5e7eb; }
 
-/* Badge status */
-.badge-active { background: #d1fae5; color: #065f46; }
-.badge-used { background: #dbeafe; color: #1e40af; }
+/* ── KPI values ─────────────────────────────────────────────── */
+.kpi-val { font-size: 2rem; font-weight: 700; line-height: 1; }
+@media (max-width: 575.98px) {
+  .kpi-val { font-size: 1.5rem !important; }
+}
+
+/* ── Badge status ───────────────────────────────────────────── */
+.badge-active  { background: #d1fae5; color: #065f46; }
+.badge-used    { background: #dbeafe; color: #1e40af; }
 .badge-expired { background: #fef3c7; color: #92400e; }
 .badge-revoked { background: #fee2e2; color: #991b1b; }
 
-/* Tables */
+/* ── Tables ─────────────────────────────────────────────────── */
 .table-bn thead th {
   background: #F9FAFB;
   font-size: .8rem;
@@ -108,25 +133,44 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   color: #6b7280;
   border-bottom: 2px solid #e5e7eb;
 }
+
+/* ── Utilities ──────────────────────────────────────────────── */
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
 </style>
 {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-<!-- Sidebar -->
-<nav class="sidebar">
-  <div class="sidebar-brand">Bon<span>Net</span></div>
+<!-- ══ Sidebar (offcanvas on mobile/tablet, fixed on desktop) ══ -->
+<nav class="sidebar offcanvas offcanvas-start offcanvas-lg"
+     tabindex="-1" id="sidebar" aria-labelledby="sidebarBrandLabel">
+
+  <!-- Close button visible only on mobile/tablet -->
+  <div class="d-flex align-items-center justify-content-between d-lg-none px-3 py-2"
+       style="border-bottom:1px solid #1f2937">
+    <span class="sidebar-brand mb-0 pb-0 border-0" id="sidebarBrandLabel">Bon<span>Net</span></span>
+    <button type="button" class="btn-close btn-close-white"
+            data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Fermer"></button>
+  </div>
+
+  <!-- Brand visible only on desktop -->
+  <div class="sidebar-brand d-none d-lg-block">Bon<span>Net</span></div>
+
   <div class="sidebar-nav">
     <div class="nav-section">Principal</div>
-    <a href="{% url 'dashboard:index' %}" class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+    <a href="{% url 'dashboard:index' %}"
+       class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
       <i class="bi bi-speedometer2"></i> Dashboard
     </a>
 
     <div class="nav-section">Gestion</div>
-    <a href="{% url 'sites:list' %}" class="{% if request.resolver_match.app_name == 'sites' %}active{% endif %}">
+    <a href="{% url 'sites:list' %}"
+       class="{% if request.resolver_match.app_name == 'sites' %}active{% endif %}">
       <i class="bi bi-diagram-3"></i> Sites
     </a>
-    <a href="{% url 'vouchers:list' %}" class="{% if request.resolver_match.app_name == 'vouchers' %}active{% endif %}">
+    <a href="{% url 'vouchers:list' %}"
+       class="{% if request.resolver_match.app_name == 'vouchers' %}active{% endif %}">
       <i class="bi bi-ticket-perforated"></i> Vouchers
     </a>
     <a href="{% url 'vouchers:create' %}">
@@ -135,14 +179,17 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     {% if user.is_superadmin %}
     <div class="nav-section">Super Admin</div>
-    <a href="{% url 'sites:tiers' %}" class="{% if 'tiers' in request.path %}active{% endif %}">
+    <a href="{% url 'sites:tiers' %}"
+       class="{% if 'tiers' in request.path %}active{% endif %}">
       <i class="bi bi-tag"></i> Tarifs
     </a>
-    <a href="{% url 'reports:index' %}" class="{% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+    <a href="{% url 'reports:index' %}"
+       class="{% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
       <i class="bi bi-file-earmark-bar-graph"></i> Rapports
     </a>
     {% endif %}
   </div>
+
   <div class="sidebar-user">
     <div class="fw-600 text-white">{{ user.get_full_name|default:user.username }}</div>
     <div>{{ user.get_role_display }}</div>
@@ -152,19 +199,36 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   </div>
 </nav>
 
-<!-- Main -->
+<!-- ══ Main ══ -->
 <div class="main-content">
-  <div class="topbar d-flex align-items-center justify-content-between">
-    <h6 class="mb-0 fw-600">{% block page_title %}{% endblock %}</h6>
-    <div class="d-flex align-items-center gap-2">
+  <div class="topbar d-flex align-items-center gap-2">
+
+    <!-- Hamburger — hidden on desktop -->
+    <button class="btn btn-link p-0 text-secondary d-lg-none me-1 flex-shrink-0"
+            type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">
+      <i class="bi bi-list" style="font-size:1.5rem"></i>
+    </button>
+
+    <h6 class="mb-0 fw-600 flex-grow-1 text-truncate">{% block page_title %}{% endblock %}</h6>
+
+    <div class="d-flex align-items-center gap-2 flex-shrink-0">
       {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} py-1 px-3 mb-0 small">
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} py-1 px-2 mb-0 small d-none d-sm-block">
         {{ message }}
       </div>
       {% endfor %}
     </div>
   </div>
+
   <div class="page-body">
+    <!-- Flash messages for mobile (below topbar) -->
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} py-2 px-3 mb-3 small d-sm-none">
+      {{ message }}
+    </div>
+    {% endfor %}
+
     {% block content %}{% endblock %}
   </div>
 </div>

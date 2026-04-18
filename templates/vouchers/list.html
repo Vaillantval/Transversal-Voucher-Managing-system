@@ -6,7 +6,7 @@
 <!-- Filtres -->
 <div class="card card-bn p-3 mb-3">
   <form method="get" class="row g-2 align-items-end">
-    <div class="col-md-3">
+    <div class="col-12 col-sm-5 col-md-3">
       <label class="form-label small fw-semibold">Site</label>
       <select name="site" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">Tous les sites</option>
@@ -15,7 +15,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-sm-3 col-md-2">
       <label class="form-label small fw-semibold">Statut</label>
       <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">Tous</option>
@@ -23,21 +23,21 @@
         <option value="used" {% if status_filter == 'used' %}selected{% endif %}>Utilisé</option>
       </select>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-sm-3 col-md-2">
       <label class="form-label small fw-semibold">Afficher</label>
       <select name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
         {% for opt in per_page_options %}
-        <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }} par page</option>
+        <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }} / page</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-3 d-flex gap-2">
+    <div class="col-12 col-md-auto d-flex gap-2">
       <button type="submit" class="btn btn-primary btn-sm">
-        <i class="bi bi-funnel"></i> Filtrer
+        <i class="bi bi-funnel"></i><span class="d-none d-sm-inline"> Filtrer</span>
       </button>
       <a href="{% url 'vouchers:list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
       <a href="{% url 'vouchers:create' %}" class="btn btn-success btn-sm ms-auto">
-        <i class="bi bi-plus"></i> Créer
+        <i class="bi bi-plus"></i><span class="d-none d-sm-inline"> Créer</span>
       </a>
     </div>
   </form>
@@ -65,23 +65,31 @@
   <div class="table-responsive">
     <table class="table table-bn table-hover mb-0">
       <thead><tr>
-        <th>Code</th><th>Site</th><th>Durée</th><th>Quota</th>
-        <th>Utilisations</th><th>Statut</th><th>Note</th><th>Créé le</th><th></th>
+        <th>Code</th>
+        <th class="d-none d-md-table-cell">Site</th>
+        <th>Durée</th>
+        <th class="d-none d-lg-table-cell">Quota</th>
+        <th class="d-none d-lg-table-cell">Utilisations</th>
+        <th>Statut</th>
+        <th class="d-none d-xl-table-cell">Note</th>
+        <th class="d-none d-md-table-cell">Créé le</th>
+        <th></th>
       </tr></thead>
       <tbody>
+      {% load dashboard_extras %}
       {% for v in vouchers %}
       {% with used=v.used|default:0 quota=v.quota|default:1 %}
       <tr>
-        <td><code class="text-primary">{{ v.code }}</code></td>
-        <td>{{ v.site_name }}</td>
-        <td>{{ v.duration_hours }}h</td>
-        <td>{{ quota }}</td>
-        <td>{{ used }}</td>
+        <td><code class="text-primary">{{ v.code_display|default:v.code }}</code></td>
+        <td class="d-none d-md-table-cell">{{ v.site_name }}</td>
+        <td>{{ v.duration_minutes|smart_duration }}</td>
+        <td class="d-none d-lg-table-cell">{{ quota }}</td>
+        <td class="d-none d-lg-table-cell">{{ used }}</td>
         <td>
           <span class="badge rounded-pill bg-{{ v.status_color }}">{{ v.status_label }}</span>
         </td>
-        <td class="text-muted small">{{ v.note|default:"-" }}</td>
-        <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
+        <td class="text-muted small d-none d-xl-table-cell">{{ v.note|default:"-" }}</td>
+        <td class="text-muted small d-none d-md-table-cell">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
         <td>
           {% if v.is_available %}
           <form method="post" action="{% url 'vouchers:delete' v.voucher_id %}"
