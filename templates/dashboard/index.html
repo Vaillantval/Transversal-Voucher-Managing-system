@@ -57,11 +57,82 @@
 
   <span class="text-muted small ms-2">Depuis {{ date_from }}</span>
 
-  {% if selected_site %}
-  <a href="?cv={{ custom_value }}&cu={{ custom_unit }}" class="btn btn-sm btn-outline-secondary ms-auto">
-    <i class="bi bi-x-circle me-1"></i>Tous les sites
-  </a>
-  {% endif %}
+  <div class="ms-auto d-flex gap-2">
+    {% if selected_site %}
+    <a href="?cv={{ custom_value }}&cu={{ custom_unit }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-circle me-1"></i>Tous les sites
+    </a>
+    {% endif %}
+    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+      <i class="bi bi-download me-1"></i>Exporter le rapport
+    </button>
+  </div>
+</div>
+
+<!-- ══ Modale d'export ══ -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:16px;overflow:hidden">
+
+      <div class="modal-header border-0 pb-0" style="background:linear-gradient(135deg,#1d4ed8,#6366f1);color:#fff">
+        <div>
+          <h5 class="modal-title fw-700" id="exportModalLabel">
+            <i class="bi bi-file-earmark-arrow-down me-2"></i>Exporter le rapport
+          </h5>
+          <p class="mb-0 small opacity-75 mt-1">
+            {% if selected_site %}{{ selected_site.name }}{% else %}Tous les sites{% endif %}
+          </p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body pt-4">
+
+        <!-- Période -->
+        <p class="fw-semibold small text-muted text-uppercase mb-2" style="letter-spacing:.06em">Période</p>
+        <div class="row g-2 mb-4">
+          <div class="col-6">
+            <label class="form-label small mb-1">Du</label>
+            <input type="date" id="exp-from" class="form-control form-control-sm"
+                   value="{{ date_from|date:'Y-m-d' }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1">Au</label>
+            <input type="date" id="exp-to" class="form-control form-control-sm"
+                   value="{% now 'Y-m-d' %}">
+          </div>
+        </div>
+
+        <!-- Format -->
+        <p class="fw-semibold small text-muted text-uppercase mb-2" style="letter-spacing:.06em">Format</p>
+        <div class="d-flex gap-2">
+
+          <input type="radio" class="btn-check" name="exp-fmt" id="fmt-excel" value="excel" checked>
+          <label class="btn btn-outline-success btn-sm flex-fill text-center" for="fmt-excel">
+            <i class="bi bi-file-earmark-excel d-block" style="font-size:1.6rem"></i>Excel
+          </label>
+
+          <input type="radio" class="btn-check" name="exp-fmt" id="fmt-pdf" value="pdf">
+          <label class="btn btn-outline-danger btn-sm flex-fill text-center" for="fmt-pdf">
+            <i class="bi bi-file-earmark-pdf d-block" style="font-size:1.6rem"></i>PDF
+          </label>
+
+          <input type="radio" class="btn-check" name="exp-fmt" id="fmt-csv" value="csv">
+          <label class="btn btn-outline-secondary btn-sm flex-fill text-center" for="fmt-csv">
+            <i class="bi bi-filetype-csv d-block" style="font-size:1.6rem"></i>CSV
+          </label>
+
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary btn-sm px-4" id="btn-export-dl">
+          <i class="bi bi-download me-1"></i>Télécharger
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- KPIs -->
@@ -399,5 +470,26 @@ if (siteChartEl) {
   });
 }
 {% endif %}
+
+// ── Export modal ──────────────────────────────────────────────────────────────
+const EXPORT_URLS = {
+  excel: "{% url 'reports:excel' %}",
+  pdf:   "{% url 'reports:pdf' %}",
+  csv:   "{% url 'reports:csv' %}",
+};
+const EXPORT_SITE = "{{ selected_site_id }}";
+
+document.getElementById('btn-export-dl').addEventListener('click', function () {
+  const fmt  = document.querySelector('input[name="exp-fmt"]:checked').value;
+  const from = document.getElementById('exp-from').value;
+  const to   = document.getElementById('exp-to').value;
+  if (!from || !to) { alert('Veuillez sélectionner une période.'); return; }
+  const url = EXPORT_URLS[fmt]
+    + '?site=' + encodeURIComponent(EXPORT_SITE)
+    + '&from=' + encodeURIComponent(from)
+    + '&to='   + encodeURIComponent(to);
+  window.location.href = url;
+  bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+});
 </script>
 {% endblock %}
