@@ -1,9 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.db.models import Sum, Count, Q
-from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sites_mgmt.models import HotspotSite, VoucherTier
 from sites_mgmt.views import sync_sites_from_unifi
@@ -18,9 +16,9 @@ def can_access_site(user, site):
 @login_required
 def voucher_list(request):
     site_filter = request.GET.get('site', '')
-    status_filter = request.GET.get('status', '')
-    per_page = int(request.GET.get('per_page', 100))
-    page = int(request.GET.get('page', 1))
+    days        = int(request.GET.get('days', 30))
+    per_page    = int(request.GET.get('per_page', 100))
+    page        = int(request.GET.get('page', 1))
 
     if request.user.is_superadmin:
         sync_sites_from_unifi()
@@ -28,37 +26,58 @@ def voucher_list(request):
     else:
         sites = request.user.managed_sites.filter(is_active=True)
 
-    # Filtrer sur un site précis si demandé
     sites_to_fetch = sites.filter(unifi_site_id=site_filter) if site_filter else sites
 
-    # Récupérer depuis UniFi
+    # ── Vouchers disponibles (stock) ─────────────────────────────
     all_vouchers = unifi.get_all_vouchers(sites_to_fetch)
+    tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
 
-    # Filtre statut côté Python
-    STATUS_MAP = {'active': 0, 'used': 1}
-    if status_filter == 'active':
-        all_vouchers = [v for v in all_vouchers if v.get('used', 0) < v.get('quota', 1)]
-    elif status_filter == 'used':
-        all_vouchers = [v for v in all_vouchers if v.get('used', 0) >= v.get('quota', 1)]
+    def tier_for(minutes):
+        for t in tiers:
+            if t.min_minutes <= minutes <= t.max_minutes:
+                return t
+        return None
 
-    # Pagination manuelle
-    total = len(all_vouchers)
-    start = (page - 1) * per_page
-    end = start + per_page
-    vouchers_page = all_vouchers[start:end]
-    total_pages = max(1, (total + per_page - 1) // per_page)
+    for v in all_vouchers:
+        t = tier_for(v.get('duration', 0))
+        v['tier_label'] = t.label if t else 'Sans tranche'
+        v['price']      = float(t.price_htg) if t else 0
+
+    # ── Sessions vendues (guests) ─────────────────────────────────
+    now_ts       = datetime.now().timestamp()
+    date_from_ts = (datetime.now() - timedelta(days=days)).timestamp()
+
+    all_guests = unifi.get_all_guests(sites_to_fetch)
+    sessions   = [g for g in all_guests if g['sold_ts'] >= date_from_ts]
+
+    for g in sessions:
+        t = tier_for(g['duration_minutes'])
+        g['tier_label']          = t.label if t else 'Sans tranche'
+        g['price']               = float(t.price_htg) if t else 0
+        g['is_currently_active'] = g.get('end', 0) > now_ts
+
+    sessions.sort(key=lambda g: g['sold_ts'], reverse=True)
+
+    total_sessions = len(sessions)
+    total_revenue  = sum(g['price'] for g in sessions)
+    start          = (page - 1) * per_page
+    sessions_page  = sessions[start:start + per_page]
+    total_pages    = max(1, (total_sessions + per_page - 1) // per_page)
 
     return render(request, 'vouchers/list.html', {
-        'vouchers': vouchers_page,
-        'sites': sites,
-        'total': total,
-        'page': page,
-        'per_page': per_page,
-        'total_pages': total_pages,
-        'per_page_options': [50, 100, 200, 500],
-        'status_filter': status_filter,
-        'site_filter': site_filter,
-        'page_title': 'Vouchers',
+        'available_vouchers': all_vouchers,
+        'sessions':           sessions_page,
+        'total_sessions':     total_sessions,
+        'total_revenue':      total_revenue,
+        'sites':              sites,
+        'days':               days,
+        'period_options':     [(7, '7 j'), (30, '30 j'), (90, '90 j'), (365, '1 an')],
+        'per_page':           per_page,
+        'per_page_options':   [50, 100, 200, 500],
+        'page':               page,
+        'total_pages':        total_pages,
+        'site_filter':        site_filter,
+        'page_title':         'Vouchers',
     })
 
 
@@ -79,14 +98,12 @@ def voucher_create(request):
             messages.error(request, "Accès refusé à ce site.")
             return redirect('vouchers:list')
 
-        count = int(request.POST.get('count', 1))
-        tier_pk = request.POST.get('tier')
-        note = request.POST.get('note', '').strip()
-
-        tier = get_object_or_404(VoucherTier, pk=tier_pk)
+        count    = int(request.POST.get('count', 1))
+        tier_pk  = request.POST.get('tier')
+        note     = request.POST.get('note', '').strip()
+        tier     = get_object_or_404(VoucherTier, pk=tier_pk)
         expire_minutes = tier.max_minutes
 
-        # Créer sur UniFi
         created = unifi.create_vouchers(
             site_id=site.unifi_site_id,
             expire_minutes=expire_minutes,
@@ -96,7 +113,6 @@ def voucher_create(request):
         )
 
         if created:
-            # Synchroniser en base locale
             for v in unifi.get_vouchers(site.unifi_site_id):
                 if v.get('note', '') == (note or f"BonNet-{tier.label}"):
                     VoucherLog.objects.get_or_create(
@@ -143,13 +159,12 @@ def voucher_delete(request, unifi_id):
 
 @login_required
 def sync_vouchers(request, site_pk):
-    """Synchronise les vouchers UniFi → base locale."""
     site = get_object_or_404(HotspotSite, pk=site_pk)
     if not can_access_site(request.user, site):
         messages.error(request, "Accès refusé.")
         return redirect('vouchers:list')
 
-    raw_vouchers = unifi.get_vouchers(site.unifi_site_id)
+    raw_vouchers  = unifi.get_vouchers(site.unifi_site_id)
     created_count = 0
 
     for v in raw_vouchers:
