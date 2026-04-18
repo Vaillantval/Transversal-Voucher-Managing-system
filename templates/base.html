@@ -14,99 +14,103 @@
 }
 body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 
-/* ── Sidebar ───────────────────────────────────────────────── */
+/* ── Sidebar ────────────────────────────────────────────────── */
 .sidebar {
   width: var(--bn-sidebar-w);
-  background: #111827;
-  display: flex;
-  flex-direction: column;
   min-height: 100vh;
+  background: #111827;
+  position: fixed;
+  top: 0; left: 0;
+  display: flex; flex-direction: column;
+  z-index: 1050;
 }
-/* On lg+ Bootstrap keeps the offcanvas visible as a regular element */
-@media (min-width: 992px) {
-  .sidebar {
-    position: fixed;
-    top: 0; left: 0;
-    z-index: 1000;
-    height: 100vh;
-  }
-  .main-content { margin-left: var(--bn-sidebar-w); }
-}
-/* On < lg Bootstrap hides offcanvas until toggled */
-@media (max-width: 991.98px) {
-  .sidebar { min-height: 100vh; }
-  .main-content { margin-left: 0; }
-}
-
 .sidebar-brand {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #1f2937;
   color: #fff;
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 1.3rem; font-weight: 700; letter-spacing: 1px;
   flex-shrink: 0;
 }
 .sidebar-brand span { color: var(--bn-blue); }
 .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
 .sidebar-nav .nav-section {
-  font-size: .7rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: #6b7280;
-  padding: .75rem 1.5rem .25rem;
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
+  color: #6b7280; padding: .75rem 1.5rem .25rem;
 }
 .sidebar-nav a {
   display: flex; align-items: center; gap: .6rem;
-  padding: .55rem 1.5rem;
-  color: #9ca3af;
-  text-decoration: none;
-  transition: all .15s;
-  font-size: .9rem;
+  padding: .55rem 1.5rem; color: #9ca3af;
+  text-decoration: none; transition: all .15s; font-size: .9rem;
 }
 .sidebar-nav a:hover, .sidebar-nav a.active {
-  background: rgba(255,255,255,.07);
-  color: #fff;
+  background: rgba(255,255,255,.07); color: #fff;
 }
 .sidebar-nav a.active { border-left: 3px solid var(--bn-blue); color: #fff; }
 .sidebar-user {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #1f2937;
-  color: #9ca3af;
-  font-size: .82rem;
-  flex-shrink: 0;
+  padding: 1rem 1.5rem; border-top: 1px solid #1f2937;
+  color: #9ca3af; font-size: .82rem; flex-shrink: 0;
+}
+/* Close button inside sidebar — only visible on mobile/tablet */
+.sidebar-close {
+  display: none;
+  background: none; border: none; color: #9ca3af;
+  font-size: 1.4rem; line-height: 1; padding: 0;
+  cursor: pointer;
+}
+.sidebar-close:hover { color: #fff; }
+
+/* ── Desktop (≥ 992px) : sidebar always visible ─────────────── */
+@media (min-width: 992px) {
+  .sidebar { transform: none !important; }
+  .main-content { margin-left: var(--bn-sidebar-w); }
+  #sidebar-hamburger { display: none !important; }
+  #sidebar-backdrop  { display: none !important; }
+  .sidebar-close     { display: none !important; }
 }
 
-/* ── Main layout ───────────────────────────────────────────── */
+/* ── Mobile / Tablet (< 992px) : sidebar as drawer ──────────── */
+@media (max-width: 991.98px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .28s ease;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; }
+  .sidebar-close { display: inline-flex; align-items: center; }
+}
+
+/* Backdrop for mobile drawer */
+#sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1040;
+  cursor: pointer;
+}
+#sidebar-backdrop.open { display: block; }
+
+/* ── Main layout ────────────────────────────────────────────── */
 .main-content { min-height: 100vh; }
 .topbar {
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: .65rem 1.25rem;
-  position: sticky; top: 0;
-  z-index: 900;
+  background: #fff; border-bottom: 1px solid #e5e7eb;
+  padding: .65rem 1.25rem; position: sticky; top: 0; z-index: 900;
 }
 .page-body { padding: 1.5rem; }
 @media (max-width: 767.98px) {
   .page-body { padding: 1rem .75rem; }
-  .topbar   { padding: .5rem .75rem; }
+  .topbar    { padding: .5rem .75rem; }
 }
 
-/* ── Cards ─────────────────────────────────────────────────── */
+/* ── Cards ──────────────────────────────────────────────────── */
 .stat-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid #e5e7eb;
+  background: #fff; border-radius: 12px;
+  padding: 1.25rem 1.5rem; border: 1px solid #e5e7eb;
   transition: box-shadow .2s;
 }
 .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-@media (max-width: 575.98px) {
-  .stat-card { padding: 1rem; }
-}
+@media (max-width: 575.98px) { .stat-card { padding: 1rem; } }
 .stat-icon {
-  width: 44px; height: 44px;
-  border-radius: 10px;
+  width: 44px; height: 44px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.25rem;
 }
@@ -114,9 +118,7 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 
 /* ── KPI values ─────────────────────────────────────────────── */
 .kpi-val { font-size: 2rem; font-weight: 700; line-height: 1; }
-@media (max-width: 575.98px) {
-  .kpi-val { font-size: 1.5rem !important; }
-}
+@media (max-width: 575.98px) { .kpi-val { font-size: 1.5rem !important; } }
 
 /* ── Badge status ───────────────────────────────────────────── */
 .badge-active  { background: #d1fae5; color: #065f46; }
@@ -126,12 +128,9 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 
 /* ── Tables ─────────────────────────────────────────────────── */
 .table-bn thead th {
-  background: #F9FAFB;
-  font-size: .8rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: #6b7280;
-  border-bottom: 2px solid #e5e7eb;
+  background: #F9FAFB; font-size: .8rem;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: #6b7280; border-bottom: 2px solid #e5e7eb;
 }
 
 /* ── Utilities ──────────────────────────────────────────────── */
@@ -142,19 +141,23 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 </head>
 <body>
 
-<!-- ══ Sidebar (offcanvas on mobile/tablet, fixed on desktop) ══ -->
-<nav class="sidebar offcanvas offcanvas-start offcanvas-lg"
-     tabindex="-1" id="sidebar" aria-labelledby="sidebarBrandLabel">
+<!-- Backdrop (mobile only) -->
+<div id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
-  <!-- Close button visible only on mobile/tablet -->
-  <div class="d-flex align-items-center justify-content-between d-lg-none px-3 py-2"
-       style="border-bottom:1px solid #1f2937">
-    <span class="sidebar-brand mb-0 pb-0 border-0" id="sidebarBrandLabel">Bon<span>Net</span></span>
-    <button type="button" class="btn-close btn-close-white"
-            data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Fermer"></button>
+<!-- ══ Sidebar ══ -->
+<nav class="sidebar" id="sidebar">
+  <!-- Header mobile : brand + close -->
+  <div class="d-flex align-items-center justify-content-between px-3 py-2 d-lg-none"
+       style="border-bottom:1px solid #1f2937;min-height:56px">
+    <span style="color:#fff;font-size:1.2rem;font-weight:700;letter-spacing:1px">
+      Bon<span style="color:var(--bn-blue)">Net</span>
+    </span>
+    <button class="sidebar-close" onclick="closeSidebar()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
 
-  <!-- Brand visible only on desktop -->
+  <!-- Brand desktop -->
   <div class="sidebar-brand d-none d-lg-block">Bon<span>Net</span></div>
 
   <div class="sidebar-nav">
@@ -203,10 +206,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 <div class="main-content">
   <div class="topbar d-flex align-items-center gap-2">
 
-    <!-- Hamburger — hidden on desktop -->
-    <button class="btn btn-link p-0 text-secondary d-lg-none me-1 flex-shrink-0"
-            type="button"
-            data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">
+    <!-- Hamburger (mobile/tablet only) -->
+    <button id="sidebar-hamburger"
+            class="btn btn-link p-0 text-secondary me-1 flex-shrink-0"
+            onclick="openSidebar()" aria-label="Menu">
       <i class="bi bi-list" style="font-size:1.5rem"></i>
     </button>
 
@@ -222,19 +225,27 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   </div>
 
   <div class="page-body">
-    <!-- Flash messages for mobile (below topbar) -->
     {% for message in messages %}
     <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} py-2 px-3 mb-3 small d-sm-none">
       {{ message }}
     </div>
     {% endfor %}
-
     {% block content %}{% endblock %}
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-backdrop').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
