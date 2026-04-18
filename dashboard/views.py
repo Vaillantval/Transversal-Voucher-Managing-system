@@ -29,6 +29,8 @@ def index(request):
         selected_site = all_sites.filter(unifi_site_id=site_filter_id).first()
     sites = all_sites.filter(unifi_site_id=site_filter_id) if selected_site else all_sites
 
+    now_ts = datetime.now().timestamp()
+
     # Tiers pour matching prix
     tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
 
@@ -38,60 +40,53 @@ def index(request):
                 return t
         return None
 
-    # Vouchers depuis UniFi (cache 2 min) — enrichissement de tous les vouchers
+    # ── Vouchers disponibles (non utilisés) ──────────────────────────────────
     all_vouchers = unifi.get_all_vouchers(sites)
-    for v in all_vouchers:
-        t = tier_for(v.get('duration', 0))
-        v['tier_label'] = t.label if t else 'Sans tranche'
-        v['price']      = float(t.price_htg) if t else 0
-
-    # Vouchers créés dans la période → pour total et disponibles
-    period_vouchers = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
-
-    # Vouchers activés (vendus) dans la période → pour revenus et graphiques
-    # Si start_time est disponible (sold_ts > 0) on filtre dessus (date réelle de vente),
-    # sinon on replie sur create_time (UniFi ne remplit pas toujours start_time).
-    sold_in_period = [
-        v for v in all_vouchers
-        if v['is_sold'] and (
-            (v['sold_ts'] > 0 and v['sold_ts'] >= date_from_ts)
-            or (v['sold_ts'] == 0 and v.get('create_time', 0) >= date_from_ts)
-        )
-    ]
-
+    period_vouchers    = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
     total_vouchers     = len(period_vouchers)
     available_vouchers = sum(1 for v in period_vouchers if v['is_available'])
-    sold_vouchers      = len(sold_in_period)
-    active_sessions    = sum(1 for v in sold_in_period if v['is_active_session'])
-    total_revenue      = sum(v['price'] for v in sold_in_period)
 
-    # Revenu par jour — date de vente effective (sold_dt = start_time UniFi)
+    # ── Sessions voucher activées = source réelle des revenus ────────────────
+    # UniFi supprime les vouchers de /stat/voucher dès activation ;
+    # /stat/guest (POST with within=8760) est la seule source fiable.
+    all_guests = unifi.get_all_guests(sites)
+
+    for g in all_guests:
+        t = tier_for(g['duration_minutes'])
+        g['tier_label'] = t.label if t else 'Sans tranche'
+        g['price']      = float(t.price_htg) if t else 0
+
+    sold_in_period  = [g for g in all_guests if g['sold_ts'] >= date_from_ts]
+    sold_vouchers   = len(sold_in_period)
+    active_sessions = sum(1 for g in sold_in_period if g.get('end', 0) > now_ts)
+    total_revenue   = sum(g['price'] for g in sold_in_period)
+
+    # Revenu par jour
     rev_day = defaultdict(float)
-    for v in sold_in_period:
-        day_key = (v['sold_dt'] or v['created_dt'])
-        if day_key:
-            rev_day[day_key.strftime('%Y-%m-%d')] += v['price']
+    for g in sold_in_period:
+        if g['sold_dt']:
+            rev_day[g['sold_dt'].strftime('%Y-%m-%d')] += g['price']
     revenue_by_day = [{'day': k, 'revenue': r} for k, r in sorted(rev_day.items())]
 
-    # Répartition par tranche — uniquement les vendus dans la période
+    # Répartition par tranche
     tier_counts = defaultdict(int)
-    for v in sold_in_period:
-        tier_counts[v['tier_label']] += 1
+    for g in sold_in_period:
+        tier_counts[g['tier_label']] += 1
     by_tier = [{'tier__label': k, 'count': c}
                for k, c in sorted(tier_counts.items(), key=lambda x: -x[1])]
 
-    # Breakdown par site — basé sur les vendus dans la période
+    # Breakdown par site
     site_bd = defaultdict(lambda: {'total': 0, 'sold': 0, 'active_sessions': 0, 'available': 0, 'revenue': 0.0})
     for v in period_vouchers:
         name = v.get('site_name', '?')
         site_bd[name]['total'] += 1
         if v['is_available']:
             site_bd[name]['available'] += 1
-    for v in sold_in_period:
-        name = v.get('site_name', '?')
+    for g in sold_in_period:
+        name = g.get('site_name', '?')
         site_bd[name]['sold']    += 1
-        site_bd[name]['revenue'] += v['price']
-        if v['is_active_session']:
+        site_bd[name]['revenue'] += g['price']
+        if g.get('end', 0) > now_ts:
             site_bd[name]['active_sessions'] += 1
     site_breakdown = sorted(site_bd.items(), key=lambda x: -x[1]['sold'])
 
@@ -100,8 +95,8 @@ def index(request):
     revenue_by_site = []
     if not selected_site:
         rev_site = defaultdict(float)
-        for v in sold_in_period:
-            rev_site[v.get('site_name', '?')] += v['price']
+        for g in sold_in_period:
+            rev_site[g.get('site_name', '?')] += g['price']
         revenue_by_site = [
             {'site__name': k, 'revenue': r}
             for k, r in sorted(rev_site.items(), key=lambda x: -x[1])[:10]

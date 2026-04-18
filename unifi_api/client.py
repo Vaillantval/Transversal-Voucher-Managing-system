@@ -14,6 +14,7 @@ _TTL_SITES    = 300   # 5 min
 _TTL_VOUCHERS = 120   # 2 min
 _TTL_CLIENTS  = 60    # 1 min
 _TTL_DEVICES  = 120   # 2 min
+_TTL_GUESTS   = 300   # 5 min
 
 
 def _connect() -> Optional[object]:
@@ -234,19 +235,65 @@ def delete_voucher(site_id: str, voucher_id: str) -> bool:
 
 # ─── GUEST HISTORY ───────────────────────────────────────────────────────────
 
-def get_guests(site_id: str) -> list:
-    """Historique des sessions guests (vouchers utilisés) via /stat/guest."""
-    key = f'unifi_guests_{site_id}'
+def _enrich_guest(g: dict, site_name: str, site_unifi_id: str) -> dict:
+    g['site_name']      = site_name
+    g['site_unifi_id']  = site_unifi_id
+    start_ts = g.get('start', 0)
+    end_ts   = g.get('end', 0)
+    g['sold_ts'] = start_ts
+    g['sold_dt'] = datetime.fromtimestamp(start_ts) if start_ts else None
+    g['duration_minutes'] = round((end_ts - start_ts) / 60) if start_ts and end_ts > start_ts else 0
+    return g
+
+
+def _fetch_site_guests(site) -> list:
+    """Fetch sessions voucher pour un site via POST /stat/guest (appelé depuis un thread)."""
+    key = f'unifi_guests_{site.unifi_site_id}'
     cached = cache.get(key)
     if cached is not None:
         return cached
+    c = get_controller(site.unifi_site_id)
+    if not c:
+        return []
+    try:
+        # POST with within=8760 (1 year) to get full history
+        raw = c._write(c._api_url() + 'stat/guest', {'within': 8760})
+        guests = [
+            _enrich_guest(g, site.name, site.unifi_site_id)
+            for g in (raw or [])
+            if g.get('authorized_by') == 'voucher' and g.get('start')
+        ]
+        cache.set(key, guests, _TTL_GUESTS)
+        return guests
+    except Exception as e:
+        logger.error(f"fetch_guests({site.unifi_site_id}) : {e}")
+        return []
+
+
+def get_all_guests(sites) -> list:
+    """Récupère l'historique voucher-guests de tous les sites en parallèle."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    sites_list = list(sites)
+    if not sites_list:
+        return []
+    all_guests = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(_fetch_site_guests, site): site for site in sites_list}
+        for future in as_completed(futures, timeout=60):
+            try:
+                all_guests.extend(future.result())
+            except Exception as e:
+                logger.error(f"Thread guests error: {e}")
+    return all_guests
+
+
+def get_guests(site_id: str) -> list:
+    """Historique brut guests d'un site (endpoint debug)."""
     c = get_controller(site_id)
     if not c:
         return []
     try:
-        guests = c._api_read('stat/guest')
-        cache.set(key, guests, 60)
-        return guests
+        return c._write(c._api_url() + 'stat/guest', {'within': 8760}) or []
     except Exception as e:
         logger.error(f"get_guests({site_id}) : {e}")
         return []
