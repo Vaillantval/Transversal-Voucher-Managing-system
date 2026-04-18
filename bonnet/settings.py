@@ -134,7 +134,7 @@ UNIFI_VERIFY_SSL = os.getenv('UNIFI_VERIFY_SSL', 'False') == 'True'
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': '/tmp/bonnet_cache',
+        'LOCATION': BASE_DIR / 'cache',
         'TIMEOUT': 300,
     }
 }
