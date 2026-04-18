@@ -242,6 +242,7 @@ def _enrich_guest(g: dict, site_name: str, site_unifi_id: str) -> dict:
     end_ts   = g.get('end', 0)
     g['sold_ts'] = start_ts
     g['sold_dt'] = datetime.fromtimestamp(start_ts) if start_ts else None
+    g['end_dt']  = datetime.fromtimestamp(end_ts)   if end_ts   else None
     g['duration_minutes'] = round((end_ts - start_ts) / 60) if start_ts and end_ts > start_ts else 0
     return g
 

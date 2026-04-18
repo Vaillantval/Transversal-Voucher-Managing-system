@@ -81,8 +81,10 @@ def index(request):
         g['price']      = float(t.price_htg) if t else 0
 
     sold_in_period  = [g for g in all_guests if g['sold_ts'] >= date_from_ts]
+    for g in sold_in_period:
+        g['is_currently_active'] = g.get('end', 0) > now_ts
     sold_vouchers   = len(sold_in_period)
-    active_sessions = sum(1 for g in sold_in_period if g.get('end', 0) > now_ts)
+    active_sessions = sum(1 for g in sold_in_period if g['is_currently_active'])
     total_revenue   = sum(g['price'] for g in sold_in_period)
 
     # Revenu par jour
@@ -173,5 +175,7 @@ def index(request):
         'total_devices_offline': total_devices_offline,
         'site_clients_list':     site_clients_list,
         'site_devices_list':     site_devices_list,
+        'period_vouchers':       period_vouchers,
+        'sold_in_period':        sold_in_period,
     }
     return render(request, 'dashboard/index.html', context)

@@ -280,28 +280,75 @@
     </div>
   </div>
 
-  <!-- Vouchers du site sur la période -->
+  <!-- Sessions vendues dans la période -->
   <div class="col-12">
     <div class="card card-bn p-3">
-      <h6 class="fw-600 mb-3">Vouchers — {{ selected_site.name }} (période sélectionnée)</h6>
-      <div class="table-responsive">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-600 mb-0">Sessions vendues — {{ selected_site.name }}</h6>
+        <span class="badge bg-secondary rounded-pill">{{ sold_in_period|length }} session(s)</span>
+      </div>
+      <div class="table-responsive" style="max-height:360px;overflow-y:auto">
+        <table class="table table-bn table-hover table-sm mb-0">
+          <thead><tr>
+            <th>Forfait</th>
+            <th class="text-center">Durée</th>
+            <th class="text-end">Prix (HTG)</th>
+            <th>MAC client</th>
+            <th>Activé le</th>
+            <th>Expire le</th>
+            <th class="text-center">Statut</th>
+          </tr></thead>
+          <tbody>
+          {% for g in sold_in_period %}
+          <tr>
+            <td class="fw-semibold">{{ g.tier_label }}</td>
+            <td class="text-center">{{ g.duration_minutes|floatformat:0|default:"—" }}min</td>
+            <td class="text-end text-primary fw-semibold">{{ g.price|floatformat:0 }}</td>
+            <td class="text-muted small font-monospace">{{ g.mac|default:"—" }}</td>
+            <td class="text-muted small">{{ g.sold_dt|date:"d/m/Y H:i" }}</td>
+            <td class="text-muted small">{{ g.end_dt|date:"d/m/Y H:i"|default:"—" }}</td>
+            <td class="text-center">
+              {% if g.is_currently_active %}
+              <span class="badge rounded-pill" style="font-size:.7rem;background:#10b981">Active</span>
+              {% else %}
+              <span class="badge bg-secondary rounded-pill" style="font-size:.7rem">Expirée</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-3">Aucune session vendue sur la période</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock disponible dans la période -->
+  <div class="col-12">
+    <div class="card card-bn p-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-600 mb-0">Vouchers disponibles (stock) — {{ selected_site.name }}</h6>
+        <span class="badge bg-success rounded-pill">{{ available_vouchers }} disponible(s)</span>
+      </div>
+      <div class="table-responsive" style="max-height:300px;overflow-y:auto">
         <table class="table table-bn table-hover table-sm mb-0">
           <thead><tr>
             <th>Code</th><th>Forfait</th><th>Durée</th><th>Statut</th><th>Créé le</th>
           </tr></thead>
           <tbody>
           {% for v in period_vouchers %}
+          {% if v.is_available %}
           <tr>
             <td><code class="text-primary">{{ v.code }}</code></td>
             <td>{{ v.tier_label }}</td>
             <td>{{ v.duration_hours }}h</td>
-            <td>
-              <span class="badge bg-{{ v.status_color }} rounded-pill" style="font-size:.7rem">{{ v.status_label }}</span>
-            </td>
+            <td><span class="badge bg-success rounded-pill" style="font-size:.7rem">Disponible</span></td>
             <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
           </tr>
+          {% endif %}
           {% empty %}
-          <tr><td colspan="6" class="text-center text-muted py-3">Aucun voucher sur la période</td></tr>
+          <tr><td colspan="5" class="text-center text-muted py-3">Aucun stock disponible sur la période</td></tr>
           {% endfor %}
           </tbody>
         </table>
