@@ -190,6 +190,16 @@ def tier_delete(request, pk):
 # ─── API JSON (pour charts) ────────────────────────────────────────────────────
 
 @login_required
+def site_guests_json(request, site_id):
+    """Endpoint debug : historique guests brut d'un site."""
+    site = get_object_or_404(HotspotSite, unifi_site_id=site_id)
+    if not request.user.is_superadmin and site not in request.user.managed_sites.all():
+        return JsonResponse({'error': 'Accès refusé'}, status=403)
+    guests = unifi.get_guests(site_id)
+    return JsonResponse({'count': len(guests), 'guests': guests[:5]})
+
+
+@login_required
 def site_stats_json(request, site_id):
     """Endpoint AJAX : stats live d'un site."""
     site = get_object_or_404(HotspotSite, unifi_site_id=site_id)

@@ -232,6 +232,26 @@ def delete_voucher(site_id: str, voucher_id: str) -> bool:
         return False
 
 
+# ─── GUEST HISTORY ───────────────────────────────────────────────────────────
+
+def get_guests(site_id: str) -> list:
+    """Historique des sessions guests (vouchers utilisés) via /stat/guest."""
+    key = f'unifi_guests_{site_id}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    c = get_controller(site_id)
+    if not c:
+        return []
+    try:
+        guests = c._api_read('stat/guest')
+        cache.set(key, guests, 60)
+        return guests
+    except Exception as e:
+        logger.error(f"get_guests({site_id}) : {e}")
+        return []
+
+
 # ─── STATISTIQUES ─────────────────────────────────────────────────────────────
 
 def get_site_stats(site_id: str, _c=None) -> dict:
