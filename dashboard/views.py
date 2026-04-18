@@ -65,10 +65,11 @@ def index(request):
         return None
 
     # ── Vouchers disponibles (non utilisés) ──────────────────────────────────
-    all_vouchers = unifi.get_all_vouchers(sites)
+    all_vouchers       = unifi.get_all_vouchers(sites)
     period_vouchers    = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
-    total_vouchers     = len(period_vouchers)
-    available_vouchers = sum(1 for v in period_vouchers if v['is_available'])
+    # Stock total disponible : indépendant de la période (UniFi ne renvoie que les non-utilisés)
+    available_vouchers = sum(1 for v in all_vouchers if v['is_available'])
+    total_vouchers     = available_vouchers
 
     # ── Sessions voucher activées = source réelle des revenus ────────────────
     # UniFi supprime les vouchers de /stat/voucher dès activation ;
