@@ -31,7 +31,7 @@
 
   .splash-subtitle {
     font-size: .9rem; letter-spacing: .25em; text-transform: uppercase;
-    color: #64748b; margin-top: -.5rem;
+    color: #94a3b8; margin-top: -.5rem;
   }
 
   /* Circular progress */
@@ -97,7 +97,7 @@
   }
   .brand-name { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; letter-spacing: -.5px; }
   .brand-name span { color: #3b82f6; }
-  .brand-tagline { font-size: .8rem; color: #64748b; margin-top: .2rem; letter-spacing: .1em; text-transform: uppercase; }
+  .brand-tagline { font-size: .8rem; color: #94a3b8; margin-top: .2rem; letter-spacing: .1em; text-transform: uppercase; }
 
   /* Inputs */
   .field-wrap { position: relative; margin-bottom: 1rem; }
@@ -114,7 +114,7 @@
     transition: border-color .2s, box-shadow .2s;
     outline: none;
   }
-  .field-wrap input::placeholder { color: #475569; }
+  .field-wrap input::placeholder { color: #64748b; }
   .field-wrap input:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59,130,246,.2);
@@ -134,7 +134,7 @@
   .remember-row input[type="checkbox"] {
     width: 1rem; height: 1rem; accent-color: #3b82f6; cursor: pointer;
   }
-  .remember-row label { font-size: .83rem; color: #64748b; cursor: pointer; }
+  .remember-row label { font-size: .83rem; color: #94a3b8; cursor: pointer; }
 
   /* Submit */
   .btn-login {
@@ -160,7 +160,7 @@
   }
 
   /* Footer */
-  .login-footer { text-align: center; margin-top: 1.5rem; font-size: .75rem; color: #334155; }
+  .login-footer { text-align: center; margin-top: 1.5rem; font-size: .75rem; color: #64748b; }
 </style>
 </head>
 <body>
@@ -239,7 +239,7 @@
 const bar  = document.getElementById('ring-bar');
 const pct  = document.getElementById('ring-pct');
 const circ = 2 * Math.PI * 28; // ≈ 175.9
-const DURATION = 2400; // ms
+const DURATION = 3800; // ms
 let start = null;
 
 function animRing(ts) {
