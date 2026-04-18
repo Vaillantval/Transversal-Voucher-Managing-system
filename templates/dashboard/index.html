@@ -98,9 +98,9 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
-      <span class="stat-icon" style="background:#FDF2F8"><i class="bi bi-currency-dollar" style="color:#9333ea"></i></span>
-      <div class="kpi-val mt-2" style="color:#9333ea">{{ total_revenue|floatformat:0 }}</div>
-      <div class="kpi-label">Revenu HTG ({{ sold_vouchers }} vendus)</div>
+      <span class="stat-icon" style="background:#FDF2F8"><i class="bi bi-cash-coin" style="color:#9333ea"></i></span>
+      <div class="kpi-val mt-2" style="color:#9333ea;font-size:1.4rem">{{ total_revenue|htg }}</div>
+      <div class="kpi-label">Revenu ({{ sold_vouchers }} vendus)</div>
     </div>
   </div>
   {% if selected_site %}
@@ -172,7 +172,7 @@
           {% else %}<span class="text-muted">0</span>{% endif %}
         </td>
         <td class="text-end fw-semibold {% if stats.revenue > 0 %}text-primary{% else %}text-muted{% endif %}">
-          {{ stats.revenue|floatformat:0 }}
+          {{ stats.revenue|htg }}
         </td>
       </tr>
       {% empty %}
@@ -302,8 +302,8 @@
           {% for g in sold_in_period %}
           <tr>
             <td class="fw-semibold">{{ g.tier_label }}</td>
-            <td class="text-center">{{ g.duration_minutes|floatformat:0|default:"—" }}min</td>
-            <td class="text-end text-primary fw-semibold">{{ g.price|floatformat:0 }}</td>
+            <td class="text-center">{{ g.duration_minutes|smart_duration }}</td>
+            <td class="text-end text-primary fw-semibold">{{ g.price|htg }}</td>
             <td class="text-muted small font-monospace">{{ g.mac|default:"—" }}</td>
             <td class="text-muted small">{{ g.sold_dt|date:"d/m/Y H:i" }}</td>
             <td class="text-muted small">{{ g.end_dt|date:"d/m/Y H:i"|default:"—" }}</td>
@@ -341,7 +341,7 @@
           <tr>
             <td><code class="text-primary">{{ v.code_display }}</code></td>
             <td>{{ v.tier_label }}</td>
-            <td>{{ v.duration_hours }}h</td>
+            <td>{{ v.duration_minutes|smart_duration }}</td>
             <td class="text-muted small">{{ v.created_dt|date:"d/m/Y H:i" }}</td>
           </tr>
           {% empty %}

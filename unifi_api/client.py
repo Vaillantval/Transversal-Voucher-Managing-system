@@ -113,8 +113,9 @@ def get_devices(site_id: str, _c=None):
 def _enrich_voucher(v: dict, site_name: str, site_unifi_id: str) -> dict:
     v['site_name']      = site_name
     v['site_unifi_id']  = site_unifi_id
-    v['duration_hours'] = round(v.get('duration', 0) / 60, 1)
-    v['voucher_id']     = v.get('_id', '')  # _id interdit dans les templates Django
+    v['duration_minutes'] = v.get('duration', 0)
+    v['duration_hours']   = round(v['duration_minutes'] / 60, 1)
+    v['voucher_id']       = v.get('_id', '')  # _id interdit dans les templates Django
     code = v.get('code', '')
     v['code_display'] = f"{code[:5]}-{code[5:]}" if len(code) > 5 else code
     ts = v.get('create_time')
