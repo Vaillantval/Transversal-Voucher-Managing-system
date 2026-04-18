@@ -116,6 +116,9 @@ def _enrich_voucher(v: dict, site_name: str, site_unifi_id: str) -> dict:
     v['voucher_id']     = v.get('_id', '')  # _id interdit dans les templates Django
     ts = v.get('create_time')
     v['created_dt'] = datetime.fromtimestamp(ts) if ts else None
+    start_ts = v.get('start_time')
+    v['sold_ts'] = start_ts or 0
+    v['sold_dt'] = datetime.fromtimestamp(start_ts) if start_ts else None
 
     # États précis
     used           = v.get('used', 0)

@@ -38,47 +38,55 @@ def index(request):
                 return t
         return None
 
-    # Vouchers depuis UniFi (cache 2 min)
+    # Vouchers depuis UniFi (cache 2 min) — enrichissement de tous les vouchers
     all_vouchers = unifi.get_all_vouchers(sites)
-    period_vouchers = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
-
-    for v in period_vouchers:
+    for v in all_vouchers:
         t = tier_for(v.get('duration', 0))
         v['tier_label'] = t.label if t else 'Sans tranche'
         v['price']      = float(t.price_htg) if t else 0
 
-    total_vouchers   = len(period_vouchers)
-    sold_vouchers    = sum(1 for v in period_vouchers if v['is_sold'])
-    active_sessions  = sum(1 for v in period_vouchers if v['is_active_session'])
-    available_vouchers = sum(1 for v in period_vouchers if v['is_available'])
-    total_revenue    = sum(v['price'] for v in period_vouchers if v['is_sold'])
+    # Vouchers créés dans la période → pour total et disponibles
+    period_vouchers = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
 
-    # Revenu par jour
+    # Vouchers activés (vendus) dans la période → pour revenus et graphiques
+    # On utilise start_time (date réelle de vente) et non create_time
+    sold_in_period = [v for v in all_vouchers
+                      if v['is_sold'] and v.get('sold_ts', 0) >= date_from_ts]
+
+    total_vouchers     = len(period_vouchers)
+    available_vouchers = sum(1 for v in period_vouchers if v['is_available'])
+    sold_vouchers      = len(sold_in_period)
+    active_sessions    = sum(1 for v in sold_in_period if v['is_active_session'])
+    total_revenue      = sum(v['price'] for v in sold_in_period)
+
+    # Revenu par jour — date de vente effective (sold_dt = start_time UniFi)
     rev_day = defaultdict(float)
-    for v in period_vouchers:
-        if v['is_sold'] and v.get('created_dt'):
-            rev_day[v['created_dt'].strftime('%Y-%m-%d')] += v['price']
+    for v in sold_in_period:
+        day_key = (v['sold_dt'] or v['created_dt'])
+        if day_key:
+            rev_day[day_key.strftime('%Y-%m-%d')] += v['price']
     revenue_by_day = [{'day': k, 'revenue': r} for k, r in sorted(rev_day.items())]
 
-    # Répartition par tranche
+    # Répartition par tranche — uniquement les vendus dans la période
     tier_counts = defaultdict(int)
-    for v in period_vouchers:
+    for v in sold_in_period:
         tier_counts[v['tier_label']] += 1
     by_tier = [{'tier__label': k, 'count': c}
                for k, c in sorted(tier_counts.items(), key=lambda x: -x[1])]
 
-    # Breakdown par site
+    # Breakdown par site — basé sur les vendus dans la période
     site_bd = defaultdict(lambda: {'total': 0, 'sold': 0, 'active_sessions': 0, 'available': 0, 'revenue': 0.0})
     for v in period_vouchers:
         name = v.get('site_name', '?')
         site_bd[name]['total'] += 1
-        if v['is_sold']:
-            site_bd[name]['sold']    += 1
-            site_bd[name]['revenue'] += v['price']
-        if v['is_active_session']:
-            site_bd[name]['active_sessions'] += 1
         if v['is_available']:
             site_bd[name]['available'] += 1
+    for v in sold_in_period:
+        name = v.get('site_name', '?')
+        site_bd[name]['sold']    += 1
+        site_bd[name]['revenue'] += v['price']
+        if v['is_active_session']:
+            site_bd[name]['active_sessions'] += 1
     site_breakdown = sorted(site_bd.items(), key=lambda x: -x[1]['sold'])
 
     # ── Mode tous les sites ──────────────────────────────────────────────────
@@ -86,9 +94,8 @@ def index(request):
     revenue_by_site = []
     if not selected_site:
         rev_site = defaultdict(float)
-        for v in period_vouchers:
-            if v['is_sold']:
-                rev_site[v.get('site_name', '?')] += v['price']
+        for v in sold_in_period:
+            rev_site[v.get('site_name', '?')] += v['price']
         revenue_by_site = [
             {'site__name': k, 'revenue': r}
             for k, r in sorted(rev_site.items(), key=lambda x: -x[1])[:10]
