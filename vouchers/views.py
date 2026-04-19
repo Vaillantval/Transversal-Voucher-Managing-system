@@ -16,9 +16,32 @@ def can_access_site(user, site):
 @login_required
 def voucher_list(request):
     site_filter = request.GET.get('site', '')
-    days        = int(request.GET.get('days', 30))
     per_page    = int(request.GET.get('per_page', 100))
     page        = int(request.GET.get('page', 1))
+
+    # Période : custom (cv + cu) ou bouton rapide (days)
+    cv_raw   = request.GET.get('cv', '').strip()
+    cu       = request.GET.get('cu', 'days')
+    days_raw = request.GET.get('days', '')
+
+    if cv_raw:
+        cv_int = max(1, int(cv_raw))
+        if cu == 'hours':
+            delta = timedelta(hours=cv_int)
+        elif cu == 'months':
+            delta = timedelta(days=cv_int * 30)
+        else:
+            cu = 'days'
+            delta = timedelta(days=cv_int)
+        custom_value = str(cv_int)
+    else:
+        days_int     = int(days_raw) if days_raw else 30
+        delta        = timedelta(days=days_int)
+        cu           = 'days'
+        custom_value = str(days_int)
+        cv_int       = days_int
+
+    days = cv_int  # kept for template quick-buttons highlight
 
     if request.user.is_superadmin:
         sync_sites_from_unifi()
@@ -44,8 +67,9 @@ def voucher_list(request):
         v['price']      = float(t.price_htg) if t else 0
 
     # ── Sessions vendues (guests) ─────────────────────────────────
-    now_ts       = datetime.now().timestamp()
-    date_from_ts = (datetime.now() - timedelta(days=days)).timestamp()
+    now_dt       = datetime.now()
+    now_ts       = now_dt.timestamp()
+    date_from_ts = (now_dt - delta).timestamp()
 
     all_guests = unifi.get_all_guests(sites_to_fetch)
     sessions   = [g for g in all_guests if g['sold_ts'] >= date_from_ts]
@@ -71,6 +95,8 @@ def voucher_list(request):
         'total_revenue':      total_revenue,
         'sites':              sites,
         'days':               days,
+        'custom_value':       custom_value,
+        'custom_unit':        cu,
         'period_options':     [(7, '7 j'), (30, '30 j'), (90, '90 j'), (365, '1 an')],
         'per_page':           per_page,
         'per_page_options':   [50, 100, 200, 500],
