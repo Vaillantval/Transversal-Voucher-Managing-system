@@ -67,10 +67,7 @@ def _sync_unifi_users_to_db():
         if is_super:
             user.managed_sites.set(all_sites)
         else:
-            site_ids = set()
-            for perm in admin.get('permissions', []):
-                for sid in perm.get('sites', []):
-                    site_ids.add(sid)
+            site_ids = admin.get('site_ids', [])
             user.managed_sites.set([site_map[sid] for sid in site_ids if sid in site_map])
 
 

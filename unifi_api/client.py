@@ -334,21 +334,50 @@ def get_all_site_stats(sites) -> dict:
 
 
 def get_all_admins() -> list:
-    """Retourne tous les admins du contrôleur via cmd/sitemgr. Cache 60 s."""
+    """
+    Retourne tous les admins avec leurs sites assignés.
+    Scan get-admins sur chaque site pour construire le mapping inverse.
+    Cache 5 min.
+    """
     key = 'unifi_all_admins'
     cached = cache.get(key)
     if cached is not None:
         return cached
+
     c = _connect()
     if not c:
         return []
+
     try:
-        admins = c._api_write('cmd/sitemgr', {'cmd': 'get-admins'})
-        cache.set(key, admins or [], 60)
-        return admins or []
+        all_sites = c.get_sites()
     except Exception as e:
-        logger.error(f"get_all_admins : {e}")
+        logger.error(f"get_all_admins get_sites : {e}")
         return []
+
+    admin_map = {}
+    for site in all_sites:
+        site_id = site['name']
+        try:
+            admins = c._write(c.url + f"api/s/{site_id}/cmd/sitemgr", {'cmd': 'get-admins'})
+            for admin in (admins or []):
+                name = admin.get('name', '').strip()
+                if not name:
+                    continue
+                if name not in admin_map:
+                    admin_map[name] = {
+                        'name': name,
+                        'email': admin.get('email', ''),
+                        'is_super': admin.get('is_super', False),
+                        'site_ids': [],
+                    }
+                if not admin_map[name]['is_super']:
+                    admin_map[name]['site_ids'].append(site_id)
+        except Exception as e:
+            logger.warning(f"get_all_admins({site_id}) : {e}")
+
+    result = list(admin_map.values())
+    cache.set(key, result, 300)
+    return result
 
 
 def can_connect() -> bool:
