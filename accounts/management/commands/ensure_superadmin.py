@@ -4,7 +4,7 @@ from accounts.models import User
 
 
 class Command(BaseCommand):
-    help = "Crée le superadmin depuis DJANGO_SUPERUSER_USERNAME (ou UNIFI_USERNAME) si aucun n'existe."
+    help = "Crée ou met à jour le superadmin depuis DJANGO_SUPERUSER_USERNAME (ou UNIFI_USERNAME)."
 
     def handle(self, *args, **kwargs):
         username = (
@@ -20,25 +20,19 @@ class Command(BaseCommand):
             ))
             return
 
-        if User.objects.filter(role=User.ROLE_SUPERADMIN).exists():
-            self.stdout.write(self.style.SUCCESS(
-                'ensure_superadmin: un superadmin existe déjà — rien à faire.'
-            ))
-            return
-
         user, created = User.objects.get_or_create(username=username)
-        user.role = User.ROLE_SUPERADMIN
-        user.is_staff = True
+        user.role         = User.ROLE_SUPERADMIN
+        user.is_staff     = True
         user.is_superuser = True
         if email:
             user.email = email
         if password:
             user.set_password(password)
-        else:
+        elif created:
             user.set_unusable_password()
         user.save()
 
-        action = 'créé' if created else 'promu superadmin'
+        action = 'créé' if created else 'mis à jour'
         self.stdout.write(self.style.SUCCESS(
-            f'ensure_superadmin: utilisateur "{username}" {action}.'
+            f'ensure_superadmin: utilisateur "{username}" {action} (superadmin, is_staff, is_superuser).'
         ))
