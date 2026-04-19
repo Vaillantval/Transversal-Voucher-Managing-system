@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional
 from django.conf import settings
 from django.core.cache import cache
+from sites_mgmt.utils import TZ_HAITI
 
 logger = logging.getLogger(__name__)
 
@@ -122,10 +123,10 @@ def _enrich_voucher(v: dict, site_name: str, site_unifi_id: str) -> dict:
     code = v.get('code', '')
     v['code_display'] = f"{code[:5]}-{code[5:]}" if len(code) > 5 else code
     ts = v.get('create_time')
-    v['created_dt'] = datetime.fromtimestamp(ts) if ts else None
+    v['created_dt'] = datetime.fromtimestamp(ts, tz=TZ_HAITI) if ts else None
     start_ts = v.get('start_time')
     v['sold_ts'] = start_ts or 0
-    v['sold_dt'] = datetime.fromtimestamp(start_ts) if start_ts else None
+    v['sold_dt'] = datetime.fromtimestamp(start_ts, tz=TZ_HAITI) if start_ts else None
 
     # États précis
     used           = v.get('used', 0)
@@ -247,8 +248,8 @@ def _enrich_guest(g: dict, site_name: str, site_unifi_id: str) -> dict:
     start_ts = g.get('start', 0)
     end_ts   = g.get('end', 0)
     g['sold_ts'] = start_ts
-    g['sold_dt'] = datetime.fromtimestamp(start_ts) if start_ts else None
-    g['end_dt']  = datetime.fromtimestamp(end_ts)   if end_ts   else None
+    g['sold_dt'] = datetime.fromtimestamp(start_ts, tz=TZ_HAITI) if start_ts else None
+    g['end_dt']  = datetime.fromtimestamp(end_ts,   tz=TZ_HAITI) if end_ts   else None
     g['duration_minutes'] = round((end_ts - start_ts) / 60) if start_ts and end_ts > start_ts else 0
     return g
 

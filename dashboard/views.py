@@ -6,7 +6,7 @@ from collections import defaultdict
 import json
 
 from sites_mgmt.models import HotspotSite, VoucherTier
-from sites_mgmt.utils import find_tier
+from sites_mgmt.utils import find_tier, TZ_HAITI
 from unifi_api import client as unifi
 
 
@@ -36,7 +36,7 @@ def index(request):
         custom_value = str(days_int)
         cv_int      = days_int
 
-    now_dt       = datetime.now()
+    now_dt       = datetime.now(TZ_HAITI)
     date_from_dt = now_dt - delta
     date_from_ts = date_from_dt.timestamp()
     date_from    = date_from_dt.date()

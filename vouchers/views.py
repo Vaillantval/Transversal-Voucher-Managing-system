@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 
 from sites_mgmt.models import HotspotSite, VoucherTier
-from sites_mgmt.utils import find_tier
+from sites_mgmt.utils import find_tier, TZ_HAITI
 from sites_mgmt.views import sync_sites_from_unifi
 from .models import VoucherLog
 from unifi_api import client as unifi
@@ -73,7 +73,7 @@ def voucher_list(request):
         v['price']      = float(t.price_htg) if t else 0
 
     # ── Sessions vendues (guests) ─────────────────────────────────
-    now_dt       = datetime.now()
+    now_dt       = datetime.now(TZ_HAITI)
     now_ts       = now_dt.timestamp()
     date_from_ts = (now_dt - delta).timestamp()
 
@@ -94,28 +94,28 @@ def voucher_list(request):
 
     if f_active_from:
         try:
-            ts = datetime.fromisoformat(f_active_from).timestamp()
+            ts = datetime.fromisoformat(f_active_from).replace(tzinfo=TZ_HAITI).timestamp()
             sessions = [g for g in sessions if g['sold_ts'] >= ts]
         except ValueError:
             pass
 
     if f_active_to:
         try:
-            ts = datetime.fromisoformat(f_active_to).timestamp()
+            ts = datetime.fromisoformat(f_active_to).replace(tzinfo=TZ_HAITI).timestamp()
             sessions = [g for g in sessions if g['sold_ts'] <= ts]
         except ValueError:
             pass
 
     if f_expire_from:
         try:
-            ts = datetime.fromisoformat(f_expire_from).timestamp()
+            ts = datetime.fromisoformat(f_expire_from).replace(tzinfo=TZ_HAITI).timestamp()
             sessions = [g for g in sessions if g.get('end', 0) >= ts]
         except ValueError:
             pass
 
     if f_expire_to:
         try:
-            ts = datetime.fromisoformat(f_expire_to).timestamp()
+            ts = datetime.fromisoformat(f_expire_to).replace(tzinfo=TZ_HAITI).timestamp()
             sessions = [g for g in sessions if g.get('end', 0) <= ts]
         except ValueError:
             pass

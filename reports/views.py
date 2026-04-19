@@ -6,7 +6,7 @@ from collections import defaultdict
 import csv, io
 
 from sites_mgmt.models import HotspotSite, VoucherTier
-from sites_mgmt.utils import find_tier
+from sites_mgmt.utils import find_tier, TZ_HAITI
 from unifi_api import client as unifi
 
 
@@ -16,8 +16,8 @@ def _get_report_data(request, site_id, date_from_str, date_to_str):
     Uses /stat/guest (same source as dashboard) so figures match exactly.
     Returns (guests_list, site_label).
     """
-    date_from_ts = datetime.fromisoformat(date_from_str).timestamp()
-    date_to_ts   = (datetime.fromisoformat(date_to_str) + timedelta(days=1)).timestamp()
+    date_from_ts = datetime.fromisoformat(date_from_str).replace(tzinfo=TZ_HAITI).timestamp()
+    date_to_ts   = (datetime.fromisoformat(date_to_str).replace(tzinfo=TZ_HAITI) + timedelta(days=1)).timestamp()
 
     if site_id:
         qs = HotspotSite.objects.filter(unifi_site_id=site_id, is_active=True)
@@ -80,7 +80,7 @@ def export_csv(request):
             g['price'],
             g.get('mac', '-'),
             g['sold_dt'].strftime('%Y-%m-%d %H:%M') if g['sold_dt'] else '-',
-            datetime.fromtimestamp(g['end']).strftime('%Y-%m-%d %H:%M') if g.get('end') else '-',
+            datetime.fromtimestamp(g['end'], tz=TZ_HAITI).strftime('%Y-%m-%d %H:%M') if g.get('end') else '-',
         ])
     return response
 
@@ -101,7 +101,7 @@ def export_excel(request):
     guests, site_label = _get_report_data(request, site_id or None, date_from, date_to)
 
     total_revenue = sum(g['price'] for g in guests)
-    now_ts        = datetime.now().timestamp()
+    now_ts        = datetime.now(TZ_HAITI).timestamp()
     active_count  = sum(1 for g in guests if g.get('end', 0) > now_ts)
 
     BLUE_DARK = "1E40AF"
@@ -166,7 +166,7 @@ def export_excel(request):
             g['price'],
             g.get('mac', '-'),
             g['sold_dt'].strftime('%d/%m/%Y %H:%M') if g['sold_dt'] else '-',
-            datetime.fromtimestamp(g['end']).strftime('%d/%m/%Y %H:%M') if g.get('end') else '-',
+            datetime.fromtimestamp(g['end'], tz=TZ_HAITI).strftime('%d/%m/%Y %H:%M') if g.get('end') else '-',
         ]
         fill = alt if ri % 2 == 0 else None
         for ci, val in enumerate(row, start=1):
@@ -233,7 +233,7 @@ def export_pdf(request):
     guests, site_label = _get_report_data(request, site_id or None, date_from, date_to)
 
     total_revenue = sum(g['price'] for g in guests)
-    now_ts        = datetime.now().timestamp()
+    now_ts        = datetime.now(TZ_HAITI).timestamp()
     active_count  = sum(1 for g in guests if g.get('end', 0) > now_ts)
 
     buffer = io.BytesIO()
@@ -248,7 +248,7 @@ def export_pdf(request):
 
     elements.append(Paragraph(f"BonNet — Rapport Vouchers | {site_label}", title_style))
     elements.append(Paragraph(
-        f"Période : {date_from} → {date_to}  |  Généré le {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        f"Période : {date_from} → {date_to}  |  Généré le {datetime.now(TZ_HAITI).strftime('%d/%m/%Y %H:%M')}",
         styles['Normal'],
     ))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#3B82F6')))
