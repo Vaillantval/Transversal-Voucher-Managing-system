@@ -29,7 +29,91 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# ─── Jazzmin (Django Admin customization) ────────────────────────��────────────
+JAZZMIN_SETTINGS = {
+    # ── Branding ──────────────────────────────────────────���───────────────────
+    "site_title":  "BonNet Admin",
+    "site_header": "BonNet",
+    "site_brand":  "BonNet",
+    "welcome_sign": "Administration BonNet",
+    "copyright": "Transversal Haiti",
+    "site_icon": None,
+    "site_logo": None,
+
+    # ── Navigation ────────────────────────────────────────────────────────────
+    "topmenu_links": [
+        {"name": "← Retour au site", "url": "/dashboard/", "new_window": False,
+         "icon": "fas fa-arrow-left"},
+    ],
+    "usermenu_links": [
+        {"name": "Profil BonNet", "url": "/accounts/profil/", "icon": "fas fa-user"},
+    ],
+
+    # ── Sidebar ───────────────────────────────────────────────────────────────
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": [
+        "accounts", "sites_mgmt", "vouchers", "dashboard", "reports",
+    ],
+    "icons": {
+        "accounts":                    "fas fa-users-cog",
+        "accounts.User":               "fas fa-user",
+        "sites_mgmt":                  "fas fa-network-wired",
+        "sites_mgmt.HotspotSite":      "fas fa-wifi",
+        "sites_mgmt.PricingTier":      "fas fa-tags",
+        "vouchers":                    "fas fa-ticket-alt",
+        "auth":                        "fas fa-lock",
+        "auth.Group":                  "fas fa-users",
+    },
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+
+    # ── UI ────────────────────────────────────────────────────────────────────
+    "related_modal_active": True,
+    "custom_css": None,
+    "custom_js":  None,
+    "use_google_fonts_cdn": False,
+    "show_ui_builder": False,
+    "changeform_format": "horizontal_tabs",
+    "language_chooser": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text":    False,
+    "footer_small_text":    False,
+    "body_small_text":      False,
+    "brand_small_text":     False,
+    "brand_colour":         "navbar-dark",
+    "accent":               "accent-primary",
+    "navbar":               "navbar-dark",
+    "no_navbar_border":     True,
+    "navbar_fixed":         True,
+    "layout_boxed":         False,
+    "footer_fixed":         False,
+    "sidebar_fixed":        True,
+    "sidebar":              "sidebar-dark-primary",
+    "sidebar_nav_small_text":  False,
+    "sidebar_disable_expand":  False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style":  False,
+    "sidebar_nav_flat_style":    False,
+    "theme":                "darkly",
+    "dark_mode_theme":      None,
+    "button_classes": {
+        "primary":   "btn-primary",
+        "secondary": "btn-secondary",
+        "info":      "btn-info",
+        "warning":   "btn-warning",
+        "danger":    "btn-danger",
+        "success":   "btn-success",
+    },
+}
+
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
