@@ -6,7 +6,15 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+_secret_key = os.getenv('SECRET_KEY', '')
+if not _secret_key:
+    if os.getenv('DEBUG', 'True') == 'True':
+        import warnings
+        _secret_key = 'dev-insecure-key-not-for-production'
+        warnings.warn('SECRET_KEY non définie — clé de dev utilisée, NE PAS déployer en prod sans SECRET_KEY.')
+    else:
+        raise RuntimeError('La variable SECRET_KEY doit être définie en production.')
+SECRET_KEY = _secret_key
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')

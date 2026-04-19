@@ -3,16 +3,23 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
+from django.contrib.auth.decorators import login_required
 
 
 def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+@login_required
 def debug_vouchers(request):
+    if not getattr(request.user, 'is_superadmin', False):
+        return HttpResponseForbidden('Accès réservé aux super-admins.')
     from unifi_api.client import get_controller
-    site_id = request.GET.get('site', 'ng3dxydx')
+    from sites_mgmt.models import HotspotSite
+    site_id = request.GET.get('site') or (
+        HotspotSite.objects.filter(is_active=True).values_list('unifi_site_id', flat=True).first() or ''
+    )
     result = {"site_id": site_id}
     try:
         c = get_controller(site_id)
@@ -27,9 +34,11 @@ def debug_vouchers(request):
     return JsonResponse(result)
 
 
+@login_required
 def unifi_debug(request):
-    from django.conf import settings
-    from unifi_api.client import _connect, get_sites
+    if not getattr(request.user, 'is_superadmin', False):
+        return HttpResponseForbidden('Accès réservé aux super-admins.')
+    from unifi_api.client import _connect
     from sites_mgmt.models import HotspotSite
     result = {
         "host": settings.UNIFI_HOST,
@@ -37,8 +46,6 @@ def unifi_debug(request):
         "username": settings.UNIFI_USERNAME,
         "password_set": bool(settings.UNIFI_PASSWORD),
         "user": str(request.user),
-        "is_authenticated": request.user.is_authenticated,
-        "user_role": getattr(request.user, 'role', 'N/A'),
         "is_superadmin": getattr(request.user, 'is_superadmin', False),
         "db_sites_count": HotspotSite.objects.count(),
     }

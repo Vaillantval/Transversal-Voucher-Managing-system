@@ -13,6 +13,13 @@
 
 {% block content %}
 
+{% if unifi_warning %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3" role="alert">
+  <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+  <span>Impossible de joindre le contrôleur UniFi — les données affichées peuvent être incomplètes ou obsolètes.</span>
+</div>
+{% endif %}
+
 <!-- ══ Filtres ══ -->
 <div class="card card-bn p-3 mb-4">
   <div class="row g-3 align-items-end">

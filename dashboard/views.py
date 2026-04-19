@@ -6,6 +6,7 @@ from collections import defaultdict
 import json
 
 from sites_mgmt.models import HotspotSite, VoucherTier
+from sites_mgmt.utils import find_tier
 from unifi_api import client as unifi
 
 
@@ -58,12 +59,6 @@ def index(request):
     # Tiers pour matching prix
     tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
 
-    def tier_for(minutes):
-        for t in tiers:
-            if t.min_minutes <= minutes <= t.max_minutes:
-                return t
-        return None
-
     # ── Vouchers disponibles (non utilisés) ──────────────────────────────────
     all_vouchers       = unifi.get_all_vouchers(sites)
     period_vouchers    = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
@@ -77,7 +72,7 @@ def index(request):
     all_guests = unifi.get_all_guests(sites)
 
     for g in all_guests:
-        t = tier_for(g['duration_minutes'])
+        t = find_tier(tiers, g['duration_minutes'])
         g['tier_label'] = t.label if t else 'Sans tranche'
         g['price']      = float(t.price_htg) if t else 0
 
@@ -150,6 +145,8 @@ def index(request):
         for c in site_clients_list:
             c['display_name'] = c.get('hostname') or c.get('last_ip') or c.get('mac', '?')
 
+    unifi_warning = not unifi.can_connect()
+
     context = {
         'page_title': 'Tableau de bord',
         'days': days,
@@ -176,8 +173,9 @@ def index(request):
         'total_devices_offline': total_devices_offline,
         'site_clients_list':     site_clients_list,
         'site_devices_list':     site_devices_list,
-        'period_vouchers':       period_vouchers,
-        'sold_in_period':        sold_in_period,
+        'period_vouchers':        period_vouchers,
+        'sold_in_period':         sold_in_period,
         'all_available_vouchers': [v for v in all_vouchers if v['is_available']],
+        'unifi_warning':          unifi_warning,
     }
     return render(request, 'dashboard/index.html', context)

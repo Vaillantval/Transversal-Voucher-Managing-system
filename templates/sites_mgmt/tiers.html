@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dashboard_extras %}
 {% block title %}Tarifs{% endblock %}
 {% block page_title %}Tranches tarifaires{% endblock %}
 
@@ -23,8 +24,8 @@
       {% for tier in tiers %}
       <tr>
         <td class="fw-semibold">{{ tier.label }}</td>
-        <td>{{ tier.min_minutes }} min ({{ tier.min_minutes|divisibleby:60 }})</td>
-        <td>{{ tier.max_minutes }} min</td>
+        <td>{{ tier.min_minutes|smart_duration }}</td>
+        <td>{{ tier.max_minutes|smart_duration }}</td>
         <td class="fw-bold text-primary">{{ tier.price_htg }} HTG</td>
         <td>
           {% if tier.is_active %}

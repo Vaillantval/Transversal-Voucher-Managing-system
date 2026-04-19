@@ -6,6 +6,7 @@ from collections import defaultdict
 import csv, io
 
 from sites_mgmt.models import HotspotSite, VoucherTier
+from sites_mgmt.utils import find_tier
 from unifi_api import client as unifi
 
 
@@ -32,17 +33,11 @@ def _get_report_data(request, site_id, date_from_str, date_to_str):
 
     tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
 
-    def tier_for(minutes):
-        for t in tiers:
-            if t.min_minutes <= minutes <= t.max_minutes:
-                return t
-        return None
-
     all_guests = unifi.get_all_guests(sites_list)
     guests = [g for g in all_guests if date_from_ts <= g['sold_ts'] < date_to_ts]
 
     for g in guests:
-        t = tier_for(g['duration_minutes'])
+        t = find_tier(tiers, g['duration_minutes'])
         g['tier_label'] = t.label if t else 'Sans tranche'
         g['price']      = float(t.price_htg) if t else 0
 

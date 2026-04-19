@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 
 from sites_mgmt.models import HotspotSite, VoucherTier
+from sites_mgmt.utils import find_tier
 from sites_mgmt.views import sync_sites_from_unifi
 from .models import VoucherLog
 from unifi_api import client as unifi
@@ -66,14 +67,8 @@ def voucher_list(request):
     all_vouchers = unifi.get_all_vouchers(sites_to_fetch)
     tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
 
-    def tier_for(minutes):
-        for t in tiers:
-            if t.min_minutes <= minutes <= t.max_minutes:
-                return t
-        return None
-
     for v in all_vouchers:
-        t = tier_for(v.get('duration', 0))
+        t = find_tier(tiers, v.get('duration', 0))
         v['tier_label'] = t.label if t else 'Sans tranche'
         v['price']      = float(t.price_htg) if t else 0
 
@@ -86,7 +81,7 @@ def voucher_list(request):
     sessions   = [g for g in all_guests if g['sold_ts'] >= date_from_ts]
 
     for g in sessions:
-        t = tier_for(g['duration_minutes'])
+        t = find_tier(tiers, g['duration_minutes'])
         g['tier_label']          = t.label if t else 'Sans tranche'
         g['price']               = float(t.price_htg) if t else 0
         g['is_currently_active'] = g.get('end', 0) > now_ts
@@ -130,7 +125,7 @@ def voucher_list(request):
             n = int(f_dur_val)
             unit_map = {'minutes': 1, 'hours': 60, 'days': 1440, 'months': 43200}
             target_min = n * unit_map.get(f_dur_unit, 1)
-            matched_tier = tier_for(target_min)
+            matched_tier = find_tier(tiers, target_min)
             if matched_tier:
                 sessions = [g for g in sessions if g['tier_label'] == matched_tier.label]
             else:
@@ -148,6 +143,8 @@ def voucher_list(request):
     start          = (page - 1) * per_page
     sessions_page  = sessions[start:start + per_page]
     total_pages    = max(1, (total_sessions + per_page - 1) // per_page)
+
+    unifi_warning = not unifi.can_connect()
 
     qs = request.GET.copy()
     qs.pop('page', None)
@@ -179,6 +176,7 @@ def voucher_list(request):
         'f_dur_unit':         f_dur_unit,
         'f_status':           f_status,
         'base_qs':            base_qs,
+        'unifi_warning':      unifi_warning,
     })
 
 

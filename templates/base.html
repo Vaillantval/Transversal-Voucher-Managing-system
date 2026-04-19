@@ -136,10 +136,26 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 /* ── Utilities ──────────────────────────────────────────────── */
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }
+
+/* ── Page loader ─────────────────────────────────────────────── */
+#page-loader {
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(255,255,255,.65);
+  align-items: center; justify-content: center;
+}
+#page-loader.active { display: flex; }
 </style>
 {% block extra_css %}{% endblock %}
 </head>
 <body>
+
+<!-- Page loader -->
+<div id="page-loader">
+  <div class="spinner-border text-primary" role="status" style="width:2.5rem;height:2.5rem">
+    <span class="visually-hidden">Chargement…</span>
+  </div>
+</div>
 
 <!-- Backdrop (mobile only) -->
 <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
@@ -176,7 +192,8 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
        class="{% if request.resolver_match.app_name == 'vouchers' %}active{% endif %}">
       <i class="bi bi-ticket-perforated"></i> Vouchers
     </a>
-    <a href="{% url 'vouchers:create' %}">
+    <a href="{% url 'vouchers:create' %}"
+       class="{% if request.resolver_match.url_name == 'create' and request.resolver_match.app_name == 'vouchers' %}active{% endif %}">
       <i class="bi bi-plus-circle"></i> Créer vouchers
     </a>
 
@@ -194,8 +211,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   </div>
 
   <div class="sidebar-user">
-    <div class="fw-600 text-white">{{ user.get_full_name|default:user.username }}</div>
-    <div>{{ user.get_role_display }}</div>
+    <a href="{% url 'accounts:profile' %}" class="text-decoration-none" style="color:inherit">
+      <div class="fw-600 text-white">{{ user.get_full_name|default:user.username }}</div>
+      <div>{{ user.get_role_display }}</div>
+    </a>
     <a href="{% url 'accounts:logout' %}" class="text-danger text-decoration-none mt-1 d-inline-block">
       <i class="bi bi-box-arrow-right"></i> Déconnexion
     </a>
@@ -245,6 +264,25 @@ function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebar-backdrop').classList.remove('open');
 }
+
+// Spinner sur navigation et soumission de formulaire
+(function() {
+  var loader = document.getElementById('page-loader');
+  function showLoader() { loader.classList.add('active'); }
+  document.addEventListener('submit', function(e) {
+    // Ne pas spinner sur les auto-submit de filtres (déjà rapide)
+    if (!e.target.closest('#sessions-filter-form')) showLoader();
+  });
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target) return;
+    showLoader();
+  });
+  // Cacher le loader quand la page est entièrement chargée
+  window.addEventListener('pageshow', function() { loader.classList.remove('active'); });
+})();
 </script>
 {% block extra_js %}{% endblock %}
 </body>

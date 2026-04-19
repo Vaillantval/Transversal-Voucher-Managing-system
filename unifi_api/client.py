@@ -16,6 +16,9 @@ _TTL_CLIENTS  = 60    # 1 min
 _TTL_DEVICES  = 120   # 2 min
 _TTL_GUESTS   = 300   # 5 min
 
+# Fenêtre historique guests (heures) – 1 an
+_GUEST_HISTORY_HOURS = 8760
+
 
 def _connect() -> Optional[object]:
     """Ouvre une session UniFi (1 login). Retourne le controller ou None."""
@@ -261,7 +264,7 @@ def _fetch_site_guests(site) -> list:
         return []
     try:
         # POST with within=8760 (1 year) to get full history
-        raw = c._write(c._api_url() + 'stat/guest', {'within': 8760})
+        raw = c._write(c._api_url() + 'stat/guest', {'within': _GUEST_HISTORY_HOURS})
         guests = [
             _enrich_guest(g, site.name, site.unifi_site_id)
             for g in (raw or [])
@@ -297,7 +300,7 @@ def get_guests(site_id: str) -> list:
     if not c:
         return []
     try:
-        return c._write(c._api_url() + 'stat/guest', {'within': 8760}) or []
+        return c._write(c._api_url() + 'stat/guest', {'within': _GUEST_HISTORY_HOURS}) or []
     except Exception as e:
         logger.error(f"get_guests({site_id}) : {e}")
         return []
@@ -326,4 +329,15 @@ def get_all_site_stats(sites) -> dict:
     result = {}
     for site in sites:
         result[site.unifi_site_id] = get_site_stats(site.unifi_site_id, c)
+    return result
+
+
+def can_connect() -> bool:
+    """Vérifie si le contrôleur UniFi est joignable (résultat mis en cache 30 s)."""
+    key = 'unifi_can_connect'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    result = _connect() is not None
+    cache.set(key, result, 30)
     return result

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Mon profil{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6 col-lg-5">
+
+    <div class="card card-bn p-4">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="stat-icon bg-primary bg-opacity-10" style="width:56px;height:56px;font-size:1.6rem">
+          <i class="bi bi-person text-primary"></i>
+        </div>
+        <div>
+          <div class="fw-700 fs-5">{{ user.get_full_name|default:user.username }}</div>
+          <div class="text-muted small">{{ user.get_role_display }}</div>
+        </div>
+      </div>
+
+      <table class="table table-sm mb-0">
+        <tbody>
+          <tr>
+            <td class="text-muted" style="width:40%">Nom d'utilisateur</td>
+            <td class="fw-semibold">{{ user.username }}</td>
+          </tr>
+          {% if user.first_name or user.last_name %}
+          <tr>
+            <td class="text-muted">Nom complet</td>
+            <td class="fw-semibold">{{ user.get_full_name }}</td>
+          </tr>
+          {% endif %}
+          {% if user.email %}
+          <tr>
+            <td class="text-muted">Email</td>
+            <td class="fw-semibold">{{ user.email }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td class="text-muted">Rôle</td>
+            <td>
+              {% if user.is_superadmin %}
+              <span class="badge rounded-pill" style="background:#1A56DB">Super Admin</span>
+              {% else %}
+              <span class="badge bg-secondary rounded-pill">Admin Site</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% if not user.is_superadmin %}
+          <tr>
+            <td class="text-muted">Sites gérés</td>
+            <td>
+              {% for site in user.managed_sites.all %}
+              <span class="badge bg-light text-dark border me-1">{{ site.name }}</span>
+              {% empty %}
+              <span class="text-muted">Aucun site assigné</span>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td class="text-muted">Dernière connexion</td>
+            <td class="text-muted small">{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-info small mt-4 mb-0 py-2">
+        <i class="bi bi-info-circle me-1"></i>
+        Les mots de passe sont gérés par le contrôleur UniFi.
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
