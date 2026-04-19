@@ -38,6 +38,42 @@ def profile_view(request):
     return render(request, 'accounts/profile.html', {'user': request.user})
 
 
+def _sync_unifi_users_to_db():
+    """Importe/met à jour tous les admins UniFi dans la base BonNet."""
+    from unifi_api.client import get_all_admins
+    from sites_mgmt.models import HotspotSite
+
+    admins = get_all_admins()
+    if not admins:
+        return
+
+    site_map = {s.unifi_site_id: s for s in HotspotSite.objects.filter(is_active=True)}
+    all_sites = list(site_map.values())
+
+    for admin in admins:
+        username = admin.get('name', '').strip()
+        if not username:
+            continue
+
+        is_super = admin.get('is_super', False)
+
+        user, created = User.objects.get_or_create(username=username)
+        if created:
+            user.set_unusable_password()
+
+        user.role = User.ROLE_SUPERADMIN if is_super else User.ROLE_SITE_ADMIN
+        user.save()
+
+        if is_super:
+            user.managed_sites.set(all_sites)
+        else:
+            site_ids = set()
+            for perm in admin.get('permissions', []):
+                for sid in perm.get('sites', []):
+                    site_ids.add(sid)
+            user.managed_sites.set([site_map[sid] for sid in site_ids if sid in site_map])
+
+
 @login_required
 def user_list(request):
     if not request.user.is_superadmin:
@@ -45,6 +81,7 @@ def user_list(request):
         return redirect('dashboard:index')
 
     from sites_mgmt.models import HotspotSite
+    _sync_unifi_users_to_db()
     users = User.objects.all().prefetch_related('managed_sites').order_by('role', 'username')
     sites = HotspotSite.objects.filter(is_active=True).order_by('name')
     return render(request, 'accounts/users.html', {

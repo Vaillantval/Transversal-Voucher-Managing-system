@@ -147,9 +147,7 @@ document.getElementById('editModal').addEventListener('show.bs.modal', function(
   toggleSites(role);
 
   document.querySelectorAll('.site-cb').forEach(function(cb) {
-    // Superadmin → site_admin : tout cocher par défaut (avait accès à tout)
-    // Site_admin existant      : cocher ses sites actuels
-    cb.checked = role === 'superadmin' ? true : sitePks.includes(cb.value);
+    cb.checked = sitePks.includes(cb.value);
   });
 });
 </script>

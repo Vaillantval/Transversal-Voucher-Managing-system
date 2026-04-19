@@ -333,6 +333,24 @@ def get_all_site_stats(sites) -> dict:
     return result
 
 
+def get_all_admins() -> list:
+    """Retourne tous les admins du contrôleur (compte service). Cache 60 s."""
+    key = 'unifi_all_admins'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    c = _connect()
+    if not c:
+        return []
+    try:
+        admins = c.get_admins()
+        cache.set(key, admins or [], 60)
+        return admins or []
+    except Exception as e:
+        logger.error(f"get_all_admins : {e}")
+        return []
+
+
 def can_connect() -> bool:
     """Vérifie si le contrôleur UniFi est joignable (résultat mis en cache 30 s)."""
     key = 'unifi_can_connect'
