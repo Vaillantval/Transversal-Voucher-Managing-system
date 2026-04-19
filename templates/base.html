@@ -184,6 +184,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
     </a>
 
     <div class="nav-section">Gestion</div>
+    <a href="{% url 'accounts:profile' %}"
+       class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+      <i class="bi bi-person-circle"></i> Profil
+    </a>
     <a href="{% url 'sites:list' %}"
        class="{% if request.resolver_match.app_name == 'sites' %}active{% endif %}">
       <i class="bi bi-diagram-3"></i> Sites
