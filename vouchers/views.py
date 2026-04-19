@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 
 from sites_mgmt.models import HotspotSite, VoucherTier
@@ -43,6 +44,16 @@ def voucher_list(request):
 
     days = cv_int  # kept for template quick-buttons highlight
 
+    # Filtres session-level
+    f_tier        = request.GET.get('f_tier', '')
+    f_active_from = request.GET.get('f_active_from', '')
+    f_active_to   = request.GET.get('f_active_to', '')
+    f_expire_from = request.GET.get('f_expire_from', '')
+    f_expire_to   = request.GET.get('f_expire_to', '')
+    f_dur_val     = request.GET.get('f_dur_val', '').strip()
+    f_dur_unit    = request.GET.get('f_dur_unit', 'minutes')
+    f_status      = request.GET.get('f_status', '')
+
     if request.user.is_superadmin:
         sync_sites_from_unifi()
         sites = HotspotSite.objects.filter(is_active=True)
@@ -82,11 +93,65 @@ def voucher_list(request):
 
     sessions.sort(key=lambda g: g['sold_ts'], reverse=True)
 
+    # Appliquer les filtres session-level
+    if f_tier:
+        sessions = [g for g in sessions if g['tier_label'] == f_tier]
+
+    if f_active_from:
+        try:
+            ts = datetime.fromisoformat(f_active_from).timestamp()
+            sessions = [g for g in sessions if g['sold_ts'] >= ts]
+        except ValueError:
+            pass
+
+    if f_active_to:
+        try:
+            ts = datetime.fromisoformat(f_active_to).timestamp()
+            sessions = [g for g in sessions if g['sold_ts'] <= ts]
+        except ValueError:
+            pass
+
+    if f_expire_from:
+        try:
+            ts = datetime.fromisoformat(f_expire_from).timestamp()
+            sessions = [g for g in sessions if g.get('end', 0) >= ts]
+        except ValueError:
+            pass
+
+    if f_expire_to:
+        try:
+            ts = datetime.fromisoformat(f_expire_to).timestamp()
+            sessions = [g for g in sessions if g.get('end', 0) <= ts]
+        except ValueError:
+            pass
+
+    if f_dur_val:
+        try:
+            n = int(f_dur_val)
+            unit_map = {'minutes': 1, 'hours': 60, 'days': 1440, 'months': 43200}
+            target_min = n * unit_map.get(f_dur_unit, 1)
+            matched_tier = tier_for(target_min)
+            if matched_tier:
+                sessions = [g for g in sessions if g['tier_label'] == matched_tier.label]
+            else:
+                sessions = []
+        except (ValueError, TypeError):
+            pass
+
+    if f_status == 'active':
+        sessions = [g for g in sessions if g.get('is_currently_active', False)]
+    elif f_status == 'expired':
+        sessions = [g for g in sessions if not g.get('is_currently_active', False)]
+
     total_sessions = len(sessions)
     total_revenue  = sum(g['price'] for g in sessions)
     start          = (page - 1) * per_page
     sessions_page  = sessions[start:start + per_page]
     total_pages    = max(1, (total_sessions + per_page - 1) // per_page)
+
+    qs = request.GET.copy()
+    qs.pop('page', None)
+    base_qs = mark_safe(qs.urlencode())
 
     return render(request, 'vouchers/list.html', {
         'available_vouchers': all_vouchers,
@@ -94,6 +159,7 @@ def voucher_list(request):
         'total_sessions':     total_sessions,
         'total_revenue':      total_revenue,
         'sites':              sites,
+        'tiers':              tiers,
         'days':               days,
         'custom_value':       custom_value,
         'custom_unit':        cu,
@@ -104,6 +170,15 @@ def voucher_list(request):
         'total_pages':        total_pages,
         'site_filter':        site_filter,
         'page_title':         'Vouchers',
+        'f_tier':             f_tier,
+        'f_active_from':      f_active_from,
+        'f_active_to':        f_active_to,
+        'f_expire_from':      f_expire_from,
+        'f_expire_to':        f_expire_to,
+        'f_dur_val':          f_dur_val,
+        'f_dur_unit':         f_dur_unit,
+        'f_status':           f_status,
+        'base_qs':            base_qs,
     })
 
 
