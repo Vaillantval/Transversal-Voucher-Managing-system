@@ -208,6 +208,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
        class="{% if 'tiers' in request.path %}active{% endif %}">
       <i class="bi bi-tag"></i> Tarifs
     </a>
+    <a href="{% url 'accounts:users' %}"
+       class="{% if request.resolver_match.app_name == 'accounts' and 'utilisateurs' in request.path %}active{% endif %}">
+      <i class="bi bi-people"></i> Utilisateurs
+    </a>
     {% endif %}
   </div>
 

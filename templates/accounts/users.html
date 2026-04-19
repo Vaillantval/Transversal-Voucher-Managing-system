@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Utilisateurs{% endblock %}
+{% block page_title %}Gestion des utilisateurs{% endblock %}
+
+{% block extra_css %}
+<style>
+.role-badge-superadmin { background:#1A56DB; color:#fff; }
+.role-badge-site_admin  { background:#e5e7eb; color:#374151; }
+.sites-toggle { display:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover mb-0">
+      <thead><tr>
+        <th>Utilisateur</th>
+        <th class="text-center">Rôle</th>
+        <th class="d-none d-md-table-cell">Sites gérés</th>
+        <th class="d-none d-lg-table-cell">Dernière connexion</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+      {% for u in users %}
+      <tr>
+        <td>
+          <div class="fw-semibold">{{ u.get_full_name|default:u.username }}</div>
+          {% if u.get_full_name %}<div class="text-muted small">{{ u.username }}</div>{% endif %}
+          {% if u == request.user %}<span class="badge bg-light text-dark border small">Vous</span>{% endif %}
+        </td>
+        <td class="text-center">
+          <span class="badge rounded-pill role-badge-{{ u.role }}">{{ u.get_role_display }}</span>
+        </td>
+        <td class="d-none d-md-table-cell">
+          {% if u.is_superadmin %}
+            <span class="text-muted small">Tous les sites</span>
+          {% else %}
+            {% for site in u.managed_sites.all %}
+              <span class="badge bg-light text-dark border me-1">{{ site.name }}</span>
+            {% empty %}
+              <span class="text-muted small">Aucun</span>
+            {% endfor %}
+          {% endif %}
+        </td>
+        <td class="text-muted small d-none d-lg-table-cell">
+          {{ u.last_login|date:"d/m/Y H:i"|default:"Jamais" }}
+        </td>
+        <td class="text-end">
+          <button class="btn btn-outline-secondary btn-sm py-0"
+                  data-bs-toggle="modal" data-bs-target="#editModal"
+                  data-pk="{{ u.pk }}"
+                  data-username="{{ u.username }}"
+                  data-role="{{ u.role }}"
+                  data-sites="{% for s in u.managed_sites.all %}{{ s.pk }},{% endfor %}">
+            <i class="bi bi-pencil"></i>
+          </button>
+          {% if u != request.user %}
+          <form method="post" action="{% url 'accounts:user_delete' u.pk %}" class="d-inline"
+                onsubmit="return confirm('Supprimer « {{ u.username }} » ?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm py-0">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-muted py-4">Aucun utilisateur</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Modal édition ── -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="editForm">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Modifier <span id="modal-username" class="text-primary"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Rôle</label>
+            <select name="role" id="edit-role" class="form-select" onchange="toggleSites(this.value)">
+              <option value="site_admin">Administrateur de site</option>
+              <option value="superadmin">Super Administrateur</option>
+            </select>
+          </div>
+
+          <div id="sites-section">
+            <label class="form-label fw-semibold small">Sites assignés</label>
+            <div class="border rounded p-2" style="max-height:220px;overflow-y:auto">
+              {% for site in sites %}
+              <div class="form-check">
+                <input class="form-check-input site-cb" type="checkbox"
+                       name="sites" value="{{ site.pk }}" id="site-{{ site.pk }}">
+                <label class="form-check-label small" for="site-{{ site.pk }}">
+                  {{ site.name }}
+                </label>
+              </div>
+              {% empty %}
+              <span class="text-muted small">Aucun site actif</span>
+              {% endfor %}
+            </div>
+            <div class="small text-muted mt-1">
+              Visible uniquement pour le rôle Administrateur de site.
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSites(role) {
+  document.getElementById('sites-section').style.display =
+    role === 'site_admin' ? '' : 'none';
+}
+
+document.getElementById('editModal').addEventListener('show.bs.modal', function(e) {
+  var btn = e.relatedTarget;
+  var pk       = btn.dataset.pk;
+  var username = btn.dataset.username;
+  var role     = btn.dataset.role;
+  var sitePks  = btn.dataset.sites.split(',').filter(Boolean);
+
+  document.getElementById('modal-username').textContent = username;
+  document.getElementById('editForm').action = '/accounts/utilisateurs/' + pk + '/modifier/';
+  document.getElementById('edit-role').value = role;
+  toggleSites(role);
+
+  // Cocher les sites assignés
+  document.querySelectorAll('.site-cb').forEach(function(cb) {
+    cb.checked = sitePks.includes(cb.value);
+  });
+});
+</script>
+{% endblock %}
