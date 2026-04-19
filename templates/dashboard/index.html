@@ -373,6 +373,54 @@
     </div>
   </div>
 
+  <!-- Admins du site -->
+  {% if site_admins %}
+  <div class="col-12">
+    <div class="card card-bn p-3">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="stat-icon" style="background:#eff6ff">
+          <i class="bi bi-people-fill" style="color:#1A56DB"></i>
+        </div>
+        <h6 class="fw-600 mb-0">Administrateurs du site</h6>
+        <span class="badge rounded-pill ms-1" style="background:#dbeafe;color:#1e40af">{{ site_admins|length }}</span>
+      </div>
+      <div class="row g-2">
+        {% for admin in site_admins %}
+        <div class="col-sm-6 col-lg-4">
+          <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb">
+            <!-- Avatar initiales -->
+            <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center fw-700"
+                 style="width:40px;height:40px;background:#1A56DB;color:#fff;font-size:.9rem">
+              {{ admin.get_full_name|default:admin.username|slice:":1"|upper }}
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-semibold text-truncate" style="font-size:.9rem">
+                {{ admin.get_full_name|default:admin.username }}
+              </div>
+              {% if admin.get_full_name %}
+              <div class="text-muted" style="font-size:.75rem">{{ admin.username }}</div>
+              {% endif %}
+              {% if admin.email %}
+              <div class="text-muted text-truncate" style="font-size:.75rem">
+                <i class="bi bi-envelope me-1"></i>{{ admin.email }}
+              </div>
+              {% endif %}
+            </div>
+            <div class="flex-shrink-0">
+              <span class="badge rounded-pill
+                {% if admin.is_superadmin %}role-badge-superadmin{% else %}role-badge-site_admin{% endif %}"
+                style="font-size:.7rem">
+                {{ admin.get_role_display }}
+              </span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Sessions vendues dans la période -->
   <div class="col-12">
     <div class="card card-bn p-3">

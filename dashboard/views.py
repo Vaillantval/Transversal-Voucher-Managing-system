@@ -147,6 +147,15 @@ def index(request):
 
     unifi_warning = not unifi.can_connect()
 
+    # Admins du site sélectionné
+    site_admins = []
+    if selected_site:
+        from accounts.models import User as UserModel
+        site_admins = list(
+            UserModel.objects.filter(managed_sites=selected_site)
+            .order_by('role', 'username')
+        )
+
     context = {
         'page_title': 'Tableau de bord',
         'days': days,
@@ -177,5 +186,6 @@ def index(request):
         'sold_in_period':         sold_in_period,
         'all_available_vouchers': [v for v in all_vouchers if v['is_available']],
         'unifi_warning':          unifi_warning,
+        'site_admins':            site_admins,
     }
     return render(request, 'dashboard/index.html', context)

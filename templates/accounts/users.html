@@ -38,7 +38,9 @@
             <span class="text-muted small">Tous les sites</span>
           {% else %}
             {% for site in u.managed_sites.all %}
-              <span class="badge bg-light text-dark border me-1">{{ site.name }}</span>
+              <a href="{% url 'dashboard:index' %}?site={{ site.unifi_site_id }}"
+                 class="badge bg-light text-dark border me-1 text-decoration-none"
+                 title="Voir les stats de {{ site.name }}">{{ site.name }}</a>
             {% empty %}
               <span class="text-muted small">Aucun</span>
             {% endfor %}
