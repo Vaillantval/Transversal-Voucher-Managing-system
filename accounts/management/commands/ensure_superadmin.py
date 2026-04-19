@@ -28,6 +28,8 @@ class Command(BaseCommand):
 
         user, created = User.objects.get_or_create(username=username)
         user.role = User.ROLE_SUPERADMIN
+        user.is_staff = True
+        user.is_superuser = True
         if email:
             user.email = email
         if password:
