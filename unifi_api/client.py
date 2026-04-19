@@ -334,7 +334,7 @@ def get_all_site_stats(sites) -> dict:
 
 
 def get_all_admins() -> list:
-    """Retourne tous les admins du contrôleur (compte service). Cache 60 s."""
+    """Retourne tous les admins du contrôleur via cmd/sitemgr. Cache 60 s."""
     key = 'unifi_all_admins'
     cached = cache.get(key)
     if cached is not None:
@@ -343,7 +343,7 @@ def get_all_admins() -> list:
     if not c:
         return []
     try:
-        admins = c.get_admins()
+        admins = c._api_write('cmd/sitemgr', {'cmd': 'get-admins'})
         cache.set(key, admins or [], 60)
         return admins or []
     except Exception as e:
