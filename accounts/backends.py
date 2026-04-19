@@ -31,7 +31,7 @@ class UniFiAuthBackend(BaseBackend):
         user, created = User.objects.get_or_create(username=username)
         if created:
             user.set_unusable_password()
-            user.role = User.ROLE_SUPERADMIN
+            user.role = User.ROLE_SITE_ADMIN
             user.save()
         return user
 

@@ -197,15 +197,16 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
       <i class="bi bi-plus-circle"></i> Créer vouchers
     </a>
 
+    <a href="{% url 'reports:index' %}"
+       class="{% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+      <i class="bi bi-file-earmark-bar-graph"></i> Rapports
+    </a>
+
     {% if user.is_superadmin %}
     <div class="nav-section">Super Admin</div>
     <a href="{% url 'sites:tiers' %}"
        class="{% if 'tiers' in request.path %}active{% endif %}">
       <i class="bi bi-tag"></i> Tarifs
-    </a>
-    <a href="{% url 'reports:index' %}"
-       class="{% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
-      <i class="bi bi-file-earmark-bar-graph"></i> Rapports
     </a>
     {% endif %}
   </div>
