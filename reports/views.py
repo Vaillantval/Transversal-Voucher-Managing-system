@@ -250,19 +250,20 @@ def export_pdf(request):
     try:
         from sites_mgmt.models import SiteConfig
         from reportlab.platypus import Image as RLImage
+        import os
         cfg = SiteConfig.get()
         logo_cells = []
         for logo_field in (cfg.logo1, cfg.logo2):
-            if logo_field and logo_field.name:
-                try:
-                    img = RLImage(logo_field.path, height=18*mm, width=50*mm, kind='proportional')
-                    logo_cells.append(img)
-                except Exception:
-                    pass
+            try:
+                if logo_field and logo_field.name:
+                    path = logo_field.path
+                    if os.path.isfile(path):
+                        logo_cells.append(RLImage(path, height=18*mm, width=50*mm, kind='proportional'))
+            except Exception:
+                pass
         if logo_cells:
-            from reportlab.platypus import Table as RLTable, TableStyle as RLTableStyle
-            logo_table = RLTable([logo_cells], colWidths=[55*mm] * len(logo_cells))
-            logo_table.setStyle(RLTableStyle([
+            logo_table = Table([logo_cells], colWidths=[55*mm] * len(logo_cells))
+            logo_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 8),
