@@ -246,6 +246,32 @@ def export_pdf(request):
                                  textColor=colors.HexColor('#1A56DB'), fontSize=16)
     elements = []
 
+    # ── Logos ──
+    try:
+        from sites_mgmt.models import SiteConfig
+        from reportlab.platypus import Image as RLImage
+        cfg = SiteConfig.get()
+        logo_cells = []
+        for logo_field in (cfg.logo1, cfg.logo2):
+            if logo_field and logo_field.name:
+                try:
+                    img = RLImage(logo_field.path, height=18*mm, width=50*mm, kind='proportional')
+                    logo_cells.append(img)
+                except Exception:
+                    pass
+        if logo_cells:
+            from reportlab.platypus import Table as RLTable, TableStyle as RLTableStyle
+            logo_table = RLTable([logo_cells], colWidths=[55*mm] * len(logo_cells))
+            logo_table.setStyle(RLTableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            elements.append(logo_table)
+    except Exception:
+        pass
+
     elements.append(Paragraph(f"BonNet — Rapport Vouchers | {site_label}", title_style))
     elements.append(Paragraph(
         f"Période : {date_from} → {date_to}  |  Généré le {datetime.now(TZ_HAITI).strftime('%d/%m/%Y %H:%M')}",
