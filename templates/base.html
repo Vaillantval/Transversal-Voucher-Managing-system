@@ -459,6 +459,35 @@ function closeSidebar() {
   document.getElementById('sidebar-backdrop').classList.remove('open');
 }
 
+// Hint de scroll : micro-animation toutes les 30s si le nav déborde
+(function() {
+  var nav = document.querySelector('.sidebar-nav');
+  if (!nav) return;
+
+  function scrollHint() {
+    var sidebar = document.getElementById('sidebar');
+    var isMobileOpen = sidebar && sidebar.classList.contains('open');
+    var isDesktop = window.innerWidth >= 992;
+    if ((!isDesktop && !isMobileOpen) || nav.scrollHeight <= nav.clientHeight) return;
+
+    // Descend 55px en douceur, puis remonte après 600ms
+    nav.scrollTo({ top: 55, behavior: 'smooth' });
+    setTimeout(function() {
+      nav.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 700);
+  }
+
+  // Premier hint 3s après ouverture du drawer
+  document.getElementById('sidebar').addEventListener('transitionend', function(e) {
+    if (e.propertyName === 'transform' && this.classList.contains('open')) {
+      setTimeout(scrollHint, 3000);
+    }
+  });
+
+  // Répéter toutes les 30s
+  setInterval(scrollHint, 30000);
+})();
+
 // Spinner sur navigation et soumission de formulaire
 (function() {
   var loader = document.getElementById('page-loader');
