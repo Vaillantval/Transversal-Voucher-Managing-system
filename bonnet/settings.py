@@ -227,14 +227,28 @@ UNIFI_USERNAME = os.getenv('UNIFI_USERNAME', '')
 UNIFI_PASSWORD = os.getenv('UNIFI_PASSWORD', '')
 UNIFI_VERIFY_SSL = os.getenv('UNIFI_VERIFY_SSL', 'False') == 'True'
 
-# Cache (pour données UniFi)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': BASE_DIR / 'cache',
-        'TIMEOUT': 300,
+# Cache (Redis en prod, FileBasedCache en dev)
+_REDIS_URL = os.getenv('REDIS_URL', '')
+if _REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': _REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'IGNORE_EXCEPTIONS': True,
+            },
+            'TIMEOUT': 600,
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+            'LOCATION': BASE_DIR / 'cache',
+            'TIMEOUT': 300,
+        }
+    }
 
 # Messages
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'

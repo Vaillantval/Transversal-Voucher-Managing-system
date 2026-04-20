@@ -278,6 +278,24 @@ def send_monthly_reports():
         logger.error(f"send_monthly_reports error: {e}", exc_info=True)
 
 
+def prewarm_cache():
+    """Pré-charge les données UniFi de tous les sites dans le cache Redis."""
+    try:
+        from sites_mgmt.models import HotspotSite
+        from unifi_api import client as unifi
+
+        sites = list(HotspotSite.objects.filter(is_active=True))
+        if not sites:
+            return
+
+        unifi.get_all_vouchers(sites)
+        unifi.get_all_guests(sites)
+        unifi.get_all_site_stats(sites)
+        logger.info(f"Cache pre-warm OK — {len(sites)} sites")
+    except Exception as e:
+        logger.error(f"prewarm_cache error: {e}", exc_info=True)
+
+
 def start():
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -286,6 +304,15 @@ def start():
 
     scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
     scheduler.add_jobstore(DjangoJobStore(), 'default')
+
+    scheduler.add_job(
+        prewarm_cache,
+        trigger=IntervalTrigger(minutes=2),
+        id='prewarm_cache',
+        name='Pré-chargement cache UniFi (toutes les 2 min)',
+        replace_existing=True,
+        misfire_grace_time=60,
+    )
 
     scheduler.add_job(
         check_stock_levels,
@@ -306,4 +333,4 @@ def start():
     )
 
     scheduler.start()
-    logger.info("APScheduler démarré — jobs : stock toutes les 30 min, rapport le dernier jour du mois.")
+    logger.info("APScheduler démarré — pre-warm/2min, stock/12h, rapport mensuel.")
