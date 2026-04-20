@@ -411,12 +411,12 @@
           <i class="bi bi-people-fill" style="color:#1A56DB"></i>
         </div>
         <h6 class="fw-600 mb-0">Administrateurs du site</h6>
-        <span class="badge rounded-pill ms-1" style="background:#dbeafe;color:#1e40af">{{ site_admins|length }}</span>
+        <span class="badge rounded-pill ms-1 admin-count-badge" style="background:#dbeafe;color:#1e40af">{{ site_admins|length }}</span>
       </div>
       <div class="row g-2">
         {% for admin in site_admins %}
         <div class="col-sm-6 col-lg-4">
-          <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb">
+          <div class="d-flex align-items-center gap-3 p-2 rounded-3 admin-card-item" style="background:#f9fafb;border:1px solid #e5e7eb">
             <!-- Avatar initiales -->
             <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center fw-700"
                  style="width:40px;height:40px;background:#1A56DB;color:#fff;font-size:.9rem">
