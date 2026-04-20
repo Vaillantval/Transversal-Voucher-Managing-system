@@ -171,17 +171,21 @@
     <div class="splash-logo">Bon<span>Net</span></div>
     <div class="splash-subtitle">Voucher Management System</div>
     {% if site_config and site_config.logo1 or site_config and site_config.logo2 %}
-    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:20px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:24px">
       {% if site_config.logo1 %}
-      <img src="{{ site_config.logo1.url }}" alt="Logo 1"
-           style="max-height:52px;max-width:140px;object-fit:contain">
+      <div style="height:52px;display:flex;align-items:center">
+        <img src="{{ site_config.logo1.url }}" alt="Logo 1"
+             style="max-height:52px;max-width:150px;width:auto;object-fit:contain;display:block">
+      </div>
       {% endif %}
       {% if site_config.logo1 and site_config.logo2 %}
-      <div style="width:1px;height:44px;background:rgba(255,255,255,.2)"></div>
+      <div style="width:1px;height:40px;background:rgba(255,255,255,.25);flex-shrink:0"></div>
       {% endif %}
       {% if site_config.logo2 %}
-      <img src="{{ site_config.logo2.url }}" alt="Logo 2"
-           style="max-height:52px;max-width:140px;object-fit:contain">
+      <div style="height:52px;display:flex;align-items:center">
+        <img src="{{ site_config.logo2.url }}" alt="Logo 2"
+             style="max-height:52px;max-width:150px;width:auto;object-fit:contain;display:block">
+      </div>
       {% endif %}
     </div>
     {% endif %}
