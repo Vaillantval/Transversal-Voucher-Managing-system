@@ -130,6 +130,7 @@ def index(request):
         all_stats = unifi.get_all_site_stats(all_sites)
         for site in all_sites:
             live_stats.append({'site': site, 'stats': all_stats.get(site.unifi_site_id, {})})
+        live_stats.sort(key=lambda x: -x['stats'].get('client_count', 0))
 
     total_clients         = sum(s['stats'].get('client_count', 0)   for s in live_stats)
     total_devices_online  = sum(s['stats'].get('device_online', 0)  for s in live_stats)

@@ -294,18 +294,38 @@
   </div>
   <div class="col-md-6">
     <div class="card card-bn p-3">
-      <h6 class="fw-600 mb-3">État des sites (live — 10 premiers)</h6>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-600 mb-0">État des sites (live)</h6>
+        <span class="text-muted small">{{ live_stats|length }} site(s)</span>
+      </div>
+      <div class="table-responsive" style="max-height:340px;overflow-y:auto">
       <table class="table table-bn table-sm mb-0">
-        <thead><tr><th>Site</th><th>Clients</th><th>Online</th><th>Offline</th></tr></thead>
+        <thead><tr><th>Site</th><th class="text-center">Clients</th><th class="text-center">Online</th><th class="text-center">Offline</th></tr></thead>
         <tbody>
         {% for item in live_stats %}
-        <tr class="site-row">
-          <td class="fw-semibold">{{ item.site.name }}</td>
-          <td><span class="device-dot dot-online me-1"></span>{{ item.stats.client_count }}</td>
-          <td><span class="device-dot dot-online me-1"></span>{{ item.stats.device_online }}</td>
-          <td>
+        <tr class="site-row" style="cursor:pointer"
+            onclick="location.href='?site={{ item.site.unifi_site_id }}&cv={{ custom_value }}&cu={{ custom_unit }}'">
+          <td class="fw-semibold">
+            <a href="?site={{ item.site.unifi_site_id }}&cv={{ custom_value }}&cu={{ custom_unit }}"
+               class="text-decoration-none text-dark d-flex align-items-center gap-1"
+               onclick="event.stopPropagation()">
+              {{ item.site.name }}
+              <i class="bi bi-arrow-right-short text-muted" style="font-size:.95rem"></i>
+            </a>
+          </td>
+          <td class="text-center">
+            {% if item.stats.client_count > 0 %}
+            <span class="badge bg-primary rounded-pill">{{ item.stats.client_count }}</span>
+            {% else %}<span class="text-muted">0</span>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if item.stats.device_online > 0 %}
+            <span class="badge bg-success rounded-pill">{{ item.stats.device_online }}</span>
+            {% else %}<span class="text-muted">0</span>{% endif %}
+          </td>
+          <td class="text-center">
             {% if item.stats.device_offline > 0 %}
-            <span class="device-dot dot-offline me-1"></span><span class="text-danger">{{ item.stats.device_offline }}</span>
+            <span class="badge bg-danger rounded-pill">{{ item.stats.device_offline }}</span>
             {% else %}<span class="text-muted">0</span>{% endif %}
           </td>
         </tr>
@@ -314,6 +334,7 @@
         {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </div>
