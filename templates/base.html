@@ -17,12 +17,13 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 /* ── Sidebar ────────────────────────────────────────────────── */
 .sidebar {
   width: var(--bn-sidebar-w);
-  min-height: 100vh;
+  height: 100vh;
   background: #111827;
   position: fixed;
   top: 0; left: 0;
   display: flex; flex-direction: column;
   z-index: 1050;
+  overflow: hidden;
 }
 .sidebar-brand {
   padding: 1.25rem 1.5rem;
