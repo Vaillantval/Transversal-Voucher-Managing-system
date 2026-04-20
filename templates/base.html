@@ -493,8 +493,11 @@ function closeSidebar() {
   var loader = document.getElementById('page-loader');
   function showLoader() { loader.classList.add('active'); }
   document.addEventListener('submit', function(e) {
-    // Ne pas spinner sur les auto-submit de filtres (déjà rapide)
-    if (!e.target.closest('#sessions-filter-form')) showLoader();
+    var form = e.target;
+    if (form.closest('#sessions-filter-form')) return;
+    var action = (form.action || '');
+    if (action.includes('/csv') || action.includes('/excel') || action.includes('/pdf')) return;
+    showLoader();
   });
   document.addEventListener('click', function(e) {
     var link = e.target.closest('a[href]');
