@@ -16,3 +16,7 @@ openpyxl==3.1.2
 # Prod
 whitenoise==6.6.0
 gunicorn==23.0.0
+
+# Notifications & Scheduler
+resend>=2.0.0
+django-apscheduler>=0.6.2

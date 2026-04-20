@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block extra_css %}
+<style>
+.notif-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  transition: box-shadow .15s;
+  cursor: default;
+}
+.notif-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.notif-card.unread { border-left: 4px solid var(--bn-blue); }
+.notif-card.unread.warning-type { border-left-color: #F59E0B; }
+.notif-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; flex-shrink: 0;
+}
+.icon-warning { background: #FEF3C7; color: #D97706; }
+.icon-info    { background: #DBEAFE; color: #1D4ED8; }
+.badge-unread {
+  background: #EFF6FF; color: #1D4ED8;
+  font-size: .7rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+}
+.badge-read {
+  background: #F9FAFB; color: #9ca3af;
+  font-size: .7rem; padding: 2px 8px; border-radius: 20px;
+}
+.filter-bar { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: .75rem 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0 fw-700">Notifications</h5>
+    <p class="text-muted small mb-0">Alertes stock et rapports automatiques</p>
+  </div>
+  {% if notifications %}
+  <button class="btn btn-sm btn-outline-secondary" id="btn-mark-all">
+    <i class="bi bi-check2-all me-1"></i>Tout marquer comme lu
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtres -->
+<div class="filter-bar mb-3 d-flex flex-wrap gap-2 align-items-center">
+  <span class="text-muted small me-1">Filtrer :</span>
+  <a href="?{% if read_filter %}read={{ read_filter }}{% endif %}"
+     class="btn btn-sm {% if not type_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    Tout
+  </a>
+  <a href="?type=stock_low{% if read_filter %}&read={{ read_filter }}{% endif %}"
+     class="btn btn-sm {% if type_filter == 'stock_low' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-exclamation-triangle me-1"></i>Stock faible
+  </a>
+  <a href="?type=monthly_report{% if read_filter %}&read={{ read_filter }}{% endif %}"
+     class="btn btn-sm {% if type_filter == 'monthly_report' %}btn-info{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapports
+  </a>
+  <div class="ms-auto d-flex gap-1">
+    <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}read=0"
+       class="btn btn-sm {% if read_filter == '0' %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      Non lus
+    </a>
+    <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}read=1"
+       class="btn btn-sm {% if read_filter == '1' %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+      Lus
+    </a>
+  </div>
+</div>
+
+{% if notifications %}
+<div class="d-flex flex-column gap-2" id="notif-list">
+  {% for n in notifications %}
+  <div class="notif-card {% if not n.is_read %}unread{% endif %} {% if n.type == 'stock_low' %}warning-type{% endif %}"
+       id="notif-{{ n.pk }}">
+    <div class="d-flex align-items-start gap-3">
+      <div class="notif-icon {% if n.type == 'stock_low' %}icon-warning{% else %}icon-info{% endif %}">
+        <i class="bi bi-{{ n.icon }}"></i>
+      </div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+          <span class="fw-600 text-dark">{{ n.title }}</span>
+          {% if not n.is_read %}
+            <span class="badge-unread">Non lu</span>
+          {% else %}
+            <span class="badge-read">Lu</span>
+          {% endif %}
+          {% if n.email_sent %}
+            <span class="badge bg-light text-success border" style="font-size:.7rem">
+              <i class="bi bi-envelope-check me-1"></i>Email envoyé
+            </span>
+          {% endif %}
+        </div>
+        <p class="text-muted small mb-1">{{ n.message }}</p>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <span class="text-muted" style="font-size:.78rem">
+            <i class="bi bi-clock me-1"></i>{{ n.created_at|date:"d/m/Y H:i" }}
+          </span>
+          {% if n.site %}
+          <span class="text-muted" style="font-size:.78rem">
+            <i class="bi bi-wifi me-1"></i>{{ n.site.name }}
+          </span>
+          {% endif %}
+          {% if n.type == 'stock_low' and n.stock_count is not None %}
+          <span class="fw-600" style="font-size:.78rem;color:{% if n.stock_count <= 5 %}#EF4444{% else %}#F59E0B{% endif %}">
+            <i class="bi bi-ticket-perforated me-1"></i>{{ n.stock_count }} restant(s)
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% if not n.is_read %}
+      <button class="btn btn-sm btn-link text-secondary p-0 flex-shrink-0 btn-mark-one"
+              data-pk="{{ n.pk }}" title="Marquer comme lu">
+        <i class="bi bi-check-lg" style="font-size:1.2rem"></i>
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-bell-slash text-muted" style="font-size:3rem"></i>
+  <p class="text-muted mt-3 mb-0">Aucune notification{% if type_filter or read_filter %} pour ce filtre{% endif %}.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+function postJSON(url) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+  }).then(r => r.json());
+}
+
+// Marquer une notif comme lue
+document.querySelectorAll('.btn-mark-one').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pk = btn.dataset.pk;
+    postJSON(`/notifications/${pk}/read/`).then(data => {
+      if (data.ok) {
+        const card = document.getElementById(`notif-${pk}`);
+        card.classList.remove('unread', 'warning-type');
+        btn.remove();
+        card.querySelector('.badge-unread')?.replaceWith((() => {
+          const s = document.createElement('span');
+          s.className = 'badge-read'; s.textContent = 'Lu';
+          return s;
+        })());
+        updateBadge(-1);
+      }
+    });
+  });
+});
+
+// Tout marquer
+document.getElementById('btn-mark-all')?.addEventListener('click', () => {
+  postJSON('/notifications/read-all/').then(data => {
+    if (data.ok) location.reload();
+  });
+});
+
+function updateBadge(delta) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  const cur = parseInt(badge.textContent) || 0;
+  const next = Math.max(0, cur + delta);
+  if (next === 0) badge.remove();
+  else badge.textContent = next;
+}
+</script>
+{% endblock %}

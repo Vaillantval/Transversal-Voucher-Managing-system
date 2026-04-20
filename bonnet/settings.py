@@ -126,6 +126,8 @@ INSTALLED_APPS = [
     'vouchers',
     'dashboard',
     'reports',
+    'notifications.apps.NotificationsConfig',
+    'django_apscheduler',
 ]
 
 MIDDLEWARE = [
@@ -152,6 +154,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'notifications.context_processors.unread_notifications',
             ],
         },
     },
@@ -234,3 +237,14 @@ CACHES = {
 
 # Messages
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+# ── Resend (emails transactionnels) ──────────────────────────────────────────
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'BonNet <noreply@bonnet.ht>')
+
+# Emails destinataires du rapport mensuel (virgule-séparés)
+ADMIN_NOTIFY = os.getenv('ADMIN_NOTIFY', '')
+
+# APScheduler
+APSCHEDULER_DATETIME_FORMAT = "d/m/Y H:i:s"
+APSCHEDULER_RUN_NOW_TIMEOUT = 25

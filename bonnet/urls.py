@@ -74,5 +74,6 @@ urlpatterns = [
     path('sites/', include('sites_mgmt.urls')),
     path('vouchers/', include('vouchers.urls')),
     path('reports/', include('reports.urls')),
+    path('notifications/', include('notifications.urls')),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

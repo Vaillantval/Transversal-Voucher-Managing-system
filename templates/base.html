@@ -205,6 +205,17 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
        class="{% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
       <i class="bi bi-file-earmark-bar-graph"></i> Rapports
     </a>
+    <a href="{% url 'notifications:list' %}"
+       class="{% if request.resolver_match.app_name == 'notifications' %}active{% endif %}">
+      <i class="bi bi-bell"></i> Notifications
+      {% if unread_notifications_count %}
+      <span id="notif-badge"
+            style="background:#EF4444;color:#fff;font-size:.65rem;font-weight:700;
+                   border-radius:10px;padding:1px 6px;margin-left:auto">
+        {{ unread_notifications_count }}
+      </span>
+      {% endif %}
+    </a>
 
     {% if user.is_superadmin %}
     <div class="nav-section">Super Admin</div>
