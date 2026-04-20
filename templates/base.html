@@ -470,11 +470,11 @@ function closeSidebar() {
     var isDesktop = window.innerWidth >= 992;
     if ((!isDesktop && !isMobileOpen) || nav.scrollHeight <= nav.clientHeight) return;
 
-    // Descend 55px en douceur, puis remonte après 600ms
-    nav.scrollTo({ top: 55, behavior: 'smooth' });
+    // Descend 120px en douceur, puis remonte après 900ms
+    nav.scrollTo({ top: 120, behavior: 'smooth' });
     setTimeout(function() {
       nav.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 700);
+    }, 900);
   }
 
   // Premier hint 3s après ouverture du drawer
