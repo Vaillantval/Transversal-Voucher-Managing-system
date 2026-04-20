@@ -3,7 +3,9 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from datetime import date, timedelta, datetime
 from collections import defaultdict
-import csv, io
+import csv, io, logging
+
+logger = logging.getLogger(__name__)
 
 from sites_mgmt.models import HotspotSite, VoucherTier
 from sites_mgmt.utils import find_tier, TZ_HAITI
@@ -220,6 +222,14 @@ def export_excel(request):
 
 @login_required
 def export_pdf(request):
+    try:
+        return _export_pdf_inner(request)
+    except Exception:
+        logger.exception("export_pdf FATAL ERROR")
+        return HttpResponse("Erreur lors de la génération du PDF. Voir les logs.", status=500)
+
+
+def _export_pdf_inner(request):
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm, mm
@@ -259,8 +269,8 @@ def export_pdf(request):
                     path = logo_field.path
                     if os.path.isfile(path):
                         logo_cells.append(RLImage(path, height=18*mm, width=50*mm, kind='proportional'))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"PDF logo load error: {e}")
         if logo_cells:
             logo_table = Table([logo_cells], colWidths=[55*mm] * len(logo_cells))
             logo_table.setStyle(TableStyle([
@@ -270,8 +280,8 @@ def export_pdf(request):
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ]))
             elements.append(logo_table)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"PDF logo block error: {e}")
 
     elements.append(Paragraph(f"BonNet — Rapport Vouchers | {site_label}", title_style))
     elements.append(Paragraph(
