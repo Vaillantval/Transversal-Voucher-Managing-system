@@ -123,8 +123,9 @@ def generate_excel_bytes(sites: list, date_from: str, date_to: str) -> bytes:
     # ── Une feuille par site ──────────────────────────────────────────────────
     for site in sites:
         guests = by_site.get(site.unifi_site_id, [])
-        # Tronquer le nom si trop long pour Excel (max 31 chars)
-        sheet_name = site.name[:31]
+        # Nettoyer le nom de feuille (Excel : max 31 chars, interdit: / \ * ? [ ] :)
+        import re
+        sheet_name = re.sub(r'[/\\*?\[\]:]', '-', site.name)[:31]
         ws = wb.create_sheet(sheet_name)
 
         ws.merge_cells('A1:G1')
