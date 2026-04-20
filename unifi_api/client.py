@@ -324,12 +324,32 @@ def get_site_stats(site_id: str, _c=None) -> dict:
     }
 
 
+def _fetch_site_stats(site) -> tuple:
+    """Retourne (site_id, stats_dict) — appelé depuis un thread."""
+    key = f'unifi_stats_{site.unifi_site_id}'
+    cached = cache.get(key)
+    if cached is not None:
+        return site.unifi_site_id, cached
+    stats = get_site_stats(site.unifi_site_id)
+    cache.set(key, stats, _TTL_DEVICES)
+    return site.unifi_site_id, stats
+
+
 def get_all_site_stats(sites) -> dict:
-    """Stats de tous les sites en un seul login. Retourne {site_id: stats}."""
-    c = _connect()
+    """Stats de tous les sites en parallèle. Retourne {site_id: stats}."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    sites_list = list(sites)
+    if not sites_list:
+        return {}
     result = {}
-    for site in sites:
-        result[site.unifi_site_id] = get_site_stats(site.unifi_site_id, c)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(_fetch_site_stats, site): site for site in sites_list}
+        for future in as_completed(futures, timeout=60):
+            try:
+                site_id, stats = future.result()
+                result[site_id] = stats
+            except Exception as e:
+                logger.error(f"Thread stats error: {e}")
     return result
 
 
@@ -387,5 +407,5 @@ def can_connect() -> bool:
     if cached is not None:
         return cached
     result = _connect() is not None
-    cache.set(key, result, 30)
+    cache.set(key, result, 120)
     return result
