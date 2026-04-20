@@ -249,9 +249,17 @@
         <th class="text-end">Revenu</th>
       </tr></thead>
       <tbody>
-      {% for site_name, stats in site_breakdown %}
-      <tr>
-        <td class="fw-semibold">{{ site_name }}</td>
+      {% for stats in site_breakdown %}
+      <tr class="site-row" style="cursor:pointer"
+          onclick="location.href='?site={{ stats.site_id }}&cv={{ custom_value }}&cu={{ custom_unit }}'">
+        <td class="fw-semibold">
+          <a href="?site={{ stats.site_id }}&cv={{ custom_value }}&cu={{ custom_unit }}"
+             class="text-decoration-none text-dark d-flex align-items-center gap-1"
+             onclick="event.stopPropagation()">
+            {{ stats.name }}
+            <i class="bi bi-arrow-right-short text-muted" style="font-size:.95rem"></i>
+          </a>
+        </td>
         <td class="text-center d-none d-sm-table-cell">
           {% if stats.available > 0 %}<span class="badge bg-success rounded-pill">{{ stats.available }}</span>
           {% else %}<span class="text-muted">0</span>{% endif %}

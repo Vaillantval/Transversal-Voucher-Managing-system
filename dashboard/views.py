@@ -97,20 +97,24 @@ def index(request):
     by_tier = [{'tier__label': k, 'count': c}
                for k, c in sorted(tier_counts.items(), key=lambda x: -x[1])]
 
-    # Breakdown par site
-    site_bd = defaultdict(lambda: {'total': 0, 'sold': 0, 'active_sessions': 0, 'available': 0, 'revenue': 0.0})
+    # Breakdown par site (keyed par unifi_site_id pour permettre les liens)
+    site_bd = defaultdict(lambda: {'name': '?', 'site_id': '', 'total': 0, 'sold': 0, 'active_sessions': 0, 'available': 0, 'revenue': 0.0})
     for v in period_vouchers:
-        name = v.get('site_name', '?')
-        site_bd[name]['total'] += 1
+        sid = v.get('site_unifi_id', '')
+        site_bd[sid]['name']    = v.get('site_name', '?')
+        site_bd[sid]['site_id'] = sid
+        site_bd[sid]['total']  += 1
         if v['is_available']:
-            site_bd[name]['available'] += 1
+            site_bd[sid]['available'] += 1
     for g in sold_in_period:
-        name = g.get('site_name', '?')
-        site_bd[name]['sold']    += 1
-        site_bd[name]['revenue'] += g['price']
+        sid = g.get('site_unifi_id', '')
+        site_bd[sid]['name']    = g.get('site_name', '?')
+        site_bd[sid]['site_id'] = sid
+        site_bd[sid]['sold']    += 1
+        site_bd[sid]['revenue'] += g['price']
         if g.get('end', 0) > now_ts:
-            site_bd[name]['active_sessions'] += 1
-    site_breakdown = sorted(site_bd.items(), key=lambda x: -x[1]['sold'])
+            site_bd[sid]['active_sessions'] += 1
+    site_breakdown = sorted(site_bd.values(), key=lambda x: -x['sold'])
 
     # ── Mode tous les sites ──────────────────────────────────────────────────
     live_stats = []
