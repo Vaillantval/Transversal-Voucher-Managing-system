@@ -224,9 +224,14 @@ def export_excel(request):
 def export_pdf(request):
     try:
         return _export_pdf_inner(request)
-    except Exception:
+    except Exception as e:
+        import traceback
         logger.exception("export_pdf FATAL ERROR")
-        return HttpResponse("Erreur lors de la génération du PDF. Voir les logs.", status=500)
+        tb = traceback.format_exc()
+        return HttpResponse(
+            f"PDF ERROR — {type(e).__name__}: {e}\n\n{tb}",
+            status=500, content_type='text/plain'
+        )
 
 
 def _export_pdf_inner(request):
