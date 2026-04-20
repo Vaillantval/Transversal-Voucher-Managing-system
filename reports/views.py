@@ -224,14 +224,9 @@ def export_excel(request):
 def export_pdf(request):
     try:
         return _export_pdf_inner(request)
-    except Exception as e:
-        import traceback
+    except Exception:
         logger.exception("export_pdf FATAL ERROR")
-        tb = traceback.format_exc()
-        return HttpResponse(
-            f"PDF ERROR — {type(e).__name__}: {e}\n\n{tb}",
-            status=500, content_type='text/plain'
-        )
+        return HttpResponse("Erreur lors de la génération du PDF. Voir les logs.", status=500)
 
 
 def _export_pdf_inner(request):
@@ -272,7 +267,7 @@ def _export_pdf_inner(request):
             try:
                 if logo_field and logo_field.name:
                     path = logo_field.path
-                    if os.path.isfile(path):
+                    if os.path.isfile(path) and not path.lower().endswith('.svg'):
                         logo_cells.append(RLImage(path, height=18*mm, width=50*mm, kind='proportional'))
             except Exception as e:
                 logger.warning(f"PDF logo load error: {e}")
