@@ -9,10 +9,12 @@
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 1rem 1.25rem;
-  transition: box-shadow .15s;
+  transition: box-shadow .15s, border-color .15s;
   cursor: default;
 }
-.notif-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+.notif-card.clickable { cursor: pointer; }
+.notif-card.clickable:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); border-color: #93c5fd; }
+.notif-card:not(.clickable):hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
 .notif-card.unread { border-left: 4px solid var(--bn-blue); }
 .notif-card.unread.warning-type { border-left-color: #F59E0B; }
 .notif-icon {
@@ -62,6 +64,10 @@
      class="btn btn-sm {% if type_filter == 'monthly_report' %}btn-info{% else %}btn-outline-secondary{% endif %}">
     <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapports
   </a>
+  <a href="?type=auto_generated{% if read_filter %}&read={{ read_filter }}{% endif %}"
+     class="btn btn-sm {% if type_filter == 'auto_generated' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-lightning-charge me-1"></i>Auto-générés
+  </a>
   <div class="ms-auto d-flex gap-1">
     <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}read=0"
        class="btn btn-sm {% if read_filter == '0' %}btn-dark{% else %}btn-outline-secondary{% endif %}">
@@ -77,8 +83,9 @@
 {% if notifications %}
 <div class="d-flex flex-column gap-2" id="notif-list">
   {% for n in notifications %}
-  <div class="notif-card {% if not n.is_read %}unread{% endif %} {% if n.type == 'stock_low' %}warning-type{% endif %}"
-       id="notif-{{ n.pk }}">
+  <div class="notif-card {% if not n.is_read %}unread{% endif %} {% if n.type == 'stock_low' %}warning-type{% endif %}{% if n.site %} clickable{% endif %}"
+       id="notif-{{ n.pk }}"
+       {% if n.site %}data-url="{% url 'vouchers:list' %}?site={{ n.site.unifi_site_id }}" data-pk="{{ n.pk }}"{% endif %}>
     <div class="d-flex align-items-start gap-3">
       <div class="notif-icon {% if n.type == 'stock_low' %}icon-warning{% else %}icon-info{% endif %}">
         <i class="bi bi-{{ n.icon }}"></i>
@@ -142,6 +149,23 @@ function postJSON(url) {
     headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
   }).then(r => r.json());
 }
+
+// Clic sur carte → navigate vers vouchers du site + marque comme lu
+document.querySelectorAll('.notif-card.clickable').forEach(card => {
+  card.addEventListener('click', e => {
+    if (e.target.closest('.btn-mark-one')) return; // laisser le bouton gérer son propre clic
+    const pk = card.dataset.pk;
+    const url = card.dataset.url;
+    if (pk && !card.classList.contains('is_read')) {
+      fetch(`/notifications/${pk}/read/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+      }).finally(() => { window.location.href = url; });
+    } else {
+      window.location.href = url;
+    }
+  });
+});
 
 // Marquer une notif comme lue
 document.querySelectorAll('.btn-mark-one').forEach(btn => {

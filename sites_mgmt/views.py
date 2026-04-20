@@ -108,6 +108,7 @@ def site_edit(request, pk):
         site.location = request.POST.get('location', site.location).strip()
         site.description = request.POST.get('description', site.description).strip()
         site.is_active = request.POST.get('is_active') == 'on'
+        site.auto_generate_vouchers = request.POST.get('auto_generate_vouchers') == 'on'
 
         # Admins assignés
         admin_ids = request.POST.getlist('admins')

@@ -8,6 +8,14 @@ logger = logging.getLogger(__name__)
 
 STOCK_ALERT_THRESHOLD = 30
 STOCK_ALERT_COOLDOWN_HOURS = 24
+AUTO_GEN_DELAY_HOURS = 36
+AUTO_GEN_COUNT_PER_TIER = 100
+
+_MOIS_FR = {
+    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre',
+}
 
 
 def check_stock_levels():
@@ -61,6 +69,20 @@ def check_stock_levels():
                 created_at__gte=cutoff,
             ).exists()
             if already:
+                # Vérifier si on doit déclencher la génération automatique
+                if site.auto_generate_vouchers:
+                    trigger_cutoff = timezone.now() - timedelta(hours=AUTO_GEN_DELAY_HOURS)
+                    pending_alert = Notification.objects.filter(
+                        type=Notification.TYPE_STOCK_LOW,
+                        site=site,
+                        created_at__lte=trigger_cutoff,
+                        auto_gen_triggered=False,
+                    ).first()
+                    if pending_alert:
+                        logger.info(f"Auto-gen déclenchée pour {site.name} (stock={count})")
+                        pending_alert.auto_gen_triggered = True
+                        pending_alert.save(update_fields=['auto_gen_triggered'])
+                        _auto_generate_vouchers_for_site(site, count)
                 continue
 
             notif = Notification.objects.create(
@@ -96,6 +118,99 @@ def check_stock_levels():
 
     except Exception as e:
         logger.error(f"check_stock_levels error: {e}", exc_info=True)
+
+
+def _auto_generate_vouchers_for_site(site, current_stock: int):
+    """Génère 50 vouchers × chaque forfait actif pour un site, puis notifie par email."""
+    try:
+        from sites_mgmt.models import VoucherTier
+        from vouchers.models import VoucherLog
+        from unifi_api import client as unifi
+        from .models import Notification
+        from .email_service import send_email, build_auto_gen_html
+
+        now = timezone.now()
+        date_label = f"{now.day} {_MOIS_FR[now.month]} {now.year}"
+
+        tiers = list(VoucherTier.objects.filter(is_active=True))
+        if not tiers:
+            logger.warning(f"Auto-gen {site.name}: aucun forfait actif.")
+            return
+
+        total_created = 0
+        tier_results = []
+
+        for tier in tiers:
+            note = f"{tier.label}_{site.name}_{date_label}"
+            created = unifi.create_vouchers(
+                site_id=site.unifi_site_id,
+                expire_minutes=tier.max_minutes,
+                count=AUTO_GEN_COUNT_PER_TIER,
+                quota=1,
+                note=note,
+            )
+            if not created:
+                logger.error(f"Auto-gen {site.name} / {tier.label}: échec UniFi.")
+                tier_results.append({'tier': tier, 'count': 0, 'success': False})
+                continue
+
+            # Sync en base
+            synced = 0
+            for v in unifi.get_vouchers(site.unifi_site_id):
+                if v.get('note', '') == note:
+                    _, is_new = VoucherLog.objects.get_or_create(
+                        unifi_id=v['_id'],
+                        defaults={
+                            'site': site,
+                            'created_by': None,
+                            'tier': tier,
+                            'code': v.get('code', ''),
+                            'duration_minutes': v.get('duration', tier.max_minutes),
+                            'quota': v.get('quota', 1),
+                            'note': note,
+                            'price_htg': tier.price_htg,
+                        }
+                    )
+                    if is_new:
+                        synced += 1
+
+            total_created += synced
+            tier_results.append({'tier': tier, 'count': synced, 'success': True})
+            logger.info(f"Auto-gen {site.name} / {tier.label}: {synced} vouchers créés.")
+
+        # Notification en base
+        notif = Notification.objects.create(
+            type=Notification.TYPE_AUTO_GENERATED,
+            site=site,
+            title=f"Génération automatique — {site.name}",
+            message=(
+                f"{total_created} voucher(s) générés automatiquement sur {site.name} "
+                f"({len(tiers)} forfait(s), {AUTO_GEN_COUNT_PER_TIER} par forfait)."
+            ),
+            stock_count=current_stock,
+        )
+
+        # Email aux ADMIN_NOTIFY (fallback unifi@transversal.ht)
+        admin_notify = getattr(settings, 'ADMIN_NOTIFY', '')
+        to_emails = [e.strip() for e in admin_notify.split(',') if e.strip()]
+        if not to_emails:
+            to_emails = ['unifi@transversal.ht']
+
+        try:
+            html = build_auto_gen_html(site, tier_results, current_stock, date_label)
+            result = send_email(
+                to=to_emails,
+                subject=f"[BonNet] ✅ Génération automatique — {site.name} ({total_created} vouchers)",
+                html=html,
+            )
+            if result:
+                notif.email_sent = True
+                notif.save(update_fields=['email_sent'])
+        except Exception as e:
+            logger.error(f"Email auto-gen {site.name}: {e}")
+
+    except Exception as e:
+        logger.error(f"_auto_generate_vouchers_for_site({site.name}): {e}", exc_info=True)
 
 
 def send_monthly_reports():
@@ -174,9 +289,9 @@ def start():
 
     scheduler.add_job(
         check_stock_levels,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(hours=12),
         id='check_stock_levels',
-        name='Vérification stock vouchers (toutes les 30 min)',
+        name='Vérification stock vouchers (toutes les 12h)',
         replace_existing=True,
         misfire_grace_time=300,
     )

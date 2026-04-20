@@ -5,9 +5,11 @@ from sites_mgmt.models import HotspotSite
 class Notification(models.Model):
     TYPE_STOCK_LOW = 'stock_low'
     TYPE_MONTHLY_REPORT = 'monthly_report'
+    TYPE_AUTO_GENERATED = 'auto_generated'
     TYPE_CHOICES = [
         (TYPE_STOCK_LOW, 'Stock faible'),
         (TYPE_MONTHLY_REPORT, 'Rapport mensuel'),
+        (TYPE_AUTO_GENERATED, 'Génération automatique'),
     ]
 
     type = models.CharField(max_length=30, choices=TYPE_CHOICES)
@@ -20,6 +22,7 @@ class Notification(models.Model):
     stock_count = models.PositiveIntegerField(null=True, blank=True)
     is_read = models.BooleanField(default=False)
     email_sent = models.BooleanField(default=False)
+    auto_gen_triggered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -30,8 +33,18 @@ class Notification(models.Model):
 
     @property
     def icon(self):
-        return 'exclamation-triangle-fill' if self.type == self.TYPE_STOCK_LOW else 'file-earmark-bar-graph-fill'
+        icons = {
+            self.TYPE_STOCK_LOW: 'exclamation-triangle-fill',
+            self.TYPE_MONTHLY_REPORT: 'file-earmark-bar-graph-fill',
+            self.TYPE_AUTO_GENERATED: 'lightning-charge-fill',
+        }
+        return icons.get(self.type, 'bell-fill')
 
     @property
     def color(self):
-        return 'warning' if self.type == self.TYPE_STOCK_LOW else 'info'
+        colors = {
+            self.TYPE_STOCK_LOW: 'warning',
+            self.TYPE_MONTHLY_REPORT: 'info',
+            self.TYPE_AUTO_GENERATED: 'success',
+        }
+        return colors.get(self.type, 'secondary')

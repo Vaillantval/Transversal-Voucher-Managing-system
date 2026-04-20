@@ -16,7 +16,7 @@ def notification_list(request):
 
     # Filtre type
     type_filter = request.GET.get('type', '')
-    if type_filter in (Notification.TYPE_STOCK_LOW, Notification.TYPE_MONTHLY_REPORT):
+    if type_filter in (Notification.TYPE_STOCK_LOW, Notification.TYPE_MONTHLY_REPORT, Notification.TYPE_AUTO_GENERATED):
         qs = qs.filter(type=type_filter)
 
     # Filtre lu/non-lu

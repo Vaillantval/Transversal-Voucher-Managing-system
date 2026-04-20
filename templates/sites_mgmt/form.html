@@ -56,6 +56,20 @@
           </div>
         </div>
 
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="auto_generate_vouchers" id="auto_generate_vouchers"
+                   {% if site.auto_generate_vouchers %}checked{% endif %}>
+            <label class="form-check-label fw-semibold" for="auto_generate_vouchers">
+              Génération automatique de vouchers
+            </label>
+          </div>
+          <div class="form-text">
+            Si le stock reste faible 36h après l'alerte, génère automatiquement
+            50 vouchers par forfait actif.
+          </div>
+        </div>
+
         {% if site_admins %}
         <div class="mb-4">
           <label class="form-label fw-semibold">Administrateurs assignés</label>
