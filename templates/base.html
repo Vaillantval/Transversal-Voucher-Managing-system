@@ -402,9 +402,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
       {% endfor %}
       <!-- Toggle dark/light -->
       <button id="theme-toggle" title="Changer le thème"
-              class="btn btn-link p-1 text-secondary flex-shrink-0"
-              style="font-size:1.1rem;line-height:1">
-        <i class="bi bi-moon-stars-fill" id="theme-icon"></i>
+              class="btn btn-link p-1 text-secondary flex-shrink-0 d-flex align-items-center gap-1"
+              style="font-size:.85rem;line-height:1">
+        <i class="bi bi-moon-stars-fill" id="theme-icon" style="font-size:1.1rem"></i>
+        <span id="theme-label">Sombre</span>
       </button>
     </div>
   </div>
@@ -453,18 +454,21 @@ function closeSidebar() {
 <script>
 (function(){
   const html = document.documentElement;
-  const btn  = document.getElementById('theme-toggle');
-  const icon = document.getElementById('theme-icon');
+  const btn   = document.getElementById('theme-toggle');
+  const icon  = document.getElementById('theme-icon');
+  const label = document.getElementById('theme-label');
 
   function applyTheme(dark){
     if(dark){
       html.setAttribute('data-theme','dark');
       html.setAttribute('data-bs-theme','dark');
       icon.className = 'bi bi-sun-fill';
+      label.textContent = 'Clair';
     } else {
       html.removeAttribute('data-theme');
       html.removeAttribute('data-bs-theme');
       icon.className = 'bi bi-moon-stars-fill';
+      label.textContent = 'Sombre';
     }
   }
 
