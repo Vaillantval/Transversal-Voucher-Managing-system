@@ -11,6 +11,22 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+def trigger_report(request):
+    import os
+    token = request.GET.get('token', '')
+    if token != os.getenv('SECRET_KEY', '')[:16]:
+        return HttpResponseForbidden('Accès refusé.')
+    try:
+        from notifications.management.commands.send_report_now import Command
+        cmd = Command()
+        cmd.stdout = __import__('io').StringIO()
+        cmd.stderr = __import__('io').StringIO()
+        cmd.handle(days=30)
+        return JsonResponse({'ok': True, 'output': cmd.stdout.getvalue()})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
 @login_required
 def debug_vouchers(request):
     if not getattr(request.user, 'is_superadmin', False):
@@ -76,4 +92,11 @@ urlpatterns = [
     path('reports/', include('reports.urls')),
     path('notifications/', include('notifications.urls')),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Serve media files in all environments (dev + prod)
+from django.views.static import serve
+from django.urls import re_path
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
