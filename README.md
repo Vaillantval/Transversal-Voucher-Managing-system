@@ -8,6 +8,7 @@ sur les sites Starlink/UniFi déployés en Haïti.
 | Composant | Détail |
 |-----------|--------|
 | **Backend** | Django 5.2 + PostgreSQL (Railway) |
+| **Cache** | Redis (Railway) via django-redis — partagé entre workers |
 | **API UniFi** | pyunifi — contrôleur p989.cloudunifi.com |
 | **Emails** | Resend (API HTTP) |
 | **Scheduler** | APScheduler + django-apscheduler |
@@ -58,6 +59,7 @@ python manage.py runserver
 | `UNIFI_PASSWORD` | Oui | Mot de passe UniFi |
 | `RESEND_API_KEY` | Prod | Clé API Resend (emails) |
 | `RESEND_FROM_EMAIL` | Prod | Expéditeur email (domaine vérifié Resend) |
+| `REDIS_URL` | Prod | URL Redis Railway (copier depuis le service Redis) |
 | `ADMIN_NOTIFY` | Prod | Emails destinataires rapports (virgule-séparés) |
 
 ## Structure des rôles
@@ -76,7 +78,7 @@ python manage.py runserver
 | `vouchers` | VoucherLog — créer / sync / supprimer via UniFi API |
 | `dashboard` | KPIs + charts Chart.js (temps réel) |
 | `reports` | Export PDF / Excel / CSV |
-| `unifi_api` | Client HTTP pyunifi avec cache fichier (2–5 min TTL) |
+| `unifi_api` | Client HTTP pyunifi avec cache Redis (3–6 min TTL, pre-warm /2min) |
 | `notifications` | Alertes stock + rapports mensuels automatiques |
 
 ## Notifications & Emails automatiques
@@ -86,7 +88,7 @@ python manage.py runserver
 - **Filtre** : site doit avoir ≥ 1 device ET des sessions dans les 2 dernières semaines
 - **Destinataires** : site_admins du site concerné (pas le superadmin)
 - **Cooldown** : 1 alerte maximum par site toutes les 24h
-- **Fréquence de vérification** : toutes les 30 minutes
+- **Fréquence de vérification** : toutes les 12 heures
 
 ### Rapport mensuel automatique
 - **Déclencheur** : dernier jour du mois à 8h00 (heure Haïti)
@@ -105,7 +107,22 @@ python manage.py send_report_now --days 60 # 60 derniers jours
 - **Excel** : rapport multi-feuilles (résumé global + détail + par forfait + graphique)
 - **PDF** : rapport formaté avec tableau récap par site + détail transactions
 
-## Déploiement Railway
+## Architecture Railway (3 services)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Railway Project : BonNet                               │
+│                                                         │
+│  [web]         Django + Gunicorn  → pages & API         │
+│  [redis]       Redis              → cache partagé       │
+│  [postgresql]  PostgreSQL         → données             │
+│                                                         │
+│  web ──REDIS_URL──► Redis    (cache vouchers/guests)    │
+│  web ──DATABASE_URL──► PostgreSQL  (users, logs…)       │
+│  web ──HTTPS──► p989.cloudunifi.com  (UniFi API)        │
+│                 (appelé seulement par le pre-warm /2min) │
+└─────────────────────────────────────────────────────────┘
+```
 
 ```toml
 # railway.toml
@@ -113,6 +130,12 @@ startCommand = "python manage.py migrate --noinput && python manage.py ensure_su
 ```
 
 > ⚠️ `--workers 1` obligatoire — APScheduler démarre dans chaque worker Gunicorn ; plusieurs workers créeraient des jobs en double.
+
+### Ajout du service Redis
+1. Railway → **Add Service → Database → Redis**
+2. Copier la valeur de `REDIS_URL` depuis le service Redis
+3. L'ajouter manuellement dans les variables du service web
+4. Redéployer → le cache bascule automatiquement sur Redis
 
 ## Prochaines étapes suggérées
 
