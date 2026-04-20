@@ -334,3 +334,7 @@ def start():
 
     scheduler.start()
     logger.info("APScheduler démarré — pre-warm/2min, stock/12h, rapport mensuel.")
+
+    # Pre-warm immédiat au démarrage (cache froid après redéploiement)
+    import threading
+    threading.Thread(target=prewarm_cache, daemon=True, name='prewarm-startup').start()
