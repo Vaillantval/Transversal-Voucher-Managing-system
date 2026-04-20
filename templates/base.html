@@ -309,22 +309,9 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   <!-- Header mobile : brand + close -->
   <div class="d-flex align-items-center justify-content-between px-3 py-2 d-lg-none"
        style="border-bottom:1px solid #1f2937;min-height:56px">
-    <div class="d-flex align-items-center gap-2">
-      <span style="color:#fff;font-size:1.2rem;font-weight:700;letter-spacing:1px">
-        Bon<span style="color:var(--bn-blue)">Net</span>
-      </span>
-      {% if site_config and site_config.logo1 or site_config and site_config.logo2 %}
-      <div style="width:1px;height:20px;background:rgba(255,255,255,.2)"></div>
-      {% if site_config.logo1 %}
-      <img src="{{ site_config.logo1.url }}" alt=""
-           style="max-height:22px;max-width:60px;object-fit:contain;opacity:.85">
-      {% endif %}
-      {% if site_config.logo2 %}
-      <img src="{{ site_config.logo2.url }}" alt=""
-           style="max-height:22px;max-width:60px;object-fit:contain;opacity:.85">
-      {% endif %}
-      {% endif %}
-    </div>
+    <span style="color:#fff;font-size:1.2rem;font-weight:700;letter-spacing:1px">
+      Bon<span style="color:var(--bn-blue)">Net</span>
+    </span>
     <button class="sidebar-close" onclick="closeSidebar()" aria-label="Fermer">
       <i class="bi bi-x-lg"></i>
     </button>
@@ -334,7 +321,7 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   <div class="sidebar-brand d-none d-lg-block">Bon<span>Net</span></div>
 
   {% if site_config and site_config.logo1 or site_config and site_config.logo2 %}
-  <div class="sidebar-logos d-none d-lg-flex align-items-center justify-content-center gap-2 px-3 py-2"
+  <div class="sidebar-logos d-flex align-items-center justify-content-center gap-2 px-3 py-2"
        style="border-bottom:1px solid #1f2937;flex-wrap:wrap">
     {% if site_config.logo1 %}
     <img src="{{ site_config.logo1.url }}" alt="Logo 1"
