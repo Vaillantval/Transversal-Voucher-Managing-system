@@ -33,7 +33,8 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   flex-shrink: 0;
 }
 .sidebar-brand span { color: var(--bn-blue); }
-.sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+.sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.sidebar-nav::-webkit-scrollbar { display: none; }
 .sidebar-nav .nav-section {
   font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
   color: #6b7280; padding: .75rem 1.5rem .25rem;
