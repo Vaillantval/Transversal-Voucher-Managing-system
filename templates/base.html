@@ -147,6 +147,141 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 #page-loader.active { display: flex; }
 </style>
 {% block extra_css %}{% endblock %}
+
+<!-- Theme init : évite le flash blanc au chargement -->
+<script>
+  (function(){
+    if(localStorage.getItem('bn-theme')==='dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+      document.documentElement.setAttribute('data-bs-theme','dark');
+    }
+  })();
+</script>
+
+<style>
+/* ══ DARK THEME ═══════════════════════════════════════════════════════════════
+   Inspiré du login : #0b1120 / #0f172a / #1e293b — accents #3b82f6 / #6366f1
+   Le mode clair n'est pas touché.
+═══════════════════════════════════════════════════════════════════════════════*/
+[data-theme="dark"] {
+
+  /* ── Page & surfaces ── */
+  --bn-blue:      #3b82f6;
+  --bn-blue-dark: #2563eb;
+
+  body  { background: #0b1120 !important; color: #e2e8f0; }
+
+  /* ── Sidebar ── */
+  .sidebar          { background: #060c18 !important; border-right: 1px solid rgba(255,255,255,.06); }
+  .sidebar-brand    { border-bottom-color: rgba(255,255,255,.06) !important; }
+  .sidebar-nav .nav-section { color: #475569 !important; }
+  .sidebar-nav a    { color: #94a3b8 !important; }
+  .sidebar-nav a:hover,
+  .sidebar-nav a.active { background: rgba(59,130,246,.1) !important; color: #e2e8f0 !important; }
+  .sidebar-nav a.active { border-left-color: #3b82f6 !important; }
+  .sidebar-user     { border-top-color: rgba(255,255,255,.06) !important; color: #94a3b8 !important; }
+
+  /* ── Topbar ── */
+  .topbar { background: #0f172a !important; border-bottom-color: rgba(255,255,255,.07) !important; }
+  .topbar h6 { color: #e2e8f0 !important; }
+
+  /* ── Cards ── */
+  .stat-card, .card-bn, .card {
+    background: #0f172a !important;
+    border-color: rgba(255,255,255,.07) !important;
+    color: #e2e8f0 !important;
+  }
+  .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.5) !important; }
+
+  /* ── KPI ── */
+  .kpi-label { color: #64748b !important; }
+
+  /* ── Tables ── */
+  .table { color: #cbd5e1 !important; --bs-table-bg: transparent; }
+  .table-bn thead th {
+    background: #1e293b !important;
+    color: #64748b !important;
+    border-bottom-color: rgba(255,255,255,.07) !important;
+  }
+  .table > :not(caption) > * > * { border-bottom-color: rgba(255,255,255,.06) !important; }
+  .table-hover tbody tr:hover td { background: rgba(59,130,246,.07) !important; }
+  .site-row:hover { background: rgba(59,130,246,.07) !important; }
+
+  /* ── Form controls ── */
+  .form-control, .form-select {
+    background: #1e293b !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: #e2e8f0 !important;
+  }
+  .form-control::placeholder { color: #475569 !important; }
+  .form-control:focus, .form-select:focus {
+    background: #1e293b !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.2) !important;
+    color: #e2e8f0 !important;
+  }
+  .form-select option { background: #1e293b; color: #e2e8f0; }
+
+  /* ── Buttons ── */
+  .btn-outline-secondary { color: #94a3b8 !important; border-color: rgba(255,255,255,.15) !important; }
+  .btn-outline-secondary:hover { background: rgba(255,255,255,.08) !important; color: #e2e8f0 !important; }
+  .btn-light { background: #1e293b !important; color: #e2e8f0 !important; border-color: rgba(255,255,255,.1) !important; }
+
+  /* ── Modal ── */
+  .modal-content { background: #0f172a !important; border-color: rgba(255,255,255,.08) !important; color: #e2e8f0 !important; }
+  .modal-footer  { border-top-color:  rgba(255,255,255,.07) !important; }
+
+  /* ── Alerts ── */
+  .alert-warning { background: rgba(245,158,11,.1) !important; border-color: rgba(245,158,11,.25) !important; color: #fbbf24 !important; }
+  .alert-danger  { background: rgba(239,68,68,.1)  !important; border-color: rgba(239,68,68,.25)  !important; color: #fca5a5 !important; }
+  .alert-success { background: rgba(16,185,129,.1) !important; border-color: rgba(16,185,129,.25) !important; color: #6ee7b7 !important; }
+  .alert-info    { background: rgba(59,130,246,.1) !important; border-color: rgba(59,130,246,.25) !important; color: #93c5fd !important; }
+
+  /* ── Badges statut ── */
+  .badge-active  { background: rgba(16,185,129,.15)  !important; color: #6ee7b7 !important; }
+  .badge-used    { background: rgba(59,130,246,.15)  !important; color: #93c5fd !important; }
+  .badge-expired { background: rgba(245,158,11,.15)  !important; color: #fbbf24 !important; }
+  .badge-revoked { background: rgba(239,68,68,.15)   !important; color: #fca5a5 !important; }
+
+  /* ── Textes & liens ── */
+  .text-muted  { color: #64748b !important; }
+  .text-dark   { color: #e2e8f0 !important; }
+  a.text-dark  { color: #e2e8f0 !important; }
+  .fw-600, .fw-700, .fw-semibold { color: inherit; }
+
+  /* ── code ── */
+  code { color: #7dd3fc !important; }
+
+  /* ── Stat icons ── */
+  .stat-icon[style*="background:#EBF5FF"] { background: rgba(59,130,246,.15) !important; }
+  .stat-icon[style*="background:#F0FDF4"] { background: rgba(16,185,129,.15) !important; }
+  .stat-icon[style*="background:#FDF2F8"] { background: rgba(168,85,247,.15) !important; }
+  .stat-icon[style*="background:#FEF9C3"] { background: rgba(234,179,8,.15)  !important; }
+  .stat-icon[style*="background:#FEF2F2"] { background: rgba(239,68,68,.15)  !important; }
+  .stat-icon[style*="background:#eff6ff"]  { background: rgba(59,130,246,.15) !important; }
+
+  /* ── Glow background (inspiré login) ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 30%, rgba(59,130,246,.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 85% 75%, rgba(99,102,241,.06) 0%, transparent 70%);
+  }
+  .main-content { position: relative; z-index: 1; }
+
+  /* ── Page loader ── */
+  #page-loader { background: rgba(11,17,32,.7) !important; }
+
+  /* ── Notifications ── */
+  .notif-card               { background: #0f172a !important; border-color: rgba(255,255,255,.07) !important; }
+  .notif-card.unread        { border-left-color: #3b82f6 !important; }
+  .notif-card.warning-type  { border-left-color: #f59e0b !important; }
+  .filter-bar               { background: #0f172a !important; border-color: rgba(255,255,255,.07) !important; }
+  .badge-unread { background: rgba(59,130,246,.15) !important; color: #93c5fd !important; }
+  .badge-read   { background: rgba(255,255,255,.05) !important; color: #475569 !important; }
+}
+</style>
 </head>
 <body>
 
@@ -260,6 +395,12 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
         {{ message }}
       </div>
       {% endfor %}
+      <!-- Toggle dark/light -->
+      <button id="theme-toggle" title="Changer le thème"
+              class="btn btn-link p-1 text-secondary flex-shrink-0"
+              style="font-size:1.1rem;line-height:1">
+        <i class="bi bi-moon-stars-fill" id="theme-icon"></i>
+      </button>
     </div>
   </div>
 
@@ -302,6 +443,34 @@ function closeSidebar() {
   });
   // Cacher le loader quand la page est entièrement chargée
   window.addEventListener('pageshow', function() { loader.classList.remove('active'); });
+})();
+</script>
+<script>
+(function(){
+  const html = document.documentElement;
+  const btn  = document.getElementById('theme-toggle');
+  const icon = document.getElementById('theme-icon');
+
+  function applyTheme(dark){
+    if(dark){
+      html.setAttribute('data-theme','dark');
+      html.setAttribute('data-bs-theme','dark');
+      icon.className = 'bi bi-sun-fill';
+    } else {
+      html.removeAttribute('data-theme');
+      html.removeAttribute('data-bs-theme');
+      icon.className = 'bi bi-moon-stars-fill';
+    }
+  }
+
+  // Appliquer l'état initial
+  applyTheme(localStorage.getItem('bn-theme')==='dark');
+
+  btn.addEventListener('click', function(){
+    const isDark = html.getAttribute('data-theme')==='dark';
+    localStorage.setItem('bn-theme', isDark ? 'light' : 'dark');
+    applyTheme(!isDark);
+  });
 })();
 </script>
 {% block extra_js %}{% endblock %}
