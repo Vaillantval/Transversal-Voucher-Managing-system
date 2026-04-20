@@ -20,7 +20,7 @@ class Command(BaseCommand):
         today = date.today()
         date_to   = today.isoformat()
         date_from = (today - timedelta(days=days)).isoformat()
-        label     = f"Derniers {days} jours ({date_from} → {date_to})"
+        label     = f"[TEST] Derniers {days} jours ({date_from} → {date_to})"
 
         admin_notify = getattr(settings, 'ADMIN_NOTIFY', '')
         to_emails = [e.strip() for e in admin_notify.split(',') if e.strip()]
