@@ -40,6 +40,23 @@ class HotspotSite(models.Model):
         return self.name
 
 
+class SiteConfig(models.Model):
+    footer_text = models.CharField(max_length=300, blank=True, verbose_name='Texte du footer')
+    logo1 = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 1')
+    logo2 = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 2')
+
+    class Meta:
+        verbose_name = 'Configuration du site'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def footer(self):
+        return self.footer_text or '© 2026 BonNet · Transversal'
+
+
 class VoucherTier(models.Model):
     """
     Tranche tarifaire définie par le superadmin.

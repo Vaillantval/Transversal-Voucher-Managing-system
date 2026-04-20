@@ -167,9 +167,24 @@
 
 <!-- ══ SPLASH ══ -->
 <div id="splash">
-  <div>
+  <div style="text-align:center">
     <div class="splash-logo">Bon<span>Net</span></div>
     <div class="splash-subtitle">Voucher Management System</div>
+    {% if site_config and site_config.logo1 or site_config and site_config.logo2 %}
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:20px;flex-wrap:wrap">
+      {% if site_config.logo1 %}
+      <img src="{{ site_config.logo1.url }}" alt="Logo 1"
+           style="max-height:52px;max-width:140px;object-fit:contain">
+      {% endif %}
+      {% if site_config.logo1 and site_config.logo2 %}
+      <div style="width:1px;height:44px;background:rgba(255,255,255,.2)"></div>
+      {% endif %}
+      {% if site_config.logo2 %}
+      <img src="{{ site_config.logo2.url }}" alt="Logo 2"
+           style="max-height:52px;max-width:140px;object-fit:contain">
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
   <div class="progress-ring">
     <svg viewBox="0 0 60 60" width="64" height="64">
@@ -189,6 +204,21 @@
         <div class="brand-icon"><i class="bi bi-wifi"></i></div>
         <div class="brand-name">Bon<span>Net</span></div>
         <div class="brand-tagline">Voucher Management System</div>
+        {% if site_config and site_config.logo1 or site_config and site_config.logo2 %}
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+          {% if site_config.logo1 %}
+          <img src="{{ site_config.logo1.url }}" alt="Logo 1"
+               style="max-height:36px;max-width:110px;object-fit:contain">
+          {% endif %}
+          {% if site_config.logo1 and site_config.logo2 %}
+          <div style="width:1px;height:30px;background:rgba(255,255,255,.2)"></div>
+          {% endif %}
+          {% if site_config.logo2 %}
+          <img src="{{ site_config.logo2.url }}" alt="Logo 2"
+               style="max-height:36px;max-width:110px;object-fit:contain">
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
 
       {% if messages %}
@@ -230,7 +260,7 @@
       </form>
     </div>
 
-    <div class="login-footer">© 2026 BonNet · Transversal</div>
+    <div class="login-footer">{{ site_config.footer|default:"© 2026 BonNet · Transversal" }}</div>
   </div>
 </div>
 

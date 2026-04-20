@@ -188,6 +188,37 @@ def tier_delete(request, pk):
     return redirect('sites:tiers')
 
 
+# ─── CONFIGURATION GLOBALE ────────────────────────────────────────────────────
+
+@login_required
+@superadmin_required
+def config_edit(request):
+    from .models import SiteConfig
+    config = SiteConfig.get()
+
+    if request.method == 'POST':
+        config.footer_text = request.POST.get('footer_text', '').strip()
+
+        if request.FILES.get('logo1'):
+            config.logo1 = request.FILES['logo1']
+        elif request.POST.get('clear_logo1'):
+            config.logo1 = None
+
+        if request.FILES.get('logo2'):
+            config.logo2 = request.FILES['logo2']
+        elif request.POST.get('clear_logo2'):
+            config.logo2 = None
+
+        config.save()
+        messages.success(request, 'Configuration mise à jour.')
+        return redirect('sites:config')
+
+    return render(request, 'sites_mgmt/config.html', {
+        'config': config,
+        'page_title': 'Configuration',
+    })
+
+
 # ─── API JSON (pour charts) ────────────────────────────────────────────────────
 
 @login_required

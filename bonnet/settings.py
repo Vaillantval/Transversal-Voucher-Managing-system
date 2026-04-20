@@ -155,6 +155,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
+                'sites_mgmt.context_processors.site_config',
             ],
         },
     },

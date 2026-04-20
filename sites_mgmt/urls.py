@@ -13,4 +13,5 @@ urlpatterns = [
     path('tarifs/<int:pk>/supprimer/', views.tier_delete, name='tier_delete'),
     path('api/<str:site_id>/stats/', views.site_stats_json, name='stats_json'),
     path('api/<str:site_id>/guests/', views.site_guests_json, name='guests_json'),
+    path('configuration/', views.config_edit, name='config'),
 ]

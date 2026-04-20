@@ -47,6 +47,31 @@ def generate_pdf_report(queryset, site_name: str, date_from: date, date_to: date
 
     elements = []
 
+    # ── Logos ──
+    try:
+        from sites_mgmt.models import SiteConfig
+        from reportlab.platypus import Image as RLImage
+        cfg = SiteConfig.get()
+        logo_cells = []
+        for logo_field in (cfg.logo1, cfg.logo2):
+            if logo_field and logo_field.name:
+                try:
+                    img = RLImage(logo_field.path, height=18*mm, width=50*mm, kind='proportional')
+                    logo_cells.append(img)
+                except Exception:
+                    pass
+        if logo_cells:
+            logo_table = Table([logo_cells], colWidths=[55*mm] * len(logo_cells))
+            logo_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            elements.append(logo_table)
+    except Exception:
+        pass
+
     # ── En-tête ──
     elements.append(Paragraph("BonNet — Rapport de Vouchers", title_style))
     elements.append(Paragraph(
