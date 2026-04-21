@@ -258,6 +258,7 @@ def config_edit(request):
 def partners_view(request):
     """Gestion des demandes partenaires + éditeur des conditions."""
     from accounts.models import PartnerApplication
+    from .models import SiteConfig
 
     config = SiteConfig.get()
 

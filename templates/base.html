@@ -392,8 +392,16 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
        class="{% if request.resolver_match.app_name == 'accounts' and 'utilisateurs' in request.path %}active{% endif %}">
       <i class="bi bi-people"></i> Utilisateurs
     </a>
+    <a href="{% url 'sites:partners' %}"
+       class="{% if 'partenaires' in request.path %}active{% endif %}">
+      <i class="bi bi-person-badge"></i> Partenaires
+    </a>
+    <a href="{% url 'sites:product_list' %}"
+       class="{% if 'produits' in request.path %}active{% endif %}">
+      <i class="bi bi-box-seam"></i> Produits
+    </a>
     <a href="{% url 'sites:config' %}"
-       class="{% if 'configuration' in request.path %}active{% endif %}">
+       class="{% if 'configuration' in request.path and 'partenaires' not in request.path %}active{% endif %}">
       <i class="bi bi-sliders"></i> Configuration
     </a>
     {% endif %}
