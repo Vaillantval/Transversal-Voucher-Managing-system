@@ -131,37 +131,39 @@ def build_monthly_report_html(month_label: str, sites_summary: list, date_from: 
 
     grand_sessions = sum(s['sessions'] for s in sites_summary)
     grand_revenue  = sum(s['revenue']  for s in sites_summary)
+    multi_site     = len(sites_summary) > 1
 
-    # ── Tableau récapitulatif global ──────────────────────────────────────────
-    # Ligne TOTAL en premier
-    recap_rows = f"""
-    <tr style="background:#eff6ff">
-      <td style="{TD_BL}">TOTAL — {len(sites_summary)} site(s)</td>
-      <td style="{TD_B}">{grand_sessions}</td>
-      <td style="{TD_B}">—</td>
-      <td style="{TD_B}">{grand_revenue:,.2f} HTG</td>
-    </tr>"""
-
-    for i, s in enumerate(sites_summary):
-        bg = 'background:#f8faff' if i % 2 == 0 else ''
-        recap_rows += f"""
-        <tr style="{bg}">
-          <td style="{TD_L}">{s['site'].name}</td>
-          <td style="{TD}">{s['sessions']}</td>
-          <td style="{TD}">{s['active']}</td>
-          <td style="{TD}">{s['revenue']:,.2f} HTG</td>
+    # ── Tableau récapitulatif global (uniquement multi-sites) ─────────────────
+    if multi_site:
+        recap_rows = f"""
+        <tr style="background:#eff6ff">
+          <td style="{TD_BL}">TOTAL — {len(sites_summary)} sites</td>
+          <td style="{TD_B}">{grand_sessions}</td>
+          <td style="{TD_B}">—</td>
+          <td style="{TD_B}">{grand_revenue:,.2f} HTG</td>
         </tr>"""
-
-    recap_table = f"""
-    <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
-      <thead><tr style="background:#1e40af">
-        <th style="{TH_L};color:#fff;border:none">Site</th>
-        <th style="{TH};color:#fff;border:none">Sessions vendues</th>
-        <th style="{TH};color:#fff;border:none">Sessions actives</th>
-        <th style="{TH};color:#fff;border:none">Revenu total</th>
-      </tr></thead>
-      <tbody>{recap_rows}</tbody>
-    </table>"""
+        for i, s in enumerate(sites_summary):
+            bg = 'background:#f8faff' if i % 2 == 0 else ''
+            recap_rows += f"""
+            <tr style="{bg}">
+              <td style="{TD_L}">{s['site'].name}</td>
+              <td style="{TD}">{s['sessions']}</td>
+              <td style="{TD}">{s['active']}</td>
+              <td style="{TD}">{s['revenue']:,.2f} HTG</td>
+            </tr>"""
+        recap_table = f"""
+        <p style="margin:0 0 10px;font-weight:700;color:#111827">Récapitulatif global</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
+          <thead><tr style="background:#1e40af">
+            <th style="{TH_L};color:#fff;border:none">Site</th>
+            <th style="{TH};color:#fff;border:none">Sessions vendues</th>
+            <th style="{TH};color:#fff;border:none">Sessions actives</th>
+            <th style="{TH};color:#fff;border:none">Revenu total</th>
+          </tr></thead>
+          <tbody>{recap_rows}</tbody>
+        </table>"""
+    else:
+        recap_table = ''
 
     # ── Détail par site ────────────────────────────────────────────────────────
     site_sections = ''
@@ -218,10 +220,9 @@ def build_monthly_report_html(month_label: str, sites_summary: list, date_from: 
           &nbsp;·&nbsp; Les fichiers Excel et PDF complets sont joints à cet email.
         </p>
 
-        <p style="margin:0 0 10px;font-weight:700;color:#111827">Récapitulatif global</p>
         {recap_table}
 
-        <p style="margin:0 0 14px;font-weight:700;color:#111827">Détail par site</p>
+        <p style="margin:0 0 14px;font-weight:700;color:#111827">{'Détail par site' if multi_site else 'Détail des ventes'}</p>
         {site_sections}
 
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0 12px">
