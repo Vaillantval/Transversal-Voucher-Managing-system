@@ -44,7 +44,7 @@ def _get_report_data(request, site_id, date_from_str, date_to_str):
         g['price']      = float(t.price_htg) if t else 0
 
     guests.sort(key=lambda g: g['sold_ts'], reverse=True)
-    return guests, site_label
+    return guests, site_label, sites_list
 
 
 @login_required
@@ -67,23 +67,41 @@ def export_csv(request):
     date_from = request.GET.get('from', (date.today() - timedelta(days=30)).isoformat())
     date_to   = request.GET.get('to',   date.today().isoformat())
 
-    guests, site_label = _get_report_data(request, site_id or None, date_from, date_to)
+    guests, site_label, sites_list = _get_report_data(request, site_id or None, date_from, date_to)
+    multi_site = len(sites_list) > 1
 
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
     response['Content-Disposition'] = f'attachment; filename="bonnet_rapport_{date_from}_{date_to}.csv"'
 
     writer = csv.writer(response)
     writer.writerow(['Site', 'Forfait', 'Durée (h)', 'Prix (HTG)', 'MAC client', 'Date activation', 'Date expiry'])
-    for g in guests:
-        writer.writerow([
-            g['site_name'],
-            g['tier_label'],
-            round(g['duration_minutes'] / 60, 1),
-            g['price'],
-            g.get('mac', '-'),
-            g['sold_dt'].strftime('%Y-%m-%d %H:%M') if g['sold_dt'] else '-',
-            datetime.fromtimestamp(g['end'], tz=TZ_HAITI).strftime('%Y-%m-%d %H:%M') if g.get('end') else '-',
-        ])
+
+    if multi_site:
+        # Grouper par site avec ligne séparatrice
+        from collections import defaultdict
+        by_site = defaultdict(list)
+        for g in guests:
+            by_site[g['site_name']].append(g)
+        for site_name, site_guests in by_site.items():
+            writer.writerow([])
+            writer.writerow([f'── {site_name} ── {len(site_guests)} session(s)  |  {sum(g["price"] for g in site_guests):,.2f} HTG'])
+            for g in site_guests:
+                writer.writerow([
+                    g['site_name'], g['tier_label'],
+                    round(g['duration_minutes'] / 60, 1), g['price'],
+                    g.get('mac', '-'),
+                    g['sold_dt'].strftime('%Y-%m-%d %H:%M') if g['sold_dt'] else '-',
+                    datetime.fromtimestamp(g['end'], tz=TZ_HAITI).strftime('%Y-%m-%d %H:%M') if g.get('end') else '-',
+                ])
+    else:
+        for g in guests:
+            writer.writerow([
+                g['site_name'], g['tier_label'],
+                round(g['duration_minutes'] / 60, 1), g['price'],
+                g.get('mac', '-'),
+                g['sold_dt'].strftime('%Y-%m-%d %H:%M') if g['sold_dt'] else '-',
+                datetime.fromtimestamp(g['end'], tz=TZ_HAITI).strftime('%Y-%m-%d %H:%M') if g.get('end') else '-',
+            ])
     return response
 
 
@@ -100,7 +118,18 @@ def export_excel(request):
     date_from = request.GET.get('from', (date.today() - timedelta(days=30)).isoformat())
     date_to   = request.GET.get('to',   date.today().isoformat())
 
-    guests, site_label = _get_report_data(request, site_id or None, date_from, date_to)
+    guests, site_label, sites_list = _get_report_data(request, site_id or None, date_from, date_to)
+
+    # Multi-site : déléguer à report_helper qui a déjà la bonne structure
+    if len(sites_list) > 1:
+        from notifications.report_helper import generate_excel_bytes
+        xlsx = generate_excel_bytes(sites=sites_list, date_from=date_from, date_to=date_to)
+        response = HttpResponse(
+            xlsx,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename="bonnet_rapport_{date_from}_{date_to}.xlsx"'
+        return response
 
     total_revenue = sum(g['price'] for g in guests)
     now_ts        = datetime.now(TZ_HAITI).timestamp()
@@ -240,7 +269,15 @@ def _export_pdf_inner(request):
     date_from = request.GET.get('from', (date.today() - timedelta(days=30)).isoformat())
     date_to   = request.GET.get('to',   date.today().isoformat())
 
-    guests, site_label = _get_report_data(request, site_id or None, date_from, date_to)
+    guests, site_label, sites_list = _get_report_data(request, site_id or None, date_from, date_to)
+
+    # Multi-site : déléguer à report_helper qui a déjà la bonne structure
+    if len(sites_list) > 1:
+        from notifications.report_helper import generate_pdf_bytes
+        pdf = generate_pdf_bytes(sites=sites_list, date_from=date_from, date_to=date_to)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="bonnet_rapport_{date_from}_{date_to}.pdf"'
+        return response
 
     total_revenue = sum(g['price'] for g in guests)
     now_ts        = datetime.now(TZ_HAITI).timestamp()
