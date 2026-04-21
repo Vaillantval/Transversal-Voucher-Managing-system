@@ -10,6 +10,10 @@ from sites_mgmt.utils import TZ_HAITI
 
 logger = logging.getLogger(__name__)
 
+# SSL verify désactivé intentionnellement (cert auto-signé UniFi) — on supprime le spam urllib3
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 # TTL cache (secondes) — pre-warm toutes les 2 min, TTL long = résilience si pre-warm rate
 _TTL_SITES    = 600   # 10 min
 _TTL_VOUCHERS = 600   # 10 min (était 3 min)
