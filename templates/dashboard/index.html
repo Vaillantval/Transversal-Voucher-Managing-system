@@ -590,16 +590,34 @@ document.getElementById('btn-export-dl').addEventListener('click', function () {
     + '&from=' + encodeURIComponent(from)
     + '&to='   + encodeURIComponent(to);
 
-  // Fermer la modale immédiatement
-  bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+  const ext = { excel: 'xlsx', pdf: 'pdf', csv: 'csv' }[fmt];
+  const filename = `bonnet_rapport_${from}_${to}.${ext}`;
 
-  // Déclencher le téléchargement sans bloquer la page
-  const a = document.createElement('a');
-  a.href = url;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Spinner sur le bouton, modale reste ouverte pendant la génération
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Génération…';
+
+  fetch(url)
+    .then(r => {
+      if (!r.ok) throw new Error('Erreur serveur ' + r.status);
+      return r.blob();
+    })
+    .then(blob => {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+    })
+    .catch(() => alert('Erreur lors de la génération du fichier.'))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download me-1"></i>Télécharger';
+    });
 });
 </script>
 {% endblock %}
