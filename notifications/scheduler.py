@@ -229,12 +229,20 @@ def send_monthly_reports():
             logger.warning("ADMIN_NOTIFY non configuré — rapport mensuel non envoyé.")
             return
 
+        import calendar
         today = date.today()
+
+        # Celery Beat déclenche jours 28-31 — on n'exécute que le dernier jour réel du mois
+        last_day_of_month = calendar.monthrange(today.year, today.month)[1]
+        if today.day != last_day_of_month:
+            logger.info(f"send_monthly_reports: jour {today.day}/{last_day_of_month}, pas le dernier jour — ignoré.")
+            return
+
         first_day_prev = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
         last_day_prev = today.replace(day=1) - timedelta(days=1)
         date_from = first_day_prev.isoformat()
         date_to = last_day_prev.isoformat()
-        month_label = first_day_prev.strftime('%B %Y')
+        month_label = f"{_MOIS_FR[first_day_prev.month]} {first_day_prev.year}"
 
         sites = list(HotspotSite.objects.filter(is_active=True))
         if not sites:
