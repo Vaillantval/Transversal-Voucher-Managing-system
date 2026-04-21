@@ -260,7 +260,35 @@ def send_monthly_reports():
         except Exception as e:
             logger.error(f"PDF generation: {e}")
 
-        html = build_monthly_report_html(month_label, sites, date_from, date_to)
+        # Calcul des données pour le corps de l'email (cache hit — déjà chargé par Excel/PDF)
+        sites_summary = []
+        try:
+            from .report_helper import _fetch_guests_per_site
+            from collections import defaultdict
+            from django.utils import timezone as tz
+            by_site = _fetch_guests_per_site(sites, date_from, date_to)
+            now_ts = tz.now().timestamp()
+            for site in sites:
+                guests = by_site.get(site.unifi_site_id, [])
+                by_tier = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+                for g in guests:
+                    by_tier[g['tier_label']]['count'] += 1
+                    by_tier[g['tier_label']]['revenue'] += g['price']
+                sites_summary.append({
+                    'site': site,
+                    'sessions': len(guests),
+                    'active': sum(1 for g in guests if g.get('end', 0) > now_ts),
+                    'revenue': sum(g['price'] for g in guests),
+                    'by_tier': [
+                        {'tier_label': k, 'count': v['count'], 'revenue': v['revenue']}
+                        for k, v in sorted(by_tier.items())
+                    ],
+                })
+        except Exception as e:
+            logger.error(f"sites_summary computation: {e}")
+            sites_summary = [{'site': s, 'sessions': 0, 'active': 0, 'revenue': 0, 'by_tier': []} for s in sites]
+
+        html = build_monthly_report_html(month_label, sites_summary, date_from, date_to)
         result = send_email(
             to=to_emails,
             subject=f"[BonNet] Rapport mensuel — {month_label}",

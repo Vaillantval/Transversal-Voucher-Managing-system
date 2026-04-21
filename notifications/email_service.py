@@ -90,7 +90,7 @@ def build_auto_gen_html(site, tier_results: list, stock_count: int, date_label: 
           Site : <strong>{site.name}</strong>
         </p>
         <p style="margin:0 0 16px;color:#6b7280;font-size:.9rem">
-          Stock détecté : <strong>{stock_count}</strong> voucher(s) — aucune action de l'admin après 36h.
+          Stock détecté : <strong>{stock_count}</strong> voucher(s) — aucune action de l'admin après le délai configuré.
         </p>
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
           <thead>
@@ -116,12 +116,93 @@ def build_auto_gen_html(site, tier_results: list, stock_count: int, date_label: 
     """
 
 
-def build_monthly_report_html(month_label: str, sites: list, date_from: str, date_to: str) -> str:
-    sites_list_html = ''.join(
-        f'<li style="color:#374151;margin:4px 0">{s.name}</li>' for s in sites
-    )
+def build_monthly_report_html(month_label: str, sites_summary: list, date_from: str, date_to: str) -> str:
+    """
+    sites_summary : liste de dicts
+        {'site': HotspotSite, 'sessions': int, 'active': int, 'revenue': float,
+         'by_tier': [{'tier_label': str, 'count': int, 'revenue': float}, ...]}
+    """
+    TH  = 'padding:8px 12px;border-bottom:2px solid #e5e7eb;font-size:.8rem;color:#6b7280;text-align:center'
+    TH_L = TH.replace('text-align:center', 'text-align:left')
+    TD  = 'padding:7px 12px;border-bottom:1px solid #f3f4f6;font-size:.85rem;text-align:center'
+    TD_L = TD.replace('text-align:center', 'text-align:left')
+    TD_B = TD + ';font-weight:700'
+    TD_BL = TD_L + ';font-weight:700'
+
+    grand_sessions = sum(s['sessions'] for s in sites_summary)
+    grand_revenue  = sum(s['revenue']  for s in sites_summary)
+
+    # ── Tableau récapitulatif global ──────────────────────────────────────────
+    recap_rows = ''
+    for i, s in enumerate(sites_summary):
+        bg = 'background:#f8faff' if i % 2 == 0 else ''
+        recap_rows += f"""
+        <tr style="{bg}">
+          <td style="{TD_L}">{s['site'].name}</td>
+          <td style="{TD}">{s['sessions']}</td>
+          <td style="{TD}">{s['active']}</td>
+          <td style="{TD}">{s['revenue']:,.2f} HTG</td>
+        </tr>"""
+
+    recap_rows += f"""
+    <tr style="background:#eff6ff">
+      <td style="{TD_BL}">TOTAL</td>
+      <td style="{TD_B}">{grand_sessions}</td>
+      <td style="{TD_B}">—</td>
+      <td style="{TD_B}">{grand_revenue:,.2f} HTG</td>
+    </tr>"""
+
+    recap_table = f"""
+    <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
+      <thead><tr style="background:#1e40af">
+        <th style="{TH_L};color:#fff;border:none">Site</th>
+        <th style="{TH};color:#fff;border:none">Sessions vendues</th>
+        <th style="{TH};color:#fff;border:none">Sessions actives</th>
+        <th style="{TH};color:#fff;border:none">Revenu total</th>
+      </tr></thead>
+      <tbody>{recap_rows}</tbody>
+    </table>"""
+
+    # ── Détail par site ────────────────────────────────────────────────────────
+    site_sections = ''
+    for s in sites_summary:
+        if not s['by_tier']:
+            tier_rows = f'<tr><td colspan="3" style="{TD};color:#9ca3af">Aucune session sur cette période.</td></tr>'
+        else:
+            tier_rows = ''
+            for j, t in enumerate(s['by_tier']):
+                bg = 'background:#f8faff' if j % 2 == 0 else ''
+                tier_rows += f"""
+                <tr style="{bg}">
+                  <td style="{TD_L}">{t['tier_label']}</td>
+                  <td style="{TD}">{t['count']}</td>
+                  <td style="{TD}">{t['revenue']:,.2f} HTG</td>
+                </tr>"""
+            site_rev = s['revenue']
+            tier_rows += f"""
+            <tr style="background:#eff6ff">
+              <td style="{TD_BL}">Total {s['site'].name}</td>
+              <td style="{TD_B}">{s['sessions']}</td>
+              <td style="{TD_B}">{site_rev:,.2f} HTG</td>
+            </tr>"""
+
+        site_sections += f"""
+        <div style="margin-bottom:24px">
+          <p style="margin:0 0 6px;font-weight:700;color:#1e40af;font-size:.95rem">
+            {s['site'].name}
+          </p>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:#1e40af">
+              <th style="{TH_L};color:#fff;border:none">Forfait</th>
+              <th style="{TH};color:#fff;border:none">Sessions</th>
+              <th style="{TH};color:#fff;border:none">Revenu</th>
+            </tr></thead>
+            <tbody>{tier_rows}</tbody>
+          </table>
+        </div>"""
+
     return f"""
-    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto">
+    <div style="font-family:system-ui,sans-serif;max-width:620px;margin:0 auto">
       <div style="background:#111827;padding:20px 24px;border-radius:8px 8px 0 0">
         <h2 style="color:#fff;margin:0;font-size:1.2rem">
           Bon<span style="color:#1A56DB">Net</span>
@@ -132,14 +213,17 @@ def build_monthly_report_html(month_label: str, sites: list, date_from: str, dat
         <div style="background:#EFF6FF;border-left:4px solid #1A56DB;padding:12px 16px;border-radius:4px;margin-bottom:20px">
           <strong style="color:#1E40AF">📊 Rapport mensuel — {month_label}</strong>
         </div>
-        <p style="margin:0 0 12px;color:#374151">
-          Veuillez trouver ci-joint les rapports Excel pour la période
-          <strong>{date_from}</strong> → <strong>{date_to}</strong>.
+        <p style="margin:0 0 20px;color:#6b7280;font-size:.9rem">
+          Période : <strong style="color:#374151">{date_from}</strong> → <strong style="color:#374151">{date_to}</strong>
+          &nbsp;·&nbsp; Les fichiers Excel et PDF complets sont joints à cet email.
         </p>
-        <p style="margin:0 0 8px;color:#374151;font-weight:600">Sites inclus :</p>
-        <ul style="margin:0 0 20px;padding-left:20px">
-          {sites_list_html}
-        </ul>
+
+        <p style="margin:0 0 10px;font-weight:700;color:#111827">Récapitulatif global</p>
+        {recap_table}
+
+        <p style="margin:0 0 14px;font-weight:700;color:#111827">Détail par site</p>
+        {site_sections}
+
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0 12px">
         <p style="margin:0;color:#9ca3af;font-size:.8rem">
           BonNet — Gestion vouchers WiFi · Transversal Haïti
