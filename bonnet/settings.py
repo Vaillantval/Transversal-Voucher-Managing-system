@@ -264,8 +264,11 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = False
 
 # Sécurité HTTPS (activé uniquement en prod)
+# Railway termine le SSL au niveau du proxy — on NE redirige PAS (SECURE_SSL_REDIRECT
+# causerait une boucle de redirections sur les health checks internes HTTP de Railway).
+# SECURE_PROXY_SSL_HEADER dit à Django que X-Forwarded-Proto: https = requête sécurisée.
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE = True
