@@ -139,7 +139,8 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }
 
-/* ── Page loader ─────────────────────────────────────────────── */
+/* ── Page loader (désactivé — navigation assez rapide sans indicateur) ── */
+/*
 #page-loader {
   display: none;
   position: fixed; inset: 0; z-index: 9999;
@@ -147,6 +148,7 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   align-items: center; justify-content: center;
 }
 #page-loader.active { display: flex; }
+*/
 </style>
 {% block extra_css %}{% endblock %}
 
@@ -272,8 +274,8 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   }
   .main-content { position: relative; z-index: 1; }
 
-  /* ── Page loader ── */
-  #page-loader { background: rgba(11,17,32,.7) !important; }
+  /* ── Page loader désactivé ── */
+  /* #page-loader { background: rgba(11,17,32,.7) !important; } */
 
   /* ── Notifications ── */
   .notif-card               { background: #0f172a !important; border-color: rgba(255,255,255,.07) !important; }
@@ -296,12 +298,13 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 </head>
 <body>
 
-<!-- Page loader -->
+<!-- Page loader désactivé
 <div id="page-loader">
   <div class="spinner-border text-light" role="status" style="width:2.5rem;height:2.5rem">
     <span class="visually-hidden">Chargement…</span>
   </div>
 </div>
+-->
 
 <!-- Backdrop (mobile only) -->
 <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
@@ -488,7 +491,8 @@ function closeSidebar() {
   setInterval(scrollHint, 30000);
 })();
 
-// Spinner sur navigation et soumission de formulaire
+// Spinner sur navigation désactivé
+/*
 (function() {
   var loader = document.getElementById('page-loader');
   function showLoader() { loader.classList.add('active'); }
@@ -506,9 +510,9 @@ function closeSidebar() {
     if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target) return;
     showLoader();
   });
-  // Cacher le loader quand la page est entièrement chargée
   window.addEventListener('pageshow', function() { loader.classList.remove('active'); });
 })();
+*/
 </script>
 <script>
 (function(){
