@@ -39,6 +39,8 @@ class VoucherLog(models.Model):
         indexes = [
             models.Index(fields=['site', 'created_at']),
             models.Index(fields=['status']),
+            models.Index(fields=['created_by', 'created_at']),
+            models.Index(fields=['status', 'site']),
         ]
 
     def __str__(self):

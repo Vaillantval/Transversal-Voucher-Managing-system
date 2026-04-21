@@ -1,1 +1,1 @@
-web: gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT
+web: gunicorn bonnet.wsgi --config gunicorn.conf.py

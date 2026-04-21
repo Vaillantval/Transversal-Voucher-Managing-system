@@ -22,7 +22,11 @@ def superadmin_required(view_func):
 # ─── SITES ────────────────────────────────────────────────────────────────────
 
 def sync_sites_from_unifi():
-    """Crée en DB les sites UniFi qui n'existent pas encore."""
+    """Crée en DB les sites UniFi qui n'existent pas encore. Max 1× toutes les 5 min."""
+    from django.core.cache import cache
+    if cache.get('_sync_sites_throttle'):
+        return
+    cache.set('_sync_sites_throttle', 1, 300)
     for us in unifi.get_sites():
         HotspotSite.objects.get_or_create(
             unifi_site_id=us.get('name', us.get('_id', '')),

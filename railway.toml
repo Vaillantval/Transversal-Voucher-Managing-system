@@ -3,7 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh -c 'python manage.py migrate --noinput && python manage.py ensure_superadmin && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT --workers 1 --timeout 60'"
+startCommand = "sh -c 'python manage.py migrate --noinput && python manage.py ensure_superadmin && gunicorn bonnet.wsgi --config gunicorn.conf.py'"
 healthcheckPath = "/health/"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"

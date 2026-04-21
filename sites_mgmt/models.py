@@ -1,3 +1,4 @@
+import functools
 from django.db import models
 from accounts.models import User
 
@@ -35,6 +36,9 @@ class HotspotSite(models.Model):
         verbose_name = 'Site Hotspot'
         verbose_name_plural = 'Sites Hotspot'
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['is_active', 'name']),
+        ]
 
     def __str__(self):
         return self.name
@@ -84,11 +88,11 @@ class VoucherTier(models.Model):
         return f"{self.label} ({h_min}h–{h_max}h) = {self.price_htg} HTG"
 
     @staticmethod
+    @functools.lru_cache(maxsize=256)
     def get_price_for_minutes(minutes: int):
-        """Retourne la tranche et le prix pour une durée donnée en minutes."""
-        tier = VoucherTier.objects.filter(
+        """Retourne la tranche pour une durée. Résultat mis en cache process-level (LRU 256)."""
+        return VoucherTier.objects.filter(
             is_active=True,
             min_minutes__lte=minutes,
             max_minutes__gte=minutes,
         ).first()
-        return tier

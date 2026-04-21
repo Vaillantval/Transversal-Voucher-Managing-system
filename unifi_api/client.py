@@ -10,12 +10,12 @@ from sites_mgmt.utils import TZ_HAITI
 
 logger = logging.getLogger(__name__)
 
-# TTL cache (secondes) — pre-warm toutes les 2 min, TTL > 2 min pour éviter les trous
-_TTL_SITES    = 300   # 5 min
-_TTL_VOUCHERS = 180   # 3 min
-_TTL_CLIENTS  = 180   # 3 min
-_TTL_DEVICES  = 180   # 3 min
-_TTL_GUESTS   = 360   # 6 min
+# TTL cache (secondes) — pre-warm toutes les 2 min, TTL long = résilience si pre-warm rate
+_TTL_SITES    = 600   # 10 min
+_TTL_VOUCHERS = 600   # 10 min (était 3 min)
+_TTL_CLIENTS  = 300   # 5 min
+_TTL_DEVICES  = 300   # 5 min
+_TTL_GUESTS   = 900   # 15 min (était 6 min — données historiques, changent peu)
 
 # Fenêtre historique guests (heures) – 1 an
 _GUEST_HISTORY_HOURS = 8760

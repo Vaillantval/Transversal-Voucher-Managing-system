@@ -77,8 +77,11 @@ def user_list(request):
         messages.error(request, 'Accès réservé aux super-admins.')
         return redirect('dashboard:index')
 
+    from django.core.cache import cache
     from sites_mgmt.models import HotspotSite
-    _sync_unifi_users_to_db()
+    if not cache.get('_sync_users_throttle'):
+        cache.set('_sync_users_throttle', 1, 300)
+        _sync_unifi_users_to_db()
     users = User.objects.all().prefetch_related('managed_sites').order_by('role', 'username')
     sites = HotspotSite.objects.filter(is_active=True).order_by('name')
     return render(request, 'accounts/users.html', {
@@ -112,14 +115,9 @@ def user_edit(request, pk):
     target.role = new_role
     target.save()
 
-    # Mise à jour des sites assignés
+    # Mise à jour des sites assignés — set() = 2 queries au lieu de N×2
     site_pks = request.POST.getlist('sites')
-    all_sites = HotspotSite.objects.all()
-    for site in all_sites:
-        if str(site.pk) in site_pks:
-            site.admins.add(target)
-        else:
-            site.admins.remove(target)
+    target.managed_sites.set(HotspotSite.objects.filter(pk__in=site_pks))
 
     messages.success(request, f'Utilisateur « {target.username} » mis à jour.')
     return redirect('accounts:users')

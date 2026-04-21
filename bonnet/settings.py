@@ -139,6 +139,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'bonnet.middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'bonnet.urls'
@@ -174,8 +175,9 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=600,
+            conn_max_age=600,   # connexions persistantes (évite reconnexion à chaque requête)
             ssl_require=True,
+            conn_health_checks=True,  # Django 5.2 : ping avant réutilisation (évite connexions mortes)
         )
     }
 else:
@@ -237,10 +239,16 @@ if _REDIS_URL:
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
                 'IGNORE_EXCEPTIONS': True,
+                'SOCKET_CONNECT_TIMEOUT': 5,
+                'SOCKET_TIMEOUT': 5,
+                'CONNECTION_POOL_KWARGS': {'max_connections': 50},
             },
             'TIMEOUT': 600,
         }
     }
+    # Sessions dans Redis (pas en base) — réduit les queries DB de ~100% par requête
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
 else:
     CACHES = {
         'default': {
@@ -249,6 +257,19 @@ else:
             'TIMEOUT': 300,
         }
     }
+
+# Sessions : 8h, survit aux redéploiements
+SESSION_COOKIE_AGE = 28800
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = False
+
+# Sécurité HTTPS (activé uniquement en prod)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Messages
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
