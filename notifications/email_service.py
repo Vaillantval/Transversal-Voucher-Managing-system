@@ -133,7 +133,15 @@ def build_monthly_report_html(month_label: str, sites_summary: list, date_from: 
     grand_revenue  = sum(s['revenue']  for s in sites_summary)
 
     # ── Tableau récapitulatif global ──────────────────────────────────────────
-    recap_rows = ''
+    # Ligne TOTAL en premier
+    recap_rows = f"""
+    <tr style="background:#eff6ff">
+      <td style="{TD_BL}">TOTAL — {len(sites_summary)} site(s)</td>
+      <td style="{TD_B}">{grand_sessions}</td>
+      <td style="{TD_B}">—</td>
+      <td style="{TD_B}">{grand_revenue:,.2f} HTG</td>
+    </tr>"""
+
     for i, s in enumerate(sites_summary):
         bg = 'background:#f8faff' if i % 2 == 0 else ''
         recap_rows += f"""
@@ -143,14 +151,6 @@ def build_monthly_report_html(month_label: str, sites_summary: list, date_from: 
           <td style="{TD}">{s['active']}</td>
           <td style="{TD}">{s['revenue']:,.2f} HTG</td>
         </tr>"""
-
-    recap_rows += f"""
-    <tr style="background:#eff6ff">
-      <td style="{TD_BL}">TOTAL</td>
-      <td style="{TD_B}">{grand_sessions}</td>
-      <td style="{TD_B}">—</td>
-      <td style="{TD_B}">{grand_revenue:,.2f} HTG</td>
-    </tr>"""
 
     recap_table = f"""
     <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
