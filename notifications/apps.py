@@ -16,7 +16,10 @@ class NotificationsConfig(AppConfig):
     def ready(self):
         if any(cmd in sys.argv for cmd in _SKIP_CMDS):
             return
-        # Évite le double démarrage avec le reloader Django en dev
+        # En prod, Celery Beat gère les tâches périodiques — APScheduler inutile
+        if os.getenv('REDIS_URL'):
+            return
+        # Dev local : APScheduler prend le relais (pas de Celery)
         if os.environ.get('RUN_MAIN') == 'true' or not os.environ.get('RUN_MAIN'):
             try:
                 from . import scheduler

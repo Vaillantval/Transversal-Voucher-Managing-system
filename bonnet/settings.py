@@ -284,6 +284,34 @@ RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'BonNet <noreply@bonnet.ht>')
 # Emails destinataires du rapport mensuel (virgule-séparés)
 ADMIN_NOTIFY = os.getenv('ADMIN_NOTIFY', '')
 
-# APScheduler
+# APScheduler (fallback dev — désactivé en prod si Celery est configuré)
 APSCHEDULER_DATETIME_FORMAT = "d/m/Y H:i:s"
 APSCHEDULER_RUN_NOW_TIMEOUT = 25
+
+# ── Celery ────────────────────────────────────────────────────────────────────
+if _REDIS_URL:
+    CELERY_BROKER_URL = _REDIS_URL
+    CELERY_RESULT_BACKEND = _REDIS_URL
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_TIMEZONE = TIME_ZONE
+    CELERY_TASK_TRACK_STARTED = True
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+    # Beat schedule — remplace APScheduler en prod
+    from celery.schedules import crontab
+    CELERY_BEAT_SCHEDULE = {
+        'prewarm-cache': {
+            'task': 'unifi_api.prewarm_all_sites',
+            'schedule': 120,                     # toutes les 2 min
+        },
+        'check-stock': {
+            'task': 'notifications.tasks.check_stock_levels',
+            'schedule': crontab(minute=0, hour='*/12'),
+        },
+        'send-monthly-report': {
+            'task': 'notifications.tasks.send_monthly_reports',
+            'schedule': crontab(minute=0, hour=8, day_of_month='28-31'),
+        },
+    }

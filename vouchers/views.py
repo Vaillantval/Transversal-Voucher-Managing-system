@@ -227,6 +227,12 @@ def voucher_create(request):
                             'price_htg': tier.price_htg,
                         }
                     )
+            # Rafraîchit le cache du site en arrière-plan
+            try:
+                from unifi_api.tasks import refresh_site
+                refresh_site.delay(site.unifi_site_id)
+            except Exception:
+                pass
             messages.success(request, f"{count} voucher(s) créé(s) avec succès !")
             return redirect('vouchers:list')
         else:
@@ -250,6 +256,11 @@ def voucher_delete(request, unifi_id):
         if unifi.delete_voucher(voucher.site.unifi_site_id, voucher.unifi_id):
             voucher.status = VoucherLog.STATUS_REVOKED
             voucher.save()
+            try:
+                from unifi_api.tasks import refresh_site
+                refresh_site.delay(voucher.site.unifi_site_id)
+            except Exception:
+                pass
             messages.success(request, f"Voucher {voucher.code} révoqué.")
         else:
             messages.error(request, "Erreur lors de la révocation.")
