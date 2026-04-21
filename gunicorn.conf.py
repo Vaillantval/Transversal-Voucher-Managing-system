@@ -15,10 +15,13 @@ import os
 bind = f"0.0.0.0:{os.getenv('PORT', '8000')}"
 
 # ─── Workers ──────────────────────────────────────────────────────────────────
-# WEB_CONCURRENCY peut être surchargé via variable Railway
-workers = int(os.getenv('WEB_CONCURRENCY', multiprocessing.cpu_count() * 2 + 1))
+# Railway PostgreSQL Hobby = 25 connexions max.
+# Budget : 4 workers × 1 connexion persistante (conn_max_age) = 4 connexions
+#          + threads partagent la même connexion dans un worker gthread
+# WEB_CONCURRENCY peut être surchargé via variable Railway si besoin
+workers = int(os.getenv('WEB_CONCURRENCY', 4))
 worker_class = 'gthread'   # threads I/O-safe dans chaque worker (idéal avec Redis/DB)
-threads = int(os.getenv('GUNICORN_THREADS', 4))
+threads = int(os.getenv('GUNICORN_THREADS', 4))  # 4 workers × 4 threads = 16 slots concurrents
 
 # ─── Timeouts ─────────────────────────────────────────────────────────────────
 timeout = 60          # worker tué après 60s (évite les workers bloqués sur UniFi)

@@ -297,13 +297,29 @@ def prewarm_cache():
 
 
 def start():
+    import os
+    import threading
+    from django.core.cache import cache
     from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.jobstores.memory import MemoryJobStore
     from apscheduler.triggers.cron import CronTrigger
     from apscheduler.triggers.interval import IntervalTrigger
-    from django_apscheduler.jobstores import DjangoJobStore
 
+    # Un seul worker Gunicorn doit faire tourner le scheduler.
+    # cache.add() est atomique : retourne True seulement si la clé n'existait pas.
+    leader_key = 'apscheduler_leader'
+    is_leader = cache.add(leader_key, os.getpid(), timeout=300)
+    if not is_leader:
+        logger.info("APScheduler: worker %s n'est pas leader, démarrage ignoré.", os.getpid())
+        # Pre-warm immédiat quand même si le cache est froid au démarrage
+        threading.Thread(target=prewarm_cache, daemon=True, name='prewarm-startup').start()
+        return
+
+    logger.info("APScheduler: worker %s élu leader.", os.getpid())
+
+    # MemoryJobStore : zéro connexion DB, les jobs sont définis dans le code
     scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
-    scheduler.add_jobstore(DjangoJobStore(), 'default')
+    scheduler.add_jobstore(MemoryJobStore(), 'default')
 
     scheduler.add_job(
         prewarm_cache,
@@ -333,8 +349,7 @@ def start():
     )
 
     scheduler.start()
-    logger.info("APScheduler démarré — pre-warm/2min, stock/12h, rapport mensuel.")
+    logger.info("APScheduler démarré (MemoryJobStore) — pre-warm/2min, stock/12h, rapport mensuel.")
 
     # Pre-warm immédiat au démarrage (cache froid après redéploiement)
-    import threading
     threading.Thread(target=prewarm_cache, daemon=True, name='prewarm-startup').start()
