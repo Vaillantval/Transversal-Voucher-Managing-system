@@ -416,7 +416,7 @@ def product_list(request):
 def product_create(request):
     from .models import PartnerProduct
     errors    = {}
-    form_data = {}
+    form_data = {'name': '', 'description': '', 'price_usd': '', 'is_active': True}
 
     if request.method == 'POST':
         name        = request.POST.get('name', '').strip()
