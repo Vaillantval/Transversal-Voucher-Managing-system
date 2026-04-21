@@ -48,6 +48,15 @@ def index(request):
     else:
         all_sites = request.user.managed_sites.filter(is_active=True)
 
+    # Site_admin avec un seul site → vue détaillée directement (pas de tableau de breakdown vide)
+    if not is_super and not site_filter_id:
+        managed = list(all_sites.values_list('unifi_site_id', flat=True))
+        if len(managed) == 1:
+            from django.shortcuts import redirect as _redir
+            params = request.GET.copy()
+            params['site'] = managed[0]
+            return _redir(f"{request.path}?{params.urlencode()}")
+
     # Site sélectionné ou tous
     selected_site = None
     if site_filter_id:

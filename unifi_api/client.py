@@ -78,6 +78,22 @@ def get_sites():
         return []
 
 
+def create_site(display_name: str) -> Optional[dict]:
+    """Crée un nouveau site UniFi. Retourne le dict site (name=internal_id, desc=display) ou None."""
+    c = _connect()
+    if not c:
+        return None
+    try:
+        result = c.create_site(display_name)
+        if result and isinstance(result, list) and len(result) > 0:
+            cache.delete('unifi_sites')
+            return result[0]
+        return None
+    except Exception as e:
+        logger.error(f"create_site({display_name!r}): {e}")
+        return None
+
+
 # ─── DEVICES / CLIENTS ────────────────────────────────────────────────────────
 
 def get_clients(site_id: str, _c=None):

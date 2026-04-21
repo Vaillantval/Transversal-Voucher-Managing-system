@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% block title %}Partenaires{% endblock %}
+{% block page_title %}Gestion des partenaires{% endblock %}
+
+{% block extra_css %}
+<style>
+.panel { background:#fff; border:1px solid #e5e7eb; border-radius:12px; margin-bottom:1.5rem; }
+.panel-hd {
+  padding:.9rem 1.25rem; border-bottom:1px solid #e5e7eb;
+  font-weight:700; font-size:.95rem; display:flex; align-items:center; gap:.5rem;
+}
+.panel-bd { padding:1.25rem; }
+
+.badge-pending  { background:#fef9c3; color:#92400e; }
+.badge-approved { background:#d1fae5; color:#065f46; }
+.badge-rejected { background:#fee2e2; color:#991b1b; }
+
+.app-row { transition: background .15s; }
+.app-row:hover { background:#f9fafb; }
+
+[data-theme="dark"] .panel { background:#0f172a; border-color:rgba(255,255,255,.07); }
+[data-theme="dark"] .panel-hd { border-bottom-color:rgba(255,255,255,.07); }
+[data-theme="dark"] .app-row:hover { background:rgba(59,130,246,.05); }
+[data-theme="dark"] .badge-pending  { background:rgba(245,158,11,.15); color:#fbbf24; }
+[data-theme="dark"] .badge-approved { background:rgba(16,185,129,.15); color:#6ee7b7; }
+[data-theme="dark"] .badge-rejected { background:rgba(239,68,68,.15);  color:#fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Nav retour + actions -->
+<div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+  <a href="{% url 'sites:config' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Configuration
+  </a>
+  <a href="{% url 'sites:product_list' %}" class="btn btn-sm btn-outline-primary ms-auto">
+    <i class="bi bi-box-seam me-1"></i>Gérer les produits
+  </a>
+</div>
+
+<!-- Stats rapides -->
+<div class="row g-3 mb-4">
+  {% with total=applications|length %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <span class="stat-icon" style="background:#fef9c3"><i class="bi bi-hourglass-split" style="color:#d97706"></i></span>
+      <div class="kpi-val mt-2" style="color:#d97706">{{ pending_count }}</div>
+      <div class="kpi-label">En attente</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <span class="stat-icon" style="background:#d1fae5"><i class="bi bi-check-circle text-success"></i></span>
+      <div class="kpi-val mt-2 text-success">{{ applications|length }}</div>
+      <div class="kpi-label">Total demandes</div>
+    </div>
+  </div>
+  {% endwith %}
+</div>
+
+<!-- Conditions de partenariat -->
+<div class="panel mb-4">
+  <div class="panel-hd">
+    <i class="bi bi-file-text text-primary"></i> Conditions de partenariat
+    <span class="text-muted fw-normal small ms-2">Affiché sur la page d'inscription</span>
+  </div>
+  <div class="panel-bd">
+    <form method="post">
+      {% csrf_token %}
+      <textarea name="partner_conditions" rows="6"
+                class="form-control font-monospace"
+                style="font-size:.85rem;line-height:1.6"
+                placeholder="Rédigez ici les conditions auxquelles les partenaires devront adhérer…">{{ config.partner_conditions }}</textarea>
+      <div class="mt-2 d-flex justify-content-end">
+        <button type="submit" name="save_conditions" class="btn btn-primary btn-sm px-4">
+          <i class="bi bi-check2 me-1"></i>Enregistrer les conditions
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Liste des demandes -->
+<div class="panel">
+  <div class="panel-hd">
+    <i class="bi bi-people text-primary"></i> Demandes de partenariat
+    {% if pending_count %}
+    <span class="badge rounded-pill ms-2" style="background:#ef4444;color:#fff;font-size:.7rem">
+      {{ pending_count }} en attente
+    </span>
+    {% endif %}
+  </div>
+  <div class="panel-bd p-0">
+    {% if applications %}
+    <div class="table-responsive">
+      <table class="table table-bn table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Candidat</th>
+            <th class="d-none d-md-table-cell">Email</th>
+            <th class="d-none d-lg-table-cell">Téléphone</th>
+            <th class="d-none d-lg-table-cell">Adresse</th>
+            <th>Soumis le</th>
+            <th class="text-center">Statut</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for app in applications %}
+        <tr class="app-row">
+          <td class="fw-semibold">{{ app.first_name }} {{ app.last_name }}</td>
+          <td class="d-none d-md-table-cell text-muted small">{{ app.email }}</td>
+          <td class="d-none d-lg-table-cell text-muted small">{{ app.phone }}</td>
+          <td class="d-none d-lg-table-cell text-muted small" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ app.address }}</td>
+          <td class="text-muted small">{{ app.created_at|date:"d/m/Y" }}</td>
+          <td class="text-center">
+            {% if app.status == 'pending' %}
+            <span class="badge rounded-pill badge-pending">En attente</span>
+            {% elif app.status == 'approved' %}
+            <span class="badge rounded-pill badge-approved">Approuvé</span>
+            {% else %}
+            <span class="badge rounded-pill badge-rejected">Rejeté</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            {% if app.status == 'pending' %}
+            <div class="d-flex gap-1 justify-content-end">
+              <!-- Approuver -->
+              <form method="post" action="{% url 'sites:partner_approve' app.pk %}"
+                    onsubmit="return confirm('Approuver la demande de {{ app.first_name }} {{ app.last_name }} et créer son site UniFi ?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="bi bi-check-lg"></i>
+                  <span class="d-none d-md-inline ms-1">Approuver</span>
+                </button>
+              </form>
+              <!-- Rejeter (modal) -->
+              <button type="button" class="btn btn-outline-danger btn-sm"
+                      data-bs-toggle="modal" data-bs-target="#rejectModal{{ app.pk }}">
+                <i class="bi bi-x-lg"></i>
+                <span class="d-none d-md-inline ms-1">Rejeter</span>
+              </button>
+            </div>
+
+            <!-- Modal rejet -->
+            <div class="modal fade" id="rejectModal{{ app.pk }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Rejeter la demande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="post" action="{% url 'sites:partner_reject' app.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                      <p class="text-muted small mb-3">
+                        Vous allez rejeter la demande de <strong>{{ app.first_name }} {{ app.last_name }}</strong>.
+                      </p>
+                      <label class="form-label small fw-semibold">Note (optionnelle)</label>
+                      <textarea name="notes" class="form-control" rows="3"
+                                placeholder="Motif du rejet…"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Annuler</button>
+                      <button type="submit" class="btn btn-danger btn-sm px-4">Confirmer le rejet</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {% elif app.status == 'approved' and app.user %}
+            <a href="{% url 'accounts:users' %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-person me-1"></i>Voir user
+            </a>
+            {% else %}
+            {% if app.admin_notes %}
+            <span class="text-muted small" title="{{ app.admin_notes }}">
+              <i class="bi bi-chat-left-text"></i>
+            </span>
+            {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-inbox" style="font-size:2rem;opacity:.4"></i>
+      <p class="mt-2 mb-0 small">Aucune demande de partenariat pour le moment.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

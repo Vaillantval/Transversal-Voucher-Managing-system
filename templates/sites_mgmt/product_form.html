@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-7 col-lg-6">
+
+    <div class="d-flex gap-2 mb-4">
+      <a href="{% url 'sites:product_list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Produits
+      </a>
+    </div>
+
+    <div class="card card-bn p-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Image -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Image du produit</label>
+          {% if product.image %}
+          <div class="d-flex align-items-center gap-3 mb-2 p-2 border rounded">
+            <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                 style="max-height:60px;max-width:120px;object-fit:contain">
+            <div class="form-check mb-0">
+              <input class="form-check-input" type="checkbox" name="clear_image" id="clear_image">
+              <label class="form-check-label text-danger small" for="clear_image">Supprimer l'image</label>
+            </div>
+          </div>
+          {% endif %}
+          <input type="file" name="image" class="form-control" accept="image/*" id="img-input">
+          <div class="form-text">PNG, JPG — recommandé : 400 × 300 px minimum.</div>
+          <img id="img-preview" src="" alt=""
+               style="display:none;max-height:140px;max-width:100%;object-fit:contain;margin-top:.75rem;border-radius:8px">
+        </div>
+
+        <!-- Nom -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="name">Nom du produit *</label>
+          <input type="text" id="name" name="name" class="form-control {% if errors.name %}is-invalid{% endif %}"
+                 value="{{ product.name|default:form_data.name|default:'' }}"
+                 placeholder="Ex: UniFi U6 Lite">
+          {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="description">Description</label>
+          <textarea id="description" name="description" class="form-control" rows="4"
+                    placeholder="Caractéristiques, avantages, cas d'usage…">{{ product.description|default:form_data.description|default:'' }}</textarea>
+        </div>
+
+        <!-- Prix -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="price_usd">Prix (USD) *</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" id="price_usd" name="price_usd" step="0.01" min="0"
+                   class="form-control {% if errors.price_usd %}is-invalid{% endif %}"
+                   value="{{ product.price_usd|default:form_data.price_usd|default:'' }}"
+                   placeholder="0.00">
+            {% if errors.price_usd %}<div class="invalid-feedback">{{ errors.price_usd }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Actif -->
+        <div class="mb-4">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch"
+                   name="is_active" id="is_active"
+                   {% if action == 'create' or product.is_active or form_data.is_active %}checked{% endif %}>
+            <label class="form-check-label" for="is_active">Produit actif (visible sur la page d'inscription)</label>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check2-circle me-1"></i>
+            {% if action == 'create' %}Créer le produit{% else %}Enregistrer{% endif %}
+          </button>
+          <a href="{% url 'sites:product_list' %}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('img-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('img-preview');
+      prev.src = e.target.result;
+      prev.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  }
+});
+</script>
+{% endblock %}

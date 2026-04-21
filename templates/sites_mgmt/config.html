@@ -166,6 +166,41 @@
         <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">Annuler</a>
       </div>
     </form>
+
+    <!-- ── Espace Partenaire (hors form pour éviter les conflits de submit) ── -->
+    <div class="card-panel mt-4 mb-4">
+      <div class="panel-header">
+        <i class="bi bi-people-fill me-2" style="color:#8b5cf6"></i>Espace Partenaire
+        {% if pending_partners %}
+        <span class="badge rounded-pill ms-2"
+              style="background:#ef4444;color:#fff;font-size:.68rem">
+          {{ pending_partners }} en attente
+        </span>
+        {% endif %}
+      </div>
+      <div class="p-4">
+        <p class="text-muted small mb-4">
+          Gérez le programme de partenariat BonNet : produits disponibles, conditions d'adhésion
+          et validation des demandes d'inscription.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'sites:partners' %}" class="btn btn-outline-primary">
+            <i class="bi bi-person-check me-1"></i>Gérer les demandes
+            {% if pending_partners %}
+            <span class="badge rounded-pill ms-1"
+                  style="background:#ef4444;color:#fff;font-size:.65rem">{{ pending_partners }}</span>
+            {% endif %}
+          </a>
+          <a href="{% url 'sites:product_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-box-seam me-1"></i>Gérer les produits
+          </a>
+          <a href="/accounts/partenaire/" target="_blank" class="btn btn-outline-secondary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Voir la page d'inscription
+          </a>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

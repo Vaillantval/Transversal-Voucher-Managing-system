@@ -204,8 +204,9 @@ def config_edit(request):
     all_sites = HotspotSite.objects.filter(is_active=True).order_by('name')
 
     if request.method == 'POST':
-        # Logos & footer
-        config.footer_text = request.POST.get('footer_text', '').strip()
+        # Logos, footer & conditions partenaire
+        config.footer_text        = request.POST.get('footer_text', '').strip()
+        config.partner_conditions = request.POST.get('partner_conditions', '').strip()
 
         if request.FILES.get('logo1'):
             config.logo1 = request.FILES['logo1']
@@ -237,13 +238,272 @@ def config_edit(request):
         messages.success(request, 'Configuration mise à jour.')
         return redirect('sites:config')
 
+    from accounts.models import PartnerApplication
+    pending_partners = PartnerApplication.objects.filter(status=PartnerApplication.STATUS_PENDING).count()
+
     return render(request, 'sites_mgmt/config.html', {
-        'config': config,
-        'autogen': autogen,
-        'all_sites': all_sites,
+        'config':          config,
+        'autogen':         autogen,
+        'all_sites':       all_sites,
         'autogen_site_ids': list(autogen.sites.values_list('pk', flat=True)),
-        'page_title': 'Configuration',
+        'pending_partners': pending_partners,
+        'page_title':      'Configuration',
     })
+
+
+# ─── PARTENAIRES (admin) ─────────────────────────────────────────────────────
+
+@login_required
+@superadmin_required
+def partners_view(request):
+    """Gestion des demandes partenaires + éditeur des conditions."""
+    from accounts.models import PartnerApplication
+
+    config = SiteConfig.get()
+
+    if request.method == 'POST' and 'save_conditions' in request.POST:
+        config.partner_conditions = request.POST.get('partner_conditions', '')
+        config.save(update_fields=['partner_conditions'])
+        messages.success(request, 'Conditions de partenariat mises à jour.')
+        return redirect('sites:partners')
+
+    applications  = PartnerApplication.objects.select_related('user').all()
+    pending_count = applications.filter(status=PartnerApplication.STATUS_PENDING).count()
+
+    return render(request, 'sites_mgmt/partners.html', {
+        'config':        config,
+        'applications':  applications,
+        'pending_count': pending_count,
+        'page_title':    'Gestion des partenaires',
+    })
+
+
+@login_required
+@superadmin_required
+def partner_approve(request, pk):
+    """Approuve une demande : crée User + site UniFi + HotspotSite + envoie email."""
+    if request.method != 'POST':
+        return redirect('sites:partners')
+
+    import secrets, string, logging
+    from accounts.models import PartnerApplication, User as BonUser
+    from django.utils import timezone
+
+    logger_local = logging.getLogger(__name__)
+    application = get_object_or_404(PartnerApplication, pk=pk, status=PartnerApplication.STATUS_PENDING)
+
+    # Générer username unique (email tronqué)
+    base = application.email[:150]
+    username = base
+    counter  = 1
+    while BonUser.objects.filter(username=username).exists():
+        suffix   = str(counter)
+        username = base[:150 - len(suffix)] + suffix
+        counter += 1
+
+    # Mot de passe temporaire sécurisé
+    alphabet     = string.ascii_letters + string.digits + '!@#$%'
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+    # Créer le compte
+    user = BonUser.objects.create_user(
+        username=username,
+        email=application.email,
+        password=temp_password,
+        first_name=application.first_name,
+        last_name=application.last_name,
+        phone=application.phone,
+        role=BonUser.ROLE_SITE_ADMIN,
+        is_active=True,
+    )
+
+    # Créer site UniFi
+    site_name = f"{application.first_name} {application.last_name}"
+    from unifi_api import client as unifi
+    unifi_site = unifi.create_site(site_name)
+
+    if unifi_site:
+        site_unifi_id = unifi_site.get('name', '')
+        hotspot = HotspotSite.objects.create(
+            name=site_name,
+            unifi_site_id=site_unifi_id,
+            location=application.address,
+            description=f"Site partenaire — {application.email}",
+            is_active=True,
+        )
+        hotspot.admins.add(user)
+        messages.success(request, f'Partenaire {site_name} approuvé — site UniFi créé (ID : {site_unifi_id}).')
+    else:
+        messages.warning(
+            request,
+            f'Partenaire {site_name} approuvé, mais la création du site UniFi a échoué. '
+            f'Créez-le manuellement et assignez l\'utilisateur « {username} ».'
+        )
+
+    # Enregistrer l'approbation
+    application.user        = user
+    application.status      = PartnerApplication.STATUS_APPROVED
+    application.reviewed_at = timezone.now()
+    application.save()
+
+    # Envoyer email avec identifiants
+    try:
+        from notifications.email_service import send_email
+        html = f"""
+        <div style="font-family:sans-serif;max-width:560px;margin:auto">
+          <h2 style="color:#1d4ed8">Bienvenue chez BonNet, {application.first_name}&nbsp;!</h2>
+          <p>Votre demande de partenariat a été approuvée. Voici vos identifiants de connexion :</p>
+          <table style="border-collapse:collapse;margin:16px 0">
+            <tr>
+              <td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Identifiant</td>
+              <td style="padding:6px 12px;font-family:monospace">{username}</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Mot de passe temporaire</td>
+              <td style="padding:6px 12px;font-family:monospace;letter-spacing:.1em">{temp_password}</td>
+            </tr>
+          </table>
+          <p style="color:#ef4444;font-weight:600">Changez votre mot de passe dès votre première connexion.</p>
+        </div>
+        """
+        send_email(
+            to=[application.email],
+            subject='[BonNet] ✅ Votre compte partenaire est activé',
+            html=html,
+        )
+    except Exception as e:
+        logger_local.error(f"Email approbation {application.email}: {e}")
+
+    return redirect('sites:partners')
+
+
+@login_required
+@superadmin_required
+def partner_reject(request, pk):
+    """Rejette une demande partenaire."""
+    if request.method != 'POST':
+        return redirect('sites:partners')
+
+    from accounts.models import PartnerApplication
+    from django.utils import timezone
+
+    application = get_object_or_404(PartnerApplication, pk=pk, status=PartnerApplication.STATUS_PENDING)
+    application.status      = PartnerApplication.STATUS_REJECTED
+    application.admin_notes = request.POST.get('notes', '').strip()
+    application.reviewed_at = timezone.now()
+    application.save()
+
+    messages.success(request, f'Demande de {application.first_name} {application.last_name} rejetée.')
+    return redirect('sites:partners')
+
+
+# ─── PRODUITS PARTENAIRES (admin) ─────────────────────────────────────────────
+
+@login_required
+@superadmin_required
+def product_list(request):
+    from .models import PartnerProduct
+    products = PartnerProduct.objects.all()
+    return render(request, 'sites_mgmt/products.html', {
+        'products':   products,
+        'page_title': 'Produits partenaires',
+    })
+
+
+@login_required
+@superadmin_required
+def product_create(request):
+    from .models import PartnerProduct
+    errors    = {}
+    form_data = {}
+
+    if request.method == 'POST':
+        name        = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        price_str   = request.POST.get('price_usd', '').strip()
+        is_active   = request.POST.get('is_active') == 'on'
+
+        form_data = {'name': name, 'description': description, 'price_usd': price_str, 'is_active': is_active}
+
+        if not name:
+            errors['name'] = 'Ce champ est requis.'
+        price_usd = None
+        try:
+            price_usd = float(price_str) if price_str else None
+            if price_usd is None or price_usd < 0:
+                errors['price_usd'] = 'Entrez un prix valide (≥ 0).'
+        except ValueError:
+            errors['price_usd'] = 'Entrez un prix valide.'
+
+        if not errors:
+            product = PartnerProduct(name=name, description=description, price_usd=price_usd, is_active=is_active)
+            if request.FILES.get('image'):
+                product.image = request.FILES['image']
+            product.save()
+            messages.success(request, f'Produit « {name} » créé.')
+            return redirect('sites:product_list')
+
+    return render(request, 'sites_mgmt/product_form.html', {
+        'errors':     errors,
+        'form_data':  form_data,
+        'action':     'create',
+        'page_title': 'Nouveau produit',
+    })
+
+
+@login_required
+@superadmin_required
+def product_edit(request, pk):
+    from .models import PartnerProduct
+    product = get_object_or_404(PartnerProduct, pk=pk)
+    errors  = {}
+
+    if request.method == 'POST':
+        product.name        = request.POST.get('name', '').strip()
+        product.description = request.POST.get('description', '').strip()
+        product.is_active   = request.POST.get('is_active') == 'on'
+
+        price_str = request.POST.get('price_usd', '').strip()
+        try:
+            price_usd = float(price_str) if price_str else None
+            if price_usd is None or price_usd < 0:
+                errors['price_usd'] = 'Entrez un prix valide (≥ 0).'
+            else:
+                product.price_usd = price_usd
+        except ValueError:
+            errors['price_usd'] = 'Entrez un prix valide.'
+
+        if not product.name:
+            errors['name'] = 'Ce champ est requis.'
+
+        if not errors:
+            if request.FILES.get('image'):
+                product.image = request.FILES['image']
+            elif request.POST.get('clear_image'):
+                product.image = None
+            product.save()
+            messages.success(request, f'Produit « {product.name} » mis à jour.')
+            return redirect('sites:product_list')
+
+    return render(request, 'sites_mgmt/product_form.html', {
+        'product':    product,
+        'errors':     errors,
+        'action':     'edit',
+        'page_title': f'Modifier — {product.name}',
+    })
+
+
+@login_required
+@superadmin_required
+def product_delete(request, pk):
+    from .models import PartnerProduct
+    if request.method != 'POST':
+        return redirect('sites:product_list')
+    product = get_object_or_404(PartnerProduct, pk=pk)
+    name = product.name
+    product.delete()
+    messages.success(request, f'Produit « {name} » supprimé.')
+    return redirect('sites:product_list')
 
 
 # ─── API JSON (pour charts) ────────────────────────────────────────────────────

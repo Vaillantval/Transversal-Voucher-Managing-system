@@ -142,3 +142,77 @@ def user_delete(request, pk):
     target.delete()
     messages.success(request, f'Utilisateur « {username} » supprimé.')
     return redirect('accounts:users')
+
+
+# ─── PARTENAIRES (public) ─────────────────────────────────────────────────────
+
+def partner_register(request):
+    """Page d'inscription partenaire (publique — pas de login requis)."""
+    if request.user.is_authenticated:
+        return redirect('dashboard:index')
+
+    from sites_mgmt.models import SiteConfig, PartnerProduct
+    from .models import PartnerApplication
+
+    config   = SiteConfig.get()
+    products = PartnerProduct.objects.filter(is_active=True)
+    errors   = {}
+    form_data = {}
+
+    if request.method == 'POST':
+        first_name          = request.POST.get('first_name', '').strip()
+        last_name           = request.POST.get('last_name', '').strip()
+        email               = request.POST.get('email', '').strip().lower()
+        address             = request.POST.get('address', '').strip()
+        phone               = request.POST.get('phone', '').strip()
+        accepted_equipment  = request.POST.get('accepted_equipment') == 'on'
+        accepted_conditions = request.POST.get('accepted_conditions') == 'on'
+
+        form_data = {
+            'first_name': first_name, 'last_name': last_name,
+            'email': email, 'address': address, 'phone': phone,
+        }
+
+        if not first_name:
+            errors['first_name'] = 'Ce champ est requis.'
+        if not last_name:
+            errors['last_name'] = 'Ce champ est requis.'
+        if not email:
+            errors['email'] = 'Ce champ est requis.'
+        elif PartnerApplication.objects.filter(email=email).exists():
+            errors['email'] = 'Une demande avec cet email existe déjà.'
+        if not address:
+            errors['address'] = 'Ce champ est requis.'
+        if not phone:
+            errors['phone'] = 'Ce champ est requis.'
+        if not accepted_equipment:
+            errors['accepted_equipment'] = 'Vous devez cocher cette case.'
+        if not accepted_conditions:
+            errors['accepted_conditions'] = 'Vous devez accepter les conditions.'
+
+        if not errors:
+            PartnerApplication.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                address=address,
+                phone=phone,
+                accepted_equipment=True,
+                accepted_conditions=True,
+            )
+            return redirect('accounts:partner_success')
+
+    return render(request, 'accounts/partner_register.html', {
+        'config':    config,
+        'products':  products,
+        'errors':    errors,
+        'form_data': form_data,
+    })
+
+
+def partner_success(request):
+    """Confirmation après soumission d'une demande partenaire."""
+    from sites_mgmt.models import SiteConfig
+    return render(request, 'accounts/partner_success.html', {
+        'config': SiteConfig.get(),
+    })

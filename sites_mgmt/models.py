@@ -40,9 +40,10 @@ class HotspotSite(models.Model):
 
 
 class SiteConfig(models.Model):
-    footer_text = models.CharField(max_length=300, blank=True, verbose_name='Texte du footer')
-    logo1 = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 1')
-    logo2 = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 2')
+    footer_text        = models.CharField(max_length=300, blank=True, verbose_name='Texte du footer')
+    logo1              = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 1')
+    logo2              = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 2')
+    partner_conditions = models.TextField(blank=True, verbose_name='Conditions de partenariat')
 
     class Meta:
         verbose_name = 'Configuration du site'
@@ -54,6 +55,23 @@ class SiteConfig(models.Model):
 
     def footer(self):
         return self.footer_text or '© 2026 BonNet · Transversal'
+
+
+class PartnerProduct(models.Model):
+    name        = models.CharField(max_length=150, verbose_name='Nom')
+    description = models.TextField(blank=True, verbose_name='Description')
+    price_usd   = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Prix (USD)')
+    image       = models.ImageField(upload_to='partner_products/', blank=True, null=True, verbose_name='Image')
+    is_active   = models.BooleanField(default=True, verbose_name='Actif')
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name          = 'Produit partenaire'
+        verbose_name_plural   = 'Produits partenaires'
+        ordering              = ['name']
+
+    def __str__(self):
+        return f"{self.name} — ${self.price_usd}"
 
 
 class VoucherTier(models.Model):
