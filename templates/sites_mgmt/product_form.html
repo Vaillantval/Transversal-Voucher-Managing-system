@@ -26,7 +26,7 @@
           <label class="form-label fw-semibold" for="name">Nom du produit *</label>
           <input type="text" id="name" name="name"
                  class="form-control {% if errors.name %}is-invalid{% endif %}"
-                 value="{{ product.name|default:form_data.name }}"
+                 value="{% if action == 'edit' %}{{ product.name }}{% else %}{{ form_data.name }}{% endif %}"
                  placeholder="Ex: UniFi U6 Lite">
           {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
         </div>
@@ -35,7 +35,7 @@
         <div class="mb-3">
           <label class="form-label fw-semibold" for="description">Description</label>
           <textarea id="description" name="description" class="form-control" rows="4"
-                    placeholder="Caractéristiques, avantages, cas d'usage…">{{ product.description|default:form_data.description }}</textarea>
+                    placeholder="Caractéristiques, avantages, cas d'usage…">{% if action == 'edit' %}{{ product.description }}{% else %}{{ form_data.description }}{% endif %}</textarea>
         </div>
 
         <!-- Prix -->
@@ -45,7 +45,7 @@
             <span class="input-group-text">$</span>
             <input type="number" id="price_usd" name="price_usd" step="0.01" min="0"
                    class="form-control {% if errors.price_usd %}is-invalid{% endif %}"
-                   value="{{ product.price_usd|default:form_data.price_usd }}"
+                   value="{% if action == 'edit' %}{{ product.price_usd }}{% else %}{{ form_data.price_usd }}{% endif %}"
                    placeholder="0.00">
             {% if errors.price_usd %}<div class="invalid-feedback">{{ errors.price_usd }}</div>{% endif %}
           </div>
@@ -56,7 +56,7 @@
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"
                    name="is_active" id="is_active"
-                   {% if action == 'create' or product.is_active or form_data.is_active %}checked{% endif %}>
+                   {% if action == 'edit' %}{% if product.is_active %}checked{% endif %}{% else %}checked{% endif %}>
             <label class="form-check-label" for="is_active">Produit actif (visible sur la page d'inscription)</label>
           </div>
         </div>
@@ -67,7 +67,7 @@
           <label class="form-label fw-semibold">Images actuelles</label>
           <div class="row g-2">
             {% for img in images %}
-            <div class="col-6 col-sm-4 col-md-3" id="img-wrap-{{ img.pk }}">
+            <div class="col-6 col-sm-4 col-md-3">
               <div class="position-relative border rounded overflow-hidden" style="aspect-ratio:4/3">
                 <img src="{{ img.image.url }}" alt=""
                      style="width:100%;height:100%;object-fit:cover">

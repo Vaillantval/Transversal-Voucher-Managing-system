@@ -13,4 +13,5 @@ urlpatterns = [
     # Partenaires (public)
     path('partenaire/',                     views.partner_register, name='partner_register'),
     path('partenaire/merci/',               views.partner_success,  name='partner_success'),
+    path('partenaire/produit/<int:pk>/',    views.product_public,   name='product_public'),
 ]

@@ -216,3 +216,16 @@ def partner_success(request):
     return render(request, 'accounts/partner_success.html', {
         'config': SiteConfig.get(),
     })
+
+
+def product_public(request, pk):
+    """Fiche produit publique (pas de login requis) — accessible depuis la page d'inscription."""
+    from sites_mgmt.models import PartnerProduct, SiteConfig
+    from django.shortcuts import get_object_or_404
+    product = get_object_or_404(PartnerProduct, pk=pk, is_active=True)
+    images  = list(product.images.all())
+    return render(request, 'accounts/product_public.html', {
+        'product': product,
+        'images':  images,
+        'config':  SiteConfig.get(),
+    })
