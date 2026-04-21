@@ -112,7 +112,6 @@ def site_edit(request, pk):
         site.location = request.POST.get('location', site.location).strip()
         site.description = request.POST.get('description', site.description).strip()
         site.is_active = request.POST.get('is_active') == 'on'
-        site.auto_generate_vouchers = request.POST.get('auto_generate_vouchers') == 'on'
 
         # Admins assignés
         admin_ids = request.POST.getlist('admins')
@@ -198,9 +197,14 @@ def tier_delete(request, pk):
 @superadmin_required
 def config_edit(request):
     from .models import SiteConfig
+    from notifications.models import AutoGenConfig
+
     config = SiteConfig.get()
+    autogen = AutoGenConfig.get()
+    all_sites = HotspotSite.objects.filter(is_active=True).order_by('name')
 
     if request.method == 'POST':
+        # Logos & footer
         config.footer_text = request.POST.get('footer_text', '').strip()
 
         if request.FILES.get('logo1'):
@@ -214,11 +218,30 @@ def config_edit(request):
             config.logo2 = None
 
         config.save()
+
+        # Auto-gen
+        autogen.enabled = request.POST.get('autogen_enabled') == 'on'
+        try:
+            autogen.count_per_tier = max(1, int(request.POST.get('autogen_count', 100)))
+        except (ValueError, TypeError):
+            autogen.count_per_tier = 100
+        try:
+            autogen.delay_hours = max(1, int(request.POST.get('autogen_delay', 24)))
+        except (ValueError, TypeError):
+            autogen.delay_hours = 24
+        autogen.save()
+
+        selected_site_ids = request.POST.getlist('autogen_sites')
+        autogen.sites.set(HotspotSite.objects.filter(pk__in=selected_site_ids))
+
         messages.success(request, 'Configuration mise à jour.')
         return redirect('sites:config')
 
     return render(request, 'sites_mgmt/config.html', {
         'config': config,
+        'autogen': autogen,
+        'all_sites': all_sites,
+        'autogen_site_ids': list(autogen.sites.values_list('pk', flat=True)),
         'page_title': 'Configuration',
     })
 

@@ -75,6 +75,90 @@
         </div>
       </div>
 
+      <!-- Génération automatique de vouchers -->
+      <div class="card-panel mb-4">
+        <div class="panel-header">
+          <i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Génération automatique de vouchers
+        </div>
+        <div class="p-4">
+          <p class="text-muted small mb-4">
+            Lorsqu'un site atteint le seuil de stock faible (≤ 30 vouchers disponibles) et que l'alerte
+            n'a pas été résolue après le délai configuré, BonNet génère automatiquement de nouveaux vouchers
+            et envoie un email aux adresses <strong>ADMIN_NOTIFY</strong>.
+          </p>
+
+          <!-- Toggle activer/désactiver -->
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     name="autogen_enabled" id="autogen_enabled"
+                     {% if autogen.enabled %}checked{% endif %}
+                     onchange="toggleAutogenFields(this.checked)">
+              <label class="form-check-label fw-semibold" for="autogen_enabled">
+                Activer la génération automatique
+              </label>
+            </div>
+          </div>
+
+          <div id="autogen-fields" {% if not autogen.enabled %}style="opacity:.45;pointer-events:none"{% endif %}>
+
+            <!-- Paramètres -->
+            <div class="row g-3 mb-4">
+              <div class="col-12 col-sm-6">
+                <label class="form-label fw-semibold" for="autogen_count">
+                  Vouchers à générer par forfait
+                </label>
+                <input type="number" id="autogen_count" name="autogen_count"
+                       class="form-control" min="1" max="500"
+                       value="{{ autogen.count_per_tier }}">
+                <div class="form-text">Appliqué à chaque tranche tarifaire active.</div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <label class="form-label fw-semibold" for="autogen_delay">
+                  Délai avant génération (heures)
+                </label>
+                <input type="number" id="autogen_delay" name="autogen_delay"
+                       class="form-control" min="1" max="168"
+                       value="{{ autogen.delay_hours }}">
+                <div class="form-text">Nombre d'heures après l'alerte stock avant déclenchement.</div>
+              </div>
+            </div>
+
+            <!-- Sélection des sites -->
+            <div class="mb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <label class="form-label fw-semibold mb-0">Sites concernés</label>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="selectAllSites(true)">
+                  <i class="bi bi-check-all me-1"></i>Tout sélectionner
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectAllSites(false)">
+                  <i class="bi bi-x-lg me-1"></i>Tout désélectionner
+                </button>
+              </div>
+            </div>
+
+            <div class="border rounded p-3" style="max-height:260px;overflow-y:auto">
+              {% if all_sites %}
+                {% for site in all_sites %}
+                <div class="form-check mb-1">
+                  <input class="form-check-input autogen-site-cb" type="checkbox"
+                         name="autogen_sites" value="{{ site.pk }}"
+                         id="autogen_site_{{ site.pk }}"
+                         {% if site.pk in autogen_site_ids %}checked{% endif %}>
+                  <label class="form-check-label" for="autogen_site_{{ site.pk }}">
+                    {{ site.name }}
+                    {% if site.location %}<span class="text-muted small ms-1">— {{ site.location }}</span>{% endif %}
+                  </label>
+                </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted small mb-0">Aucun site actif trouvé.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary px-4">
           <i class="bi bi-check2-circle me-1"></i>Enregistrer
@@ -88,6 +172,16 @@
 
 {% block extra_js %}
 <script>
+function toggleAutogenFields(enabled) {
+  const fields = document.getElementById('autogen-fields');
+  fields.style.opacity = enabled ? '1' : '.45';
+  fields.style.pointerEvents = enabled ? '' : 'none';
+}
+
+function selectAllSites(select) {
+  document.querySelectorAll('.autogen-site-cb').forEach(cb => cb.checked = select);
+}
+
 function setupPreview(inputId, previewId, sepId) {
   const input = document.querySelector(`[name="${inputId}"]`);
   const prev  = document.getElementById(previewId);

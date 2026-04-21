@@ -2,6 +2,40 @@ from django.db import models
 from sites_mgmt.models import HotspotSite
 
 
+class AutoGenConfig(models.Model):
+    """Singleton — configuration globale de la génération automatique de vouchers."""
+    enabled = models.BooleanField(
+        default=False,
+        verbose_name='Génération automatique activée',
+    )
+    count_per_tier = models.PositiveIntegerField(
+        default=100,
+        verbose_name='Vouchers à générer par forfait',
+    )
+    delay_hours = models.PositiveIntegerField(
+        default=24,
+        verbose_name='Délai avant génération (heures après alerte stock)',
+    )
+    sites = models.ManyToManyField(
+        HotspotSite,
+        blank=True,
+        related_name='autogen_configs',
+        verbose_name='Sites concernés',
+    )
+
+    class Meta:
+        verbose_name = 'Configuration génération automatique'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        status = 'activée' if self.enabled else 'désactivée'
+        return f'AutoGen ({status}, {self.count_per_tier} vouchers/forfait, délai {self.delay_hours}h)'
+
+
 class Notification(models.Model):
     TYPE_STOCK_LOW = 'stock_low'
     TYPE_MONTHLY_REPORT = 'monthly_report'

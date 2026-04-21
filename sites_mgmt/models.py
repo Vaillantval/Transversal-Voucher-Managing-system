@@ -17,11 +17,6 @@ class HotspotSite(models.Model):
     location = models.CharField(max_length=200, blank=True, verbose_name='Localisation')
     description = models.TextField(blank=True, verbose_name='Description')
     is_active = models.BooleanField(default=True, verbose_name='Actif')
-    auto_generate_vouchers = models.BooleanField(
-        default=False,
-        verbose_name='Génération automatique',
-        help_text='Génère 50 vouchers par forfait si le stock reste faible 36h après alerte.',
-    )
     admins = models.ManyToManyField(
         User,
         blank=True,

@@ -8,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 STOCK_ALERT_THRESHOLD = 30
 STOCK_ALERT_COOLDOWN_HOURS = 24
-AUTO_GEN_DELAY_HOURS = 36
-AUTO_GEN_COUNT_PER_TIER = 100
 
 _MOIS_FR = {
     1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
@@ -50,6 +48,10 @@ def check_stock_levels():
         # Sites avec au moins 1 device
         all_stats = unifi.get_all_site_stats(sites)
 
+        from .models import AutoGenConfig
+        autogen = AutoGenConfig.get()
+        autogen_site_ids = set(autogen.sites.values_list('unifi_site_id', flat=True)) if autogen.enabled else set()
+
         for site in sites:
             count = site_counts.get(site.unifi_site_id, 0)
             if count > STOCK_ALERT_THRESHOLD:
@@ -70,8 +72,8 @@ def check_stock_levels():
             ).exists()
             if already:
                 # Vérifier si on doit déclencher la génération automatique
-                if site.auto_generate_vouchers:
-                    trigger_cutoff = timezone.now() - timedelta(hours=AUTO_GEN_DELAY_HOURS)
+                if autogen.enabled and site.unifi_site_id in autogen_site_ids:
+                    trigger_cutoff = timezone.now() - timedelta(hours=autogen.delay_hours)
                     pending_alert = Notification.objects.filter(
                         type=Notification.TYPE_STOCK_LOW,
                         site=site,
@@ -82,7 +84,7 @@ def check_stock_levels():
                         logger.info(f"Auto-gen déclenchée pour {site.name} (stock={count})")
                         pending_alert.auto_gen_triggered = True
                         pending_alert.save(update_fields=['auto_gen_triggered'])
-                        _auto_generate_vouchers_for_site(site, count)
+                        _auto_generate_vouchers_for_site(site, count, autogen.count_per_tier)
                 continue
 
             notif = Notification.objects.create(
@@ -120,7 +122,7 @@ def check_stock_levels():
         logger.error(f"check_stock_levels error: {e}", exc_info=True)
 
 
-def _auto_generate_vouchers_for_site(site, current_stock: int):
+def _auto_generate_vouchers_for_site(site, current_stock: int, count_per_tier: int = 100):
     """Génère 50 vouchers × chaque forfait actif pour un site, puis notifie par email."""
     try:
         from sites_mgmt.models import VoucherTier
@@ -145,7 +147,7 @@ def _auto_generate_vouchers_for_site(site, current_stock: int):
             created = unifi.create_vouchers(
                 site_id=site.unifi_site_id,
                 expire_minutes=tier.max_minutes,
-                count=AUTO_GEN_COUNT_PER_TIER,
+                count=count_per_tier,
                 quota=1,
                 note=note,
             )
@@ -185,7 +187,7 @@ def _auto_generate_vouchers_for_site(site, current_stock: int):
             title=f"Génération automatique — {site.name}",
             message=(
                 f"{total_created} voucher(s) générés automatiquement sur {site.name} "
-                f"({len(tiers)} forfait(s), {AUTO_GEN_COUNT_PER_TIER} par forfait)."
+                f"({len(tiers)} forfait(s), {count_per_tier} par forfait)."
             ),
             stock_count=current_stock,
         )
