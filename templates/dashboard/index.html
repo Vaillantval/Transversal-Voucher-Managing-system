@@ -579,16 +579,27 @@ const EXPORT_URLS = {
 const EXPORT_SITE = "{{ selected_site_id }}";
 
 document.getElementById('btn-export-dl').addEventListener('click', function () {
+  const btn  = this;
   const fmt  = document.querySelector('input[name="exp-fmt"]:checked').value;
   const from = document.getElementById('exp-from').value;
   const to   = document.getElementById('exp-to').value;
   if (!from || !to) { alert('Veuillez sélectionner une période.'); return; }
+
   const url = EXPORT_URLS[fmt]
     + '?site=' + encodeURIComponent(EXPORT_SITE)
     + '&from=' + encodeURIComponent(from)
     + '&to='   + encodeURIComponent(to);
-  window.location.href = url;
+
+  // Fermer la modale immédiatement
   bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+
+  // Déclencher le téléchargement sans bloquer la page
+  const a = document.createElement('a');
+  a.href = url;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 });
 </script>
 {% endblock %}
