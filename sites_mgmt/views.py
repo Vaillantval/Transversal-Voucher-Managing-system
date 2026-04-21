@@ -404,7 +404,7 @@ def partner_reject(request, pk):
 @superadmin_required
 def product_list(request):
     from .models import PartnerProduct
-    products = PartnerProduct.objects.all()
+    products = PartnerProduct.objects.prefetch_related('images').all()
     return render(request, 'sites_mgmt/products.html', {
         'products':   products,
         'page_title': 'Produits partenaires',
@@ -414,7 +414,7 @@ def product_list(request):
 @login_required
 @superadmin_required
 def product_create(request):
-    from .models import PartnerProduct
+    from .models import PartnerProduct, PartnerProductImage
     errors    = {}
     form_data = {'name': '', 'description': '', 'price_usd': '', 'is_active': True}
 
@@ -437,10 +437,11 @@ def product_create(request):
             errors['price_usd'] = 'Entrez un prix valide.'
 
         if not errors:
-            product = PartnerProduct(name=name, description=description, price_usd=price_usd, is_active=is_active)
-            if request.FILES.get('image'):
-                product.image = request.FILES['image']
-            product.save()
+            product = PartnerProduct.objects.create(
+                name=name, description=description, price_usd=price_usd, is_active=is_active
+            )
+            for i, f in enumerate(request.FILES.getlist('images')):
+                PartnerProductImage.objects.create(product=product, image=f, order=i)
             messages.success(request, f'Produit « {name} » créé.')
             return redirect('sites:product_list')
 
@@ -455,7 +456,7 @@ def product_create(request):
 @login_required
 @superadmin_required
 def product_edit(request, pk):
-    from .models import PartnerProduct
+    from .models import PartnerProduct, PartnerProductImage
     product = get_object_or_404(PartnerProduct, pk=pk)
     errors  = {}
 
@@ -478,19 +479,45 @@ def product_edit(request, pk):
             errors['name'] = 'Ce champ est requis.'
 
         if not errors:
-            if request.FILES.get('image'):
-                product.image = request.FILES['image']
-            elif request.POST.get('clear_image'):
-                product.image = None
             product.save()
+            next_order = product.images.count()
+            for i, f in enumerate(request.FILES.getlist('images')):
+                PartnerProductImage.objects.create(product=product, image=f, order=next_order + i)
             messages.success(request, f'Produit « {product.name} » mis à jour.')
-            return redirect('sites:product_list')
+            return redirect('sites:product_edit', pk=product.pk)
 
     return render(request, 'sites_mgmt/product_form.html', {
         'product':    product,
+        'images':     list(product.images.all()),
         'errors':     errors,
         'action':     'edit',
         'page_title': f'Modifier — {product.name}',
+    })
+
+
+@login_required
+@superadmin_required
+def product_image_delete(request, pk):
+    from .models import PartnerProductImage
+    if request.method != 'POST':
+        return redirect('sites:product_list')
+    img = get_object_or_404(PartnerProductImage, pk=pk)
+    product_pk = img.product_id
+    img.image.delete(save=False)
+    img.delete()
+    return redirect('sites:product_edit', pk=product_pk)
+
+
+@login_required
+@superadmin_required
+def product_detail(request, pk):
+    from .models import PartnerProduct
+    product = get_object_or_404(PartnerProduct, pk=pk)
+    images  = list(product.images.all())
+    return render(request, 'sites_mgmt/product_detail.html', {
+        'product':    product,
+        'images':     images,
+        'page_title': product.name,
     })
 
 

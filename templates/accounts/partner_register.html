@@ -229,11 +229,13 @@ body::before {
       {% for product in products %}
       <div class="col-12 col-sm-6 col-md-4">
         <div class="product-card">
-          {% if product.image %}
-          <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-img">
+          {% with cover=product.cover_image %}
+          {% if cover %}
+          <img src="{{ cover.image.url }}" alt="{{ product.name }}" class="product-img">
           {% else %}
           <div class="product-img-placeholder"><i class="bi bi-router"></i></div>
           {% endif %}
+          {% endwith %}
           <div class="product-body">
             <div class="product-name">{{ product.name }}</div>
             {% if product.description %}

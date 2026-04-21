@@ -46,10 +46,11 @@
 {% if products %}
 <div class="row g-3">
   {% for product in products %}
+  {% with cover=product.cover_image %}
   <div class="col-12 col-sm-6 col-md-4 col-lg-3">
     <div class="product-card">
-      {% if product.image %}
-      <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-img">
+      {% if cover %}
+      <img src="{{ cover.image.url }}" alt="{{ product.name }}" class="product-img">
       {% else %}
       <div class="product-img-ph"><i class="bi bi-router"></i></div>
       {% endif %}
@@ -60,12 +61,22 @@
         {% endif %}
         <div class="d-flex align-items-center justify-content-between">
           <div class="product-price">${{ product.price_usd }}</div>
-          {% if not product.is_active %}
-          <span class="badge bg-secondary rounded-pill" style="font-size:.68rem">Inactif</span>
-          {% endif %}
+          <div class="d-flex align-items-center gap-2">
+            {% with img_count=product.images.count %}
+            {% if img_count %}
+            <span class="text-muted small"><i class="bi bi-images me-1"></i>{{ img_count }}</span>
+            {% endif %}
+            {% endwith %}
+            {% if not product.is_active %}
+            <span class="badge bg-secondary rounded-pill" style="font-size:.68rem">Inactif</span>
+            {% endif %}
+          </div>
         </div>
       </div>
       <div class="product-actions">
+        <a href="{% url 'sites:product_detail' product.pk %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-eye"></i>
+        </a>
         <a href="{% url 'sites:product_edit' product.pk %}" class="btn btn-sm btn-outline-primary flex-fill">
           <i class="bi bi-pencil me-1"></i>Modifier
         </a>
@@ -79,6 +90,7 @@
       </div>
     </div>
   </div>
+  {% endwith %}
   {% endfor %}
 </div>
 {% else %}

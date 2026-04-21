@@ -155,7 +155,7 @@ def partner_register(request):
     from .models import PartnerApplication
 
     config   = SiteConfig.get()
-    products = PartnerProduct.objects.filter(is_active=True)
+    products = PartnerProduct.objects.filter(is_active=True).prefetch_related('images')
     errors   = {}
     form_data = {}
 

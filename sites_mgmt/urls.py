@@ -19,8 +19,10 @@ urlpatterns = [
     path('configuration/partenaires/<int:pk>/approuver/',    views.partner_approve, name='partner_approve'),
     path('configuration/partenaires/<int:pk>/rejeter/',      views.partner_reject,  name='partner_reject'),
     # Produits partenaires
-    path('configuration/partenaires/produits/',              views.product_list,    name='product_list'),
-    path('configuration/partenaires/produits/nouveau/',      views.product_create,  name='product_create'),
-    path('configuration/partenaires/produits/<int:pk>/modifier/',  views.product_edit,   name='product_edit'),
-    path('configuration/partenaires/produits/<int:pk>/supprimer/', views.product_delete, name='product_delete'),
+    path('configuration/partenaires/produits/',                           views.product_list,         name='product_list'),
+    path('configuration/partenaires/produits/nouveau/',                   views.product_create,       name='product_create'),
+    path('configuration/partenaires/produits/<int:pk>/',                  views.product_detail,       name='product_detail'),
+    path('configuration/partenaires/produits/<int:pk>/modifier/',         views.product_edit,         name='product_edit'),
+    path('configuration/partenaires/produits/<int:pk>/supprimer/',        views.product_delete,       name='product_delete'),
+    path('configuration/partenaires/produits/images/<int:pk>/supprimer/', views.product_image_delete, name='product_image_delete'),
 ]

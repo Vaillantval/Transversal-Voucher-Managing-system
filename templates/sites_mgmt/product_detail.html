@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.gallery-main {
+  width:100%; aspect-ratio:16/9; object-fit:cover;
+  border-radius:10px; background:#f3f4f6; cursor:pointer;
+}
+.gallery-thumb {
+  width:80px; height:60px; object-fit:cover; border-radius:6px;
+  cursor:pointer; border:2px solid transparent; transition:.15s;
+  opacity:.7;
+}
+.gallery-thumb:hover { opacity:1; }
+.gallery-thumb.active { border-color:#1A56DB; opacity:1; }
+
+[data-theme="dark"] .gallery-main { background:#1e293b; }
+
+/* Lightbox */
+#lightbox {
+  display:none; position:fixed; inset:0; z-index:2000;
+  background:rgba(0,0,0,.92); align-items:center; justify-content:center;
+}
+#lightbox.open { display:flex; }
+#lightbox img { max-width:92vw; max-height:92vh; object-fit:contain; border-radius:8px; }
+#lightbox-close {
+  position:absolute; top:1rem; right:1.5rem;
+  background:none; border:none; color:#fff; font-size:2rem; cursor:pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-4">
+  <a href="{% url 'sites:product_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Produits
+  </a>
+  <a href="{% url 'sites:product_edit' product.pk %}" class="btn btn-sm btn-outline-primary ms-auto">
+    <i class="bi bi-pencil me-1"></i>Modifier
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- Galerie -->
+  <div class="col-12 col-lg-7">
+    {% if images %}
+    <img id="main-img" src="{{ images.0.image.url }}" alt="{{ product.name }}" class="gallery-main mb-3"
+         onclick="openLightbox(this.src)">
+    {% if images|length > 1 %}
+    <div class="d-flex gap-2 flex-wrap">
+      {% for img in images %}
+      <img src="{{ img.image.url }}" alt=""
+           class="gallery-thumb {% if forloop.first %}active{% endif %}"
+           onclick="setMain(this)">
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="border rounded d-flex align-items-center justify-content-center text-muted"
+         style="aspect-ratio:16/9;border-radius:10px!important;font-size:4rem;opacity:.3">
+      <i class="bi bi-router"></i>
+    </div>
+    <p class="text-muted small mt-2">Aucune image — <a href="{% url 'sites:product_edit' product.pk %}">en ajouter</a></p>
+    {% endif %}
+  </div>
+
+  <!-- Infos -->
+  <div class="col-12 col-lg-5">
+    <div class="card card-bn p-4 h-100">
+      <h2 class="fw-700 mb-1" style="font-size:1.35rem">{{ product.name }}</h2>
+      <div class="mb-3" style="font-size:1.6rem;font-weight:800;color:#059669">${{ product.price_usd }}</div>
+
+      {% if not product.is_active %}
+      <span class="badge bg-secondary rounded-pill mb-3" style="width:fit-content">Inactif</span>
+      {% endif %}
+
+      {% if product.description %}
+      <div class="text-muted" style="white-space:pre-line;font-size:.92rem;line-height:1.7">{{ product.description }}</div>
+      {% else %}
+      <p class="text-muted small fst-italic">Aucune description.</p>
+      {% endif %}
+
+      <div class="mt-auto pt-4 d-flex gap-2 flex-wrap">
+        <a href="{% url 'sites:product_edit' product.pk %}" class="btn btn-primary">
+          <i class="bi bi-pencil me-1"></i>Modifier
+        </a>
+        <form method="post" action="{% url 'sites:product_delete' product.pk %}"
+              onsubmit="return confirm('Supprimer le produit « {{ product.name }} » ?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Supprimer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close" onclick="closeLightbox()"><i class="bi bi-x-lg"></i></button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setMain(thumb) {
+  document.getElementById('main-img').src = thumb.src;
+  document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+  thumb.classList.add('active');
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>
+{% endblock %}

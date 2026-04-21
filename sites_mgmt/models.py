@@ -61,7 +61,6 @@ class PartnerProduct(models.Model):
     name        = models.CharField(max_length=150, verbose_name='Nom')
     description = models.TextField(blank=True, verbose_name='Description')
     price_usd   = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Prix (USD)')
-    image       = models.ImageField(upload_to='partner_products/', blank=True, null=True, verbose_name='Image')
     is_active   = models.BooleanField(default=True, verbose_name='Actif')
     created_at  = models.DateTimeField(auto_now_add=True)
 
@@ -72,6 +71,18 @@ class PartnerProduct(models.Model):
 
     def __str__(self):
         return f"{self.name} — ${self.price_usd}"
+
+    def cover_image(self):
+        return self.images.first()
+
+
+class PartnerProductImage(models.Model):
+    product = models.ForeignKey(PartnerProduct, on_delete=models.CASCADE, related_name='images')
+    image   = models.ImageField(upload_to='partner_products/')
+    order   = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'pk']
 
 
 class VoucherTier(models.Model):
