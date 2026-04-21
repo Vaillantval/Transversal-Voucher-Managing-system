@@ -215,12 +215,15 @@ def generate_pdf_bytes(sites: list, date_from: str, date_to: str) -> bytes:
         from sites_mgmt.models import SiteConfig
         from reportlab.platypus import Image as RLImage
         cfg = SiteConfig.get()
+        import os
         logo_cells = []
         for logo_field in (cfg.logo1, cfg.logo2):
             if logo_field and logo_field.name:
                 try:
-                    img = RLImage(logo_field.path, height=18*mm, width=50*mm, kind='proportional')
-                    logo_cells.append(img)
+                    path = logo_field.path
+                    if os.path.isfile(path) and not path.lower().endswith('.svg'):
+                        img = RLImage(path, height=18*mm, width=50*mm, kind='proportional')
+                        logo_cells.append(img)
                 except Exception:
                     pass
         if logo_cells:
