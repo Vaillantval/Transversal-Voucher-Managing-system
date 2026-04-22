@@ -78,8 +78,12 @@ def voucher_list(request):
     for v in all_vouchers:
         _spk = _unifi_to_pk.get(v.get('site_unifi_id', ''))
         _st = _tiers_by_site_pk.get(_spk, []) if _spk else []
-        t = find_tier(_st, v.get('duration', 0))
-        v['tier_label'] = t.label if t else 'Sans tranche'
+        vnote = v.get('note', '')
+        # Matcher par note d'abord (précis pour les remplacements), puis par durée
+        t = next((_t for _t in _st if _t.label == vnote), None) if vnote else None
+        if not t:
+            t = find_tier(_st, v.get('duration', 0))
+        v['tier_label'] = t.label if t else (vnote if vnote else 'Sans tranche')
         v['price']      = float(t.price_htg) if t else 0
 
     # ── Sessions vendues (guests) ─────────────────────────────────
@@ -220,8 +224,24 @@ def voucher_create(request):
             rep_unit = request.POST.get('rep_unit', 'hours')
             multipliers = {'hours': 60, 'days': 1440, 'months': 43200}
             expire_minutes = rep_dur * multipliers.get(rep_unit, 60)
-            tier_pk = request.POST.get('repl_tier_pk', '')
-            tier = VoucherTier.objects.filter(pk=tier_pk, is_replacement=True).first() if tier_pk else None
+
+            # Générer le label automatique et créer le VoucherTier remplacement
+            from datetime import date as _date
+            _MOIS_FR = {1:'Janvier',2:'Février',3:'Mars',4:'Avril',5:'Mai',6:'Juin',
+                        7:'Juillet',8:'Août',9:'Septembre',10:'Octobre',11:'Novembre',12:'Décembre'}
+            _today = _date.today()
+            _date_label = f"{_today.day} {_MOIS_FR[_today.month]} {_today.year}"
+            auto_label = f"Remplacement_{site.name}_{_date_label}"
+
+            tier = VoucherTier.objects.create(
+                label          = auto_label,
+                duration       = rep_dur,
+                unit           = rep_unit,
+                price_htg      = 0,
+                is_replacement = True,
+            )
+            tier.sites.add(site)
+            final_note = note or auto_label
         else:
             tier_pk = request.POST.get('tier')
             tier    = get_object_or_404(VoucherTier, pk=tier_pk)
@@ -229,10 +249,7 @@ def voucher_create(request):
             if tier.is_admin_code and count > tier.max_vouchers:
                 messages.error(request, f"Ce code admin est limité à {tier.max_vouchers} vouchers par création.")
                 return redirect('vouchers:create')
-
-        tier_label  = tier.label if tier else ('Remplacement' if use_replacement else '?')
-        default_note = f"BonNet-Remplacement" if use_replacement else f"BonNet-{tier_label}"
-        final_note  = note or default_note
+            final_note = note or f"BonNet-{tier.label}"
 
         created = unifi.create_vouchers(
             site_id=site.unifi_site_id,
