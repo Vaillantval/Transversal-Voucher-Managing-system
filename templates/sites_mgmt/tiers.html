@@ -45,8 +45,7 @@
         <td>
           {% with sites=tier.sites.all %}
           {% if sites %}
-          <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
-                  data-bs-toggle="modal" data-bs-target="#sitesModal"
+          <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 sites-popup-btn"
                   data-tier-pk="{{ tier.pk }}"
                   data-tier-label="{{ tier.label }}"
                   data-sites='[{% for s in sites %}{"pk":{{ s.pk }},"name":"{{ s.name }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'
@@ -97,17 +96,14 @@
   </div>
 </div>
 
-<!-- Modal sites du forfait -->
-<div class="modal fade" id="sitesModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title" id="sitesModalTitle">Sites du forfait</h6>
-        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body p-2" id="sitesModalBody"></div>
-    </div>
+<!-- Popover sites (flottant, sans bloquer le scroll) -->
+<div id="sites-popup" style="display:none;position:fixed;z-index:1080;min-width:220px;max-width:300px;
+     background:#fff;border:1px solid #dee2e6;border-radius:.5rem;box-shadow:0 4px 16px rgba(0,0,0,.15);">
+  <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+    <span class="fw-semibold small" id="popup-title"></span>
+    <button type="button" class="btn-close btn-sm" id="popup-close" style="font-size:.7rem"></button>
   </div>
+  <div id="popup-body" class="p-1" style="max-height:260px;overflow-y:auto;"></div>
 </div>
 
 <!-- Modal création -->
@@ -248,42 +244,81 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('sitesModal').addEventListener('show.bs.modal', function(e) {
-  var btn    = e.relatedTarget;
-  var tierPk = btn.dataset.tierPk;
-  var label  = btn.dataset.tierLabel;
-  var sites  = JSON.parse(btn.dataset.sites);
-  var next   = window.location.href;
+(function () {
+  var popup     = document.getElementById('sites-popup');
+  var popTitle  = document.getElementById('popup-title');
+  var popBody   = document.getElementById('popup-body');
+  var activeBtn = null;
 
-  document.getElementById('sitesModalTitle').textContent = label;
-
-  var body = document.getElementById('sitesModalBody');
-  if (sites.length === 0) {
-    body.innerHTML = '<p class="text-muted small mb-0">Aucun site assigné.</p>';
-    return;
+  function getCsrf() {
+    var c = document.cookie.split(';').find(function(x) { return x.trim().startsWith('csrftoken='); });
+    return c ? c.trim().split('=')[1] : '';
   }
 
-  var html = '<ul class="list-group list-group-flush">';
-  sites.forEach(function(s) {
-    html += '<li class="list-group-item d-flex justify-content-between align-items-center px-1 py-1 small">'
-          + '<span>' + s.name + '</span>'
-          + '<form method="post" action="/sites/tarifs/' + tierPk + '/sites/' + s.pk + '/retirer/" class="d-inline">'
-          + '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrf() + '">'
-          + '<input type="hidden" name="next" value="' + next + '">'
-          + '<button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="Retirer ce site"'
-          + ' onclick="return confirm(\'Retirer ' + s.name + ' de ce forfait ?\')">'
-          + '<i class="bi bi-x-circle"></i></button>'
-          + '</form>'
-          + '</li>';
-  });
-  html += '</ul>';
-  body.innerHTML = html;
-});
+  function openPopup(btn) {
+    var tierPk = btn.dataset.tierPk;
+    var label  = btn.dataset.tierLabel;
+    var sites  = JSON.parse(btn.dataset.sites);
+    var next   = window.location.href;
 
-function getCsrf() {
-  var c = document.cookie.split(';').find(function(x) { return x.trim().startsWith('csrftoken='); });
-  return c ? c.trim().split('=')[1] : '';
-}
+    popTitle.textContent = label;
+
+    if (sites.length === 0) {
+      popBody.innerHTML = '<p class="text-muted small px-2 py-1 mb-0">Aucun site assigné.</p>';
+    } else {
+      var html = '<ul class="list-group list-group-flush">';
+      sites.forEach(function(s) {
+        html += '<li class="list-group-item d-flex justify-content-between align-items-center px-2 py-1 small">'
+              + '<span>' + s.name + '</span>'
+              + '<form method="post" action="/sites/tarifs/' + tierPk + '/sites/' + s.pk + '/retirer/" class="d-inline ms-2">'
+              + '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrf() + '">'
+              + '<input type="hidden" name="next" value="' + next + '">'
+              + '<button type="submit" class="btn btn-link btn-sm p-0 text-danger lh-1" title="Retirer"'
+              + ' onclick="return confirm(\'Retirer ' + s.name.replace(/'/g,"\\'") + ' de ce forfait ?\')">'
+              + '<i class="bi bi-x-circle"></i></button>'
+              + '</form>'
+              + '</li>';
+      });
+      html += '</ul>';
+      popBody.innerHTML = html;
+    }
+
+    // Positionnement
+    var rect = btn.getBoundingClientRect();
+    popup.style.display = 'block';
+    var pw = popup.offsetWidth;
+    var ph = popup.offsetHeight;
+    var left = rect.left;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+    var top = rect.bottom + 4;
+    if (top + ph > window.innerHeight - 8) top = rect.top - ph - 4;
+    popup.style.left = left + 'px';
+    popup.style.top  = top  + 'px';
+    activeBtn = btn;
+  }
+
+  function closePopup() {
+    popup.style.display = 'none';
+    activeBtn = null;
+  }
+
+  document.querySelectorAll('.sites-popup-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (popup.style.display !== 'none' && activeBtn === btn) {
+        closePopup();
+      } else {
+        openPopup(btn);
+      }
+    });
+  });
+
+  document.getElementById('popup-close').addEventListener('click', closePopup);
+
+  document.addEventListener('click', function(e) {
+    if (!popup.contains(e.target)) closePopup();
+  });
+})();
 
 function toggleAll(containerId, btn) {
   var checks = document.querySelectorAll('#' + containerId + ' input[type="checkbox"]');
