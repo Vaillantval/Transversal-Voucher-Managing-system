@@ -87,17 +87,33 @@
             et envoie un email aux adresses <strong>ADMIN_NOTIFY</strong>.
           </p>
 
-          <!-- Toggle activer/désactiver -->
-          <div class="mb-4">
+          <!-- Toggles principaux -->
+          <div class="mb-3 d-flex flex-column gap-2">
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" role="switch"
                      name="autogen_enabled" id="autogen_enabled"
                      {% if autogen.enabled %}checked{% endif %}
-                     onchange="toggleAutogenFields(this.checked)">
+                     onchange="checkCombination()">
               <label class="form-check-label fw-semibold" for="autogen_enabled">
                 Activer la génération automatique
               </label>
             </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     name="autogen_notify" id="autogen_notify"
+                     {% if autogen.notify_site_admin %}checked{% endif %}
+                     onchange="checkCombination()">
+              <label class="form-check-label fw-semibold" for="autogen_notify">
+                Envoyer notifications aux admins du site
+              </label>
+              <div class="form-text">Si désactivé et génération ON : les vouchers sont créés immédiatement sans email préalable.</div>
+            </div>
+          </div>
+
+          <!-- Avertissement combinaison invalide -->
+          <div id="combo-warning" class="alert alert-danger py-2 small d-none mb-3">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Combinaison invalide : au moins l'une des deux options doit être active.
           </div>
 
           <div id="autogen-fields" {% if not autogen.enabled %}style="opacity:.45;pointer-events:none"{% endif %}>
@@ -113,7 +129,7 @@
                        value="{{ autogen.count_per_tier }}">
                 <div class="form-text">Appliqué à chaque tranche tarifaire active.</div>
               </div>
-              <div class="col-12 col-sm-6">
+              <div class="col-12 col-sm-6" id="autogen-delay-row">
                 <label class="form-label fw-semibold" for="autogen_delay">
                   Délai avant génération (heures)
                 </label>
@@ -207,10 +223,24 @@
 
 {% block extra_js %}
 <script>
-function toggleAutogenFields(enabled) {
-  const fields = document.getElementById('autogen-fields');
-  fields.style.opacity = enabled ? '1' : '.45';
-  fields.style.pointerEvents = enabled ? '' : 'none';
+function checkCombination() {
+  const genOn    = document.getElementById('autogen_enabled').checked;
+  const notifOn  = document.getElementById('autogen_notify').checked;
+  const warning  = document.getElementById('combo-warning');
+  const fields   = document.getElementById('autogen-fields');
+  const submitBtn = document.querySelector('[type="submit"]');
+
+  const invalid = !genOn && !notifOn;
+  warning.classList.toggle('d-none', !invalid);
+  submitBtn.disabled = invalid;
+
+  // Griser les paramètres de génération si AUTO-GEN est OFF
+  fields.style.opacity      = genOn ? '1' : '.45';
+  fields.style.pointerEvents = genOn ? '' : 'none';
+
+  // Délai visible seulement si Notif ON + AutoGen ON (sinon génération immédiate)
+  const delayRow = document.getElementById('autogen-delay-row');
+  if (delayRow) delayRow.style.display = (genOn && notifOn) ? '' : 'none';
 }
 
 function selectAllSites(select) {
@@ -238,6 +268,7 @@ function setupPreview(inputId, previewId, sepId) {
 }
 setupPreview('logo1', 'prev1', 'prev-sep');
 setupPreview('logo2', 'prev2', 'prev-sep');
+checkCombination();
 
 {% if config.logo1 %}
 document.getElementById('prev1').src = '{{ config.logo1.url }}';

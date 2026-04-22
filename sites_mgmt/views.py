@@ -335,7 +335,14 @@ def config_edit(request):
         config.save()
 
         # Auto-gen
-        autogen.enabled = request.POST.get('autogen_enabled') == 'on'
+        autogen_enabled       = request.POST.get('autogen_enabled') == 'on'
+        autogen_notify        = request.POST.get('autogen_notify') == 'on'
+        # Bloquer la combinaison OFF/OFF
+        if not autogen_enabled and not autogen_notify:
+            messages.error(request, "Configuration invalide : vous ne pouvez pas désactiver à la fois la génération automatique et les notifications. Au moins l'une des deux doit rester active.")
+            return redirect('sites:config')
+        autogen.enabled          = autogen_enabled
+        autogen.notify_site_admin = autogen_notify
         try:
             autogen.count_per_tier = max(1, int(request.POST.get('autogen_count', 100)))
         except (ValueError, TypeError):

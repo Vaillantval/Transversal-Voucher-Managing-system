@@ -77,7 +77,7 @@
 
     <div class="col-12 col-lg">
       <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2 mt-1">
-        <a href="{% url 'vouchers:create' %}" class="btn btn-sm btn-success">
+        <a href="{% url 'vouchers:create' %}{% if site_filter_pk %}?site={{ site_filter_pk }}{% endif %}" class="btn btn-sm btn-success">
           <i class="bi bi-plus-circle me-1"></i>Créer vouchers
         </a>
       </div>

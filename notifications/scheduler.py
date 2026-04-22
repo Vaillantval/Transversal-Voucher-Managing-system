@@ -17,12 +17,12 @@ _MOIS_FR = {
 
 
 def check_stock_levels():
-    """Vérifie le stock de vouchers de chaque site, alerte si <= 15."""
+    """Vérifie le stock par forfait standard de chaque site, alerte si un forfait a < 30 vouchers."""
     try:
-        from sites_mgmt.models import HotspotSite
+        from sites_mgmt.models import HotspotSite, VoucherTier
+        from sites_mgmt.utils import find_tier
         from unifi_api import client as unifi
-        from .models import Notification
-        from .email_service import send_email, build_stock_alert_html
+        from .models import Notification, AutoGenConfig
 
         sites = list(HotspotSite.objects.filter(is_active=True))
         if not sites:
@@ -30,13 +30,7 @@ def check_stock_levels():
 
         all_vouchers = unifi.get_all_vouchers(sites)
         all_guests   = unifi.get_all_guests(sites)
-
-        # Compter les disponibles par site
-        site_counts: dict[str, int] = {}
-        for v in all_vouchers:
-            sid = v.get('site_unifi_id', '')
-            if sid:
-                site_counts[sid] = site_counts.get(sid, 0) + (1 if v.get('is_available') else 0)
+        all_stats    = unifi.get_all_site_stats(sites)
 
         # Sessions actives dans les 2 dernières semaines par site
         two_weeks_ago = (timezone.now() - timedelta(weeks=2)).timestamp()
@@ -45,87 +39,133 @@ def check_stock_levels():
             if g.get('sold_ts', 0) >= two_weeks_ago:
                 active_sites.add(g.get('site_unifi_id', ''))
 
-        # Sites avec au moins 1 device
-        all_stats = unifi.get_all_site_stats(sites)
+        # Tiers standard par site (M2M) — exclut remplacement et admin
+        std_tiers_qs = VoucherTier.objects.filter(
+            is_active=True, is_replacement=False, is_admin_code=False,
+        ).prefetch_related('sites')
+        from collections import defaultdict as _dd
+        std_tiers_by_site: dict[int, list] = _dd(list)
+        for t in std_tiers_qs:
+            for s in t.sites.all():
+                std_tiers_by_site[s.pk].append(t)
 
-        from .models import AutoGenConfig
+        # Compter les vouchers disponibles par (site_unifi_id, duration_minutes)
+        avail_by_site_dur: dict[tuple, int] = _dd(int)
+        for v in all_vouchers:
+            if v.get('is_available'):
+                sid = v.get('site_unifi_id', '')
+                dur = v.get('duration', 0)
+                avail_by_site_dur[(sid, dur)] += 1
+
         autogen = AutoGenConfig.get()
         autogen_site_ids = set(autogen.sites.values_list('unifi_site_id', flat=True)) if autogen.enabled else set()
 
-        for site in sites:
-            count = site_counts.get(site.unifi_site_id, 0)
-            if count > STOCK_ALERT_THRESHOLD:
-                continue
+        # Lancer la génération admin (indépendante du stock standard)
+        if autogen.enabled:
+            _auto_generate_admin_vouchers(sites, autogen)
 
-            # Site doit avoir au moins 1 device ET des sessions dans les 2 dernières semaines
+        notify_on = autogen.notify_site_admin
+
+        for site in sites:
+            # Site doit avoir au moins 1 device ET des sessions récentes
             stats = all_stats.get(site.unifi_site_id, {})
             if stats.get('device_total', 0) == 0:
                 continue
             if site.unifi_site_id not in active_sites:
                 continue
 
-            cutoff = timezone.now() - timedelta(hours=STOCK_ALERT_COOLDOWN_HOURS)
-            already = Notification.objects.filter(
-                type=Notification.TYPE_STOCK_LOW,
-                site=site,
-                created_at__gte=cutoff,
-            ).exists()
-            if already:
-                # Vérifier si on doit déclencher la génération automatique
-                if autogen.enabled and site.unifi_site_id in autogen_site_ids:
-                    trigger_cutoff = timezone.now() - timedelta(hours=autogen.delay_hours)
-                    pending_alert = Notification.objects.filter(
-                        type=Notification.TYPE_STOCK_LOW,
-                        site=site,
-                        created_at__lte=trigger_cutoff,
-                        auto_gen_triggered=False,
-                    ).first()
-                    if pending_alert:
-                        logger.info(f"Auto-gen déclenchée pour {site.name} (stock={count})")
-                        pending_alert.auto_gen_triggered = True
-                        pending_alert.save(update_fields=['auto_gen_triggered'])
-                        _auto_generate_vouchers_for_site(site, count, autogen.count_per_tier)
+            site_std_tiers = std_tiers_by_site.get(site.pk, [])
+            if not site_std_tiers:
                 continue
 
-            notif = Notification.objects.create(
-                type=Notification.TYPE_STOCK_LOW,
-                site=site,
-                title=f"Stock faible — {site.name}",
-                message=(
-                    f"Le site {site.name} a seulement {count} voucher(s) disponible(s). "
-                    f"Veuillez en créer de nouveaux."
-                ),
-                stock_count=count,
-            )
-            logger.info(f"Stock alert créé : {site.name} ({count} vouchers)")
+            for tier in site_std_tiers:
+                count = avail_by_site_dur.get((site.unifi_site_id, tier.duration_minutes), 0)
+                if count >= STOCK_ALERT_THRESHOLD:
+                    continue
 
-            admin_emails = list(
-                site.admins.filter(email__isnull=False, role='site_admin')
-                .exclude(email='')
-                .values_list('email', flat=True)
-            )
-            if admin_emails:
+                can_autogen = autogen.enabled and site.unifi_site_id in autogen_site_ids
+
+                # ── Cas : AutoGen ON + Notif OFF → génération immédiate ────────
+                if can_autogen and not notify_on:
+                    cutoff = timezone.now() - timedelta(hours=STOCK_ALERT_COOLDOWN_HOURS)
+                    already_generated = Notification.objects.filter(
+                        type=Notification.TYPE_AUTO_GENERATED,
+                        site=site,
+                        title__contains=tier.label,
+                        created_at__gte=cutoff,
+                    ).exists()
+                    if not already_generated:
+                        logger.info(f"Auto-gen immédiate {site.name} / {tier.label} (stock={count})")
+                        _auto_generate_vouchers_for_tier(site, tier, count, autogen.count_per_tier)
+                    continue
+
+                # ── Cas : Notif ON (avec ou sans AutoGen) ─────────────────────
+                cutoff = timezone.now() - timedelta(hours=STOCK_ALERT_COOLDOWN_HOURS)
+                already = Notification.objects.filter(
+                    type=Notification.TYPE_STOCK_LOW,
+                    site=site,
+                    title__contains=tier.label,
+                    created_at__gte=cutoff,
+                ).exists()
+
+                if already:
+                    # 2ème détection : générer seulement si AutoGen ON
+                    if can_autogen:
+                        trigger_cutoff = timezone.now() - timedelta(hours=autogen.delay_hours)
+                        pending_alert = Notification.objects.filter(
+                            type=Notification.TYPE_STOCK_LOW,
+                            site=site,
+                            title__contains=tier.label,
+                            created_at__lte=trigger_cutoff,
+                            auto_gen_triggered=False,
+                        ).first()
+                        if pending_alert:
+                            logger.info(f"Auto-gen std {site.name} / {tier.label} (stock={count})")
+                            pending_alert.auto_gen_triggered = True
+                            pending_alert.save(update_fields=['auto_gen_triggered'])
+                            _auto_generate_vouchers_for_tier(site, tier, count, autogen.count_per_tier)
+                    continue
+
+                # 1ère détection : créer notif + email
+                notif = Notification.objects.create(
+                    type=Notification.TYPE_STOCK_LOW,
+                    site=site,
+                    title=f"Stock faible — {site.name} / {tier.label}",
+                    message=(
+                        f"Le forfait « {tier.label} » sur {site.name} "
+                        f"n'a plus que {count} voucher(s) disponible(s)."
+                    ),
+                    stock_count=count,
+                )
+                logger.info(f"Stock alert : {site.name} / {tier.label} ({count} vouchers)")
+
                 try:
-                    html = build_stock_alert_html(site, count)
-                    result = send_email(
-                        to=admin_emails,
-                        subject=f"[BonNet] ⚠️ Stock faible — {site.name} ({count} restant(s))",
-                        html=html,
+                    from .email_service import send_email, build_stock_alert_html
+                    admin_emails = list(
+                        site.admins.filter(email__isnull=False, role='site_admin')
+                        .exclude(email='')
+                        .values_list('email', flat=True)
                     )
-                    if result:
-                        notif.email_sent = True
-                        notif.save(update_fields=['email_sent'])
+                    if admin_emails:
+                        html = build_stock_alert_html(site, count)
+                        result = send_email(
+                            to=admin_emails,
+                            subject=f"[BonNet] ⚠️ Stock faible — {site.name} / {tier.label} ({count} restant(s))",
+                            html=html,
+                        )
+                        if result:
+                            notif.email_sent = True
+                            notif.save(update_fields=['email_sent'])
                 except Exception as e:
-                    logger.error(f"Email stock alert {site.name}: {e}")
+                    logger.error(f"Email stock alert {site.name}/{tier.label}: {e}")
 
     except Exception as e:
         logger.error(f"check_stock_levels error: {e}", exc_info=True)
 
 
-def _auto_generate_vouchers_for_site(site, current_stock: int, count_per_tier: int = 100):
-    """Génère 50 vouchers × chaque forfait actif pour un site, puis notifie par email."""
+def _auto_generate_vouchers_for_tier(site, tier, current_stock: int, count_per_tier: int = 100):
+    """Génère count_per_tier vouchers pour un forfait standard donné sur un site."""
     try:
-        from sites_mgmt.models import VoucherTier
         from vouchers.models import VoucherLog
         from unifi_api import client as unifi
         from .models import Notification
@@ -133,86 +173,175 @@ def _auto_generate_vouchers_for_site(site, current_stock: int, count_per_tier: i
 
         now = timezone.now()
         date_label = f"{now.day} {_MOIS_FR[now.month]} {now.year}"
+        note = f"{tier.label}_{site.name}_{date_label}"
 
-        tiers = list(VoucherTier.objects.filter(is_active=True, sites=site))
-        if not tiers:
-            logger.warning(f"Auto-gen {site.name}: aucun forfait actif.")
+        created = unifi.create_vouchers(
+            site_id=site.unifi_site_id,
+            expire_minutes=tier.duration_minutes,
+            count=count_per_tier,
+            quota=1,
+            note=note,
+        )
+        if not created:
+            logger.error(f"Auto-gen std {site.name} / {tier.label}: échec UniFi.")
             return
 
-        total_created = 0
-        tier_results = []
+        synced = 0
+        for v in unifi.get_vouchers(site.unifi_site_id):
+            if v.get('note', '') == note:
+                _, is_new = VoucherLog.objects.get_or_create(
+                    unifi_id=v['_id'],
+                    defaults={
+                        'site': site,
+                        'created_by': None,
+                        'tier': tier,
+                        'code': v.get('code', ''),
+                        'duration_minutes': v.get('duration', tier.duration_minutes),
+                        'quota': v.get('quota', 1),
+                        'note': note,
+                        'price_htg': tier.price_htg,
+                    }
+                )
+                if is_new:
+                    synced += 1
 
-        for tier in tiers:
-            note = f"{tier.label}_{site.name}_{date_label}"
-            created = unifi.create_vouchers(
-                site_id=site.unifi_site_id,
-                expire_minutes=tier.duration_minutes,
-                count=count_per_tier,
-                quota=1,
-                note=note,
-            )
-            if not created:
-                logger.error(f"Auto-gen {site.name} / {tier.label}: échec UniFi.")
-                tier_results.append({'tier': tier, 'count': 0, 'success': False})
-                continue
+        logger.info(f"Auto-gen std {site.name} / {tier.label}: {synced} vouchers créés.")
 
-            # Sync en base
-            synced = 0
-            for v in unifi.get_vouchers(site.unifi_site_id):
-                if v.get('note', '') == note:
-                    _, is_new = VoucherLog.objects.get_or_create(
-                        unifi_id=v['_id'],
-                        defaults={
-                            'site': site,
-                            'created_by': None,
-                            'tier': tier,
-                            'code': v.get('code', ''),
-                            'duration_minutes': v.get('duration', tier.duration_minutes),
-                            'quota': v.get('quota', 1),
-                            'note': note,
-                            'price_htg': tier.price_htg,
-                        }
-                    )
-                    if is_new:
-                        synced += 1
-
-            total_created += synced
-            tier_results.append({'tier': tier, 'count': synced, 'success': True})
-            logger.info(f"Auto-gen {site.name} / {tier.label}: {synced} vouchers créés.")
-
-        # Notification en base
+        tier_results = [{'tier': tier, 'count': synced, 'success': True}]
         notif = Notification.objects.create(
             type=Notification.TYPE_AUTO_GENERATED,
             site=site,
-            title=f"Génération automatique — {site.name}",
-            message=(
-                f"{total_created} voucher(s) générés automatiquement sur {site.name} "
-                f"({len(tiers)} forfait(s), {count_per_tier} par forfait)."
-            ),
+            title=f"Génération automatique — {site.name} / {tier.label}",
+            message=f"{synced} voucher(s) générés pour le forfait « {tier.label} » sur {site.name}.",
             stock_count=current_stock,
         )
 
-        # Email aux ADMIN_NOTIFY (fallback unifi@transversal.ht)
         admin_notify = getattr(settings, 'ADMIN_NOTIFY', '')
-        to_emails = [e.strip() for e in admin_notify.split(',') if e.strip()]
-        if not to_emails:
-            to_emails = ['unifi@transversal.ht']
-
+        to_emails = [e.strip() for e in admin_notify.split(',') if e.strip()] or ['unifi@transversal.ht']
         try:
             html = build_auto_gen_html(site, tier_results, current_stock, date_label)
             result = send_email(
                 to=to_emails,
-                subject=f"[BonNet] ✅ Génération automatique — {site.name} ({total_created} vouchers)",
+                subject=f"[BonNet] ✅ Auto-gen — {site.name} / {tier.label} ({synced} vouchers)",
                 html=html,
             )
             if result:
                 notif.email_sent = True
                 notif.save(update_fields=['email_sent'])
         except Exception as e:
-            logger.error(f"Email auto-gen {site.name}: {e}")
+            logger.error(f"Email auto-gen std {site.name}/{tier.label}: {e}")
 
     except Exception as e:
-        logger.error(f"_auto_generate_vouchers_for_site({site.name}): {e}", exc_info=True)
+        logger.error(f"_auto_generate_vouchers_for_tier({site.name}, {tier.label}): {e}", exc_info=True)
+
+
+def _auto_generate_admin_vouchers(sites: list, autogen):
+    """Génère des vouchers admin quand la date d'expiration est atteinte (ou absente)."""
+    try:
+        from sites_mgmt.models import VoucherTier
+        from vouchers.models import VoucherLog
+        from unifi_api import client as unifi
+        from .models import AdminVoucherGenLog, Notification
+        from .email_service import send_email, build_auto_gen_html
+
+        today = date.today()
+        now = timezone.now()
+        date_label = f"{now.day} {_MOIS_FR[now.month]} {now.year}"
+
+        admin_tiers_qs = VoucherTier.objects.filter(
+            is_active=True, is_admin_code=True,
+        ).prefetch_related('sites')
+
+        from collections import defaultdict as _dd
+        admin_tiers_by_site: dict[int, list] = _dd(list)
+        for t in admin_tiers_qs:
+            for s in t.sites.all():
+                admin_tiers_by_site[s.pk].append(t)
+
+        for site in sites:
+            admin_tiers = admin_tiers_by_site.get(site.pk, [])
+            for tier in admin_tiers:
+                try:
+                    log = AdminVoucherGenLog.objects.get(site=site, tier=tier)
+                    if today < log.expires_at:
+                        continue  # Pas encore expiré
+                except AdminVoucherGenLog.DoesNotExist:
+                    log = None
+
+                # Générer les vouchers admin (max_vouchers par tier)
+                count = tier.max_vouchers
+                note = f"BonNet-{tier.label}"
+                created = unifi.create_vouchers(
+                    site_id=site.unifi_site_id,
+                    expire_minutes=tier.duration_minutes,
+                    count=count,
+                    quota=1,
+                    note=note,
+                )
+                if not created:
+                    logger.error(f"Auto-gen admin {site.name} / {tier.label}: échec UniFi.")
+                    continue
+
+                synced = 0
+                for v in unifi.get_vouchers(site.unifi_site_id):
+                    if v.get('note', '') == note:
+                        _, is_new = VoucherLog.objects.get_or_create(
+                            unifi_id=v['_id'],
+                            defaults={
+                                'site': site,
+                                'created_by': None,
+                                'tier': tier,
+                                'code': v.get('code', ''),
+                                'duration_minutes': v.get('duration', tier.duration_minutes),
+                                'quota': v.get('quota', 1),
+                                'note': note,
+                                'price_htg': 0,
+                            }
+                        )
+                        if is_new:
+                            synced += 1
+
+                # Calculer expires_at = aujourd'hui + durée du tier
+                import math
+                duration_days = math.ceil(tier.duration_minutes / 1440)
+                new_expires_at = today + timedelta(days=duration_days)
+
+                AdminVoucherGenLog.objects.update_or_create(
+                    site=site, tier=tier,
+                    defaults={'expires_at': new_expires_at},
+                )
+
+                logger.info(f"Auto-gen admin {site.name} / {tier.label}: {synced} vouchers, expire {new_expires_at}.")
+
+                tier_results = [{'tier': tier, 'count': synced, 'success': True}]
+                notif = Notification.objects.create(
+                    type=Notification.TYPE_AUTO_GENERATED,
+                    site=site,
+                    title=f"Génération admin — {site.name} / {tier.label}",
+                    message=(
+                        f"{synced} voucher(s) admin générés pour « {tier.label} » sur {site.name}. "
+                        f"Prochaine génération après le {new_expires_at.strftime('%d/%m/%Y')}."
+                    ),
+                    stock_count=synced,
+                )
+
+                admin_notify = getattr(settings, 'ADMIN_NOTIFY', '')
+                to_emails = [e.strip() for e in admin_notify.split(',') if e.strip()] or ['unifi@transversal.ht']
+                try:
+                    html = build_auto_gen_html(site, tier_results, 0, date_label)
+                    result = send_email(
+                        to=to_emails,
+                        subject=f"[BonNet] ✅ Auto-gen admin — {site.name} / {tier.label} ({synced} vouchers)",
+                        html=html,
+                    )
+                    if result:
+                        notif.email_sent = True
+                        notif.save(update_fields=['email_sent'])
+                except Exception as e:
+                    logger.error(f"Email auto-gen admin {site.name}/{tier.label}: {e}")
+
+    except Exception as e:
+        logger.error(f"_auto_generate_admin_vouchers: {e}", exc_info=True)
 
 
 def send_monthly_reports():

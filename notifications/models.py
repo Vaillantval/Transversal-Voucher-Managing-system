@@ -16,6 +16,10 @@ class AutoGenConfig(models.Model):
         default=24,
         verbose_name='Délai avant génération (heures après alerte stock)',
     )
+    notify_site_admin = models.BooleanField(
+        default=True,
+        verbose_name='Envoyer notification aux admins du site',
+    )
     sites = models.ManyToManyField(
         HotspotSite,
         blank=True,
@@ -34,6 +38,25 @@ class AutoGenConfig(models.Model):
     def __str__(self):
         status = 'activée' if self.enabled else 'désactivée'
         return f'AutoGen ({status}, {self.count_per_tier} vouchers/forfait, délai {self.delay_hours}h)'
+
+
+class AdminVoucherGenLog(models.Model):
+    """Trace la dernière génération de vouchers admin par site + forfait."""
+    site = models.ForeignKey(
+        HotspotSite, on_delete=models.CASCADE, related_name='admin_gen_logs',
+    )
+    tier = models.ForeignKey(
+        'sites_mgmt.VoucherTier', on_delete=models.CASCADE, related_name='admin_gen_logs',
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateField()
+
+    class Meta:
+        unique_together = [('site', 'tier')]
+        verbose_name = 'Log génération vouchers admin'
+
+    def __str__(self):
+        return f"{self.site.name} / {self.tier.label} — expire {self.expires_at}"
 
 
 class Notification(models.Model):

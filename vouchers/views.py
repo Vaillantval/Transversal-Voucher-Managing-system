@@ -166,6 +166,10 @@ def voucher_list(request):
     qs.pop('page', None)
     base_qs = mark_safe(qs.urlencode())
 
+    site_filter_pk = next(
+        (s.pk for s in sites if s.unifi_site_id == site_filter), None
+    ) if site_filter else None
+
     return render(request, 'vouchers/list.html', {
         'available_vouchers': all_vouchers,
         'sessions':           sessions_page,
@@ -193,6 +197,7 @@ def voucher_list(request):
         'f_status':           f_status,
         'base_qs':            base_qs,
         'unifi_warning':      unifi_warning,
+        'site_filter_pk':     site_filter_pk,
     })
 
 
@@ -286,12 +291,15 @@ def voucher_create(request):
         else:
             messages.error(request, "Échec de la création sur le contrôleur UniFi.")
 
+    preselect_site = request.GET.get('site', '')
+
     return render(request, 'vouchers/create.html', {
-        'sites':       sites,
-        'tiers':       std_tiers,
-        'repl_tiers':  repl_tiers,
-        'admin_tiers': admin_tiers,
-        'page_title':  'Créer des vouchers',
+        'sites':           sites,
+        'tiers':           std_tiers,
+        'repl_tiers':      repl_tiers,
+        'admin_tiers':     admin_tiers,
+        'page_title':      'Créer des vouchers',
+        'preselect_site':  preselect_site,
     })
 
 

@@ -18,7 +18,7 @@
       <select name="site" id="site-select" class="form-select" required>
         <option value="">— Choisir un site —</option>
         {% for s in sites %}
-        <option value="{{ s.pk }}">{{ s.name }}{% if s.location %} ({{ s.location }}){% endif %}</option>
+        <option value="{{ s.pk }}"{% if preselect_site == s.pk|stringformat:"s" %} selected{% endif %}>{{ s.name }}{% if s.location %} ({{ s.location }}){% endif %}</option>
         {% endfor %}
       </select>
     </div>
