@@ -199,7 +199,8 @@ def voucher_create(request):
     else:
         sites = request.user.managed_sites.filter(is_active=True)
 
-    tiers = VoucherTier.objects.filter(is_active=True).prefetch_related('sites')
+    std_tiers  = VoucherTier.objects.filter(is_active=True, is_replacement=False).prefetch_related('sites')
+    repl_tiers = VoucherTier.objects.filter(is_active=True, is_replacement=True).prefetch_related('sites')
 
     if request.method == 'POST':
         site_pk = request.POST.get('site')
@@ -209,23 +210,37 @@ def voucher_create(request):
             messages.error(request, "Accès refusé à ce site.")
             return redirect('vouchers:list')
 
-        count    = int(request.POST.get('count', 1))
-        tier_pk  = request.POST.get('tier')
-        note     = request.POST.get('note', '').strip()
-        tier     = get_object_or_404(VoucherTier, pk=tier_pk)
-        expire_minutes = tier.duration_minutes
+        note  = request.POST.get('note', '').strip()
+        count = int(request.POST.get('count', 1))
+
+        use_replacement = request.POST.get('use_replacement') == '1'
+        if use_replacement:
+            rep_dur  = int(request.POST.get('rep_duration', 1))
+            rep_unit = request.POST.get('rep_unit', 'hours')
+            multipliers = {'hours': 60, 'days': 1440, 'months': 43200}
+            expire_minutes = rep_dur * multipliers.get(rep_unit, 60)
+            tier_pk = request.POST.get('repl_tier_pk', '')
+            tier = VoucherTier.objects.filter(pk=tier_pk, is_replacement=True).first() if tier_pk else None
+        else:
+            tier_pk = request.POST.get('tier')
+            tier    = get_object_or_404(VoucherTier, pk=tier_pk)
+            expire_minutes = tier.duration_minutes
+
+        tier_label  = tier.label if tier else ('Remplacement' if use_replacement else '?')
+        default_note = f"BonNet-Remplacement" if use_replacement else f"BonNet-{tier_label}"
+        final_note  = note or default_note
 
         created = unifi.create_vouchers(
             site_id=site.unifi_site_id,
             expire_minutes=expire_minutes,
             count=count,
             quota=1,
-            note=note or f"BonNet-{tier.label}",
+            note=final_note,
         )
 
         if created:
             for v in unifi.get_vouchers(site.unifi_site_id):
-                if v.get('note', '') == (note or f"BonNet-{tier.label}"):
+                if v.get('note', '') == final_note:
                     VoucherLog.objects.get_or_create(
                         unifi_id=v['_id'],
                         defaults={
@@ -236,7 +251,7 @@ def voucher_create(request):
                             'duration_minutes': v.get('duration', expire_minutes),
                             'quota': v.get('quota', 1),
                             'note': v.get('note', ''),
-                            'price_htg': tier.price_htg,
+                            'price_htg': tier.price_htg if tier else 0,
                         }
                     )
             # Rafraîchit le cache du site en arrière-plan
@@ -251,8 +266,9 @@ def voucher_create(request):
             messages.error(request, "Échec de la création sur le contrôleur UniFi.")
 
     return render(request, 'vouchers/create.html', {
-        'sites': sites,
-        'tiers': tiers,
+        'sites':      sites,
+        'tiers':      std_tiers,
+        'repl_tiers': repl_tiers,
         'page_title': 'Créer des vouchers',
     })
 

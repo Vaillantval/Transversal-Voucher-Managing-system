@@ -111,9 +111,10 @@ class VoucherTier(models.Model):
     sites     = models.ManyToManyField(
         'HotspotSite', blank=True, related_name='tiers', verbose_name='Sites'
     )
-    price_htg = models.DecimalField(max_digits=10, decimal_places=2,
-                                    default=0, verbose_name='Prix (HTG)')
-    is_active = models.BooleanField(default=True, verbose_name='Actif')
+    price_htg      = models.DecimalField(max_digits=10, decimal_places=2,
+                                         default=0, verbose_name='Prix (HTG)')
+    is_replacement = models.BooleanField(default=False, verbose_name='Remplacement')
+    is_active      = models.BooleanField(default=True, verbose_name='Actif')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

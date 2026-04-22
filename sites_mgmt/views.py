@@ -140,21 +140,60 @@ def tier_list(request):
     site_filter = request.GET.get('site', '')
     all_sites   = HotspotSite.objects.filter(is_active=True).order_by('name')
 
+    qs = VoucherTier.objects.filter(is_replacement=False).prefetch_related('sites')
     if site_filter:
         selected_site = all_sites.filter(pk=site_filter).first()
-        tiers = VoucherTier.objects.filter(sites__pk=site_filter).prefetch_related('sites')
+        qs = qs.filter(sites__pk=site_filter)
     else:
         selected_site = None
-        tiers = VoucherTier.objects.prefetch_related('sites').all()
 
     return render(request, 'sites_mgmt/tiers.html', {
-        'tiers':         tiers,
+        'tiers':         qs,
         'all_sites':     all_sites,
         'selected_site': selected_site,
         'site_filter':   site_filter,
         'page_title':    'Forfaits tarifaires',
         'label_presets': VoucherTier.LABEL_PRESETS,
     })
+
+
+@login_required
+@superadmin_required
+def tier_replacement_list(request):
+    all_sites   = HotspotSite.objects.filter(is_active=True).order_by('name')
+    site_filter = request.GET.get('site', '')
+
+    qs = VoucherTier.objects.filter(is_replacement=True).prefetch_related('sites')
+    if site_filter:
+        qs = qs.filter(sites__pk=site_filter)
+
+    return render(request, 'sites_mgmt/tiers_replacement.html', {
+        'tiers':       qs,
+        'all_sites':   all_sites,
+        'site_filter': site_filter,
+        'page_title':  'Forfaits Remplacement',
+    })
+
+
+@login_required
+@superadmin_required
+def tier_replacement_create(request):
+    if request.method == 'POST':
+        try:
+            tier = VoucherTier.objects.create(
+                label          = request.POST['label'],
+                duration       = int(request.POST['duration']),
+                unit           = request.POST['unit'],
+                price_htg      = 0,
+                is_replacement = True,
+            )
+            site_pks = request.POST.getlist('sites')
+            if site_pks:
+                tier.sites.set(HotspotSite.objects.filter(pk__in=site_pks))
+            messages.success(request, f'Forfait remplacement « {tier.label} » créé.')
+        except Exception as e:
+            messages.error(request, f'Erreur : {e}')
+    return redirect('sites:tier_replacement_list')
 
 
 @login_required
@@ -186,7 +225,8 @@ def tier_edit(request, pk):
             tier.label     = request.POST['label']
             tier.duration  = int(request.POST['duration'])
             tier.unit      = request.POST['unit']
-            tier.price_htg = request.POST.get('price_htg') or 0
+            if not tier.is_replacement:
+                tier.price_htg = request.POST.get('price_htg') or 0
             tier.is_active = request.POST.get('is_active') == 'on'
             tier.save()
             site_pks = request.POST.getlist('sites')
@@ -194,18 +234,20 @@ def tier_edit(request, pk):
             messages.success(request, f'Forfait « {tier.label} » mis à jour.')
         except Exception as e:
             messages.error(request, f'Erreur : {e}')
-    return redirect('sites:tiers')
+    redirect_to = 'sites:tier_replacement_list' if tier.is_replacement else 'sites:tiers'
+    return redirect(redirect_to)
 
 
 @login_required
 @superadmin_required
 def tier_delete(request, pk):
     tier = get_object_or_404(VoucherTier, pk=pk)
+    is_repl = tier.is_replacement
     if request.method == 'POST':
         name = tier.label
         tier.delete()
         messages.success(request, f'Forfait « {name} » supprimé.')
-    return redirect('sites:tiers')
+    return redirect('sites:tier_replacement_list' if is_repl else 'sites:tiers')
 
 
 @login_required

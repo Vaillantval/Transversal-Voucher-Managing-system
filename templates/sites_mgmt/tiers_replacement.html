@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-{% block title %}Forfaits{% endblock %}
-{% block page_title %}Forfaits tarifaires{% endblock %}
+{% block title %}Forfaits Remplacement{% endblock %}
+{% block page_title %}Forfaits Remplacement{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <p class="text-muted mb-0 small">Définissez les forfaits (label, durée, sites, prix) pour la création de vouchers.</p>
-  <div class="d-flex gap-2">
-    <a href="{% url 'sites:tier_replacement_list' %}" class="btn btn-outline-warning btn-sm">
-      <i class="bi bi-arrow-repeat"></i> Forfaits Remplacement
+  <div>
+    <a href="{% url 'sites:tiers' %}" class="btn btn-outline-secondary btn-sm me-2">
+      <i class="bi bi-arrow-left"></i> Retour aux forfaits
     </a>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createModal">
-      <i class="bi bi-plus"></i> Nouveau forfait
-    </button>
+    <span class="text-muted small">Forfaits gratuits (prix = 0) utilisés pour les remplacements de vouchers.</span>
   </div>
+  <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#createReplModal">
+    <i class="bi bi-plus"></i> Nouveau forfait remplacement
+  </button>
 </div>
 
 <!-- Filtre par site -->
@@ -37,7 +37,7 @@
           <th>Label</th>
           <th>Durée</th>
           <th>Sites</th>
-          <th>Prix (HTG)</th>
+          <th>Prix</th>
           <th>Statut</th>
           <th></th>
         </tr>
@@ -62,9 +62,7 @@
           {% endif %}
           {% endwith %}
         </td>
-        <td class="fw-bold {% if tier.is_free %}text-success{% else %}text-primary{% endif %}">
-          {% if tier.is_free %}Gratuit{% else %}{{ tier.price_htg }} HTG{% endif %}
-        </td>
+        <td class="text-success fw-bold">Gratuit</td>
         <td>
           {% if tier.is_active %}
           <span class="badge badge-active rounded-pill">Actif</span>
@@ -74,18 +72,17 @@
         </td>
         <td class="d-flex gap-1">
           <button class="btn btn-outline-secondary btn-sm py-0"
-                  data-bs-toggle="modal" data-bs-target="#editModal"
+                  data-bs-toggle="modal" data-bs-target="#editReplModal"
                   data-pk="{{ tier.pk }}"
                   data-label="{{ tier.label }}"
                   data-duration="{{ tier.duration }}"
                   data-unit="{{ tier.unit }}"
-                  data-price="{{ tier.price_htg }}"
                   data-active="{{ tier.is_active|yesno:'true,false' }}"
                   data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <i class="bi bi-pencil"></i>
           </button>
           <form method="post" action="{% url 'sites:tier_delete' tier.pk %}"
-                onsubmit="return confirm('Supprimer ce forfait ?')">
+                onsubmit="return confirm('Supprimer ce forfait remplacement ?')">
             {% csrf_token %}
             <button class="btn btn-outline-danger btn-sm py-0">
               <i class="bi bi-trash"></i>
@@ -94,14 +91,14 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" class="text-center text-muted py-4">Aucun forfait défini{% if site_filter %} pour ce site{% endif %}</td></tr>
+      <tr><td colspan="6" class="text-center text-muted py-4">Aucun forfait remplacement défini{% if site_filter %} pour ce site{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- Popover sites (flottant, sans bloquer le scroll) -->
+<!-- Popover sites -->
 <div id="sites-popup" style="display:none;position:fixed;z-index:1080;min-width:220px;max-width:300px;
      background:#fff;border:1px solid #dee2e6;border-radius:.5rem;box-shadow:0 4px 16px rgba(0,0,0,.15);">
   <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
@@ -112,25 +109,20 @@
 </div>
 
 <!-- Modal création -->
-<div class="modal fade" id="createModal" tabindex="-1">
+<div class="modal fade" id="createReplModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="post" action="{% url 'sites:tier_create' %}">
+      <form method="post" action="{% url 'sites:tier_replacement_create' %}">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
         <div class="modal-header">
-          <h5 class="modal-title">Nouveau forfait</h5>
+          <h5 class="modal-title"><i class="bi bi-arrow-repeat text-warning me-2"></i>Nouveau forfait remplacement</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body row g-3">
 
           <div class="col-12">
             <label class="form-label small fw-semibold">Label</label>
-            <input type="text" name="label" class="form-control" list="label-presets"
-                   placeholder="Ex: Code_Admin, Remplacement…" required>
-            <datalist id="label-presets">
-              {% for p in label_presets %}<option value="{{ p }}">{% endfor %}
-            </datalist>
+            <input type="text" name="label" class="form-control" placeholder="Ex: Remplacement 24h" required>
           </div>
 
           <div class="col-6">
@@ -148,21 +140,22 @@
           </div>
 
           <div class="col-12">
-            <label class="form-label small fw-semibold">Prix (HTG) — laisser 0 pour gratuit</label>
-            <input type="number" name="price_htg" step="0.01" value="0" min="0" class="form-control">
+            <div class="alert alert-success py-1 small mb-0">
+              <i class="bi bi-lock-fill me-1"></i> Prix = 0 HTG (gratuit, non modifiable)
+            </div>
           </div>
 
           <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label class="form-label small fw-semibold mb-0">Sites</label>
               <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
-                      onclick="toggleAll('c-site-checks', this)">Tout sélectionner</button>
+                      onclick="toggleAll('cr-site-checks', this)">Tout sélectionner</button>
             </div>
-            <div class="border rounded p-2 d-flex flex-wrap gap-2" id="c-site-checks">
+            <div class="border rounded p-2 d-flex flex-wrap gap-2" id="cr-site-checks">
               {% for s in all_sites %}
               <div class="form-check me-3">
-                <input class="form-check-input" type="checkbox" name="sites" value="{{ s.pk }}" id="c-site-{{ s.pk }}">
-                <label class="form-check-label small" for="c-site-{{ s.pk }}">{{ s.name }}</label>
+                <input class="form-check-input" type="checkbox" name="sites" value="{{ s.pk }}" id="cr-site-{{ s.pk }}">
+                <label class="form-check-label small" for="cr-site-{{ s.pk }}">{{ s.name }}</label>
               </div>
               {% endfor %}
             </div>
@@ -171,7 +164,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
-          <button type="submit" class="btn btn-primary btn-sm">Créer</button>
+          <button type="submit" class="btn btn-warning btn-sm">Créer</button>
         </div>
       </form>
     </div>
@@ -179,29 +172,29 @@
 </div>
 
 <!-- Modal édition -->
-<div class="modal fade" id="editModal" tabindex="-1">
+<div class="modal fade" id="editReplModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="post" id="editForm">
+      <form method="post" id="editReplForm">
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title">Modifier le forfait</h5>
+          <h5 class="modal-title">Modifier le forfait remplacement</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body row g-3">
 
           <div class="col-12">
             <label class="form-label small fw-semibold">Label</label>
-            <input type="text" name="label" id="edit-label" class="form-control" list="label-presets" required>
+            <input type="text" name="label" id="er-label" class="form-control" required>
           </div>
 
           <div class="col-6">
             <label class="form-label small fw-semibold">Durée</label>
-            <input type="number" name="duration" id="edit-duration" class="form-control" min="1" required>
+            <input type="number" name="duration" id="er-duration" class="form-control" min="1" required>
           </div>
           <div class="col-6">
             <label class="form-label small fw-semibold">Unité</label>
-            <select name="unit" id="edit-unit" class="form-select">
+            <select name="unit" id="er-unit" class="form-select">
               <option value="hours">Heures</option>
               <option value="days">Jours</option>
               <option value="months">Mois</option>
@@ -210,13 +203,14 @@
           </div>
 
           <div class="col-8">
-            <label class="form-label small fw-semibold">Prix (HTG)</label>
-            <input type="number" name="price_htg" id="edit-price" step="0.01" min="0" class="form-control">
+            <div class="alert alert-success py-1 small mb-0">
+              <i class="bi bi-lock-fill me-1"></i> Prix = 0 HTG (gratuit, non modifiable)
+            </div>
           </div>
-          <div class="col-4 d-flex align-items-end pb-1">
+          <div class="col-4 d-flex align-items-center">
             <div class="form-check">
-              <input type="checkbox" name="is_active" id="edit-active" class="form-check-input">
-              <label class="form-check-label small" for="edit-active">Actif</label>
+              <input type="checkbox" name="is_active" id="er-active" class="form-check-input">
+              <label class="form-check-label small" for="er-active">Actif</label>
             </div>
           </div>
 
@@ -224,14 +218,14 @@
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label class="form-label small fw-semibold mb-0">Sites</label>
               <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
-                      onclick="toggleAll('edit-sites-container', this)">Tout sélectionner</button>
+                      onclick="toggleAll('er-sites-container', this)">Tout sélectionner</button>
             </div>
-            <div class="border rounded p-2 d-flex flex-wrap gap-2" id="edit-sites-container">
+            <div class="border rounded p-2 d-flex flex-wrap gap-2" id="er-sites-container">
               {% for s in all_sites %}
               <div class="form-check me-3">
-                <input class="form-check-input edit-site-check" type="checkbox"
-                       name="sites" value="{{ s.pk }}" id="e-site-{{ s.pk }}">
-                <label class="form-check-label small" for="e-site-{{ s.pk }}">{{ s.name }}</label>
+                <input class="form-check-input er-site-check" type="checkbox"
+                       name="sites" value="{{ s.pk }}" id="er-site-{{ s.pk }}">
+                <label class="form-check-label small" for="er-site-{{ s.pk }}">{{ s.name }}</label>
               </div>
               {% endfor %}
             </div>
@@ -249,6 +243,7 @@
 
 {% block extra_js %}
 <script>
+// ── Popover sites ──────────────────────────────────────────────────────────
 (function () {
   var popup     = document.getElementById('sites-popup');
   var popTitle  = document.getElementById('popup-title');
@@ -288,7 +283,6 @@
       popBody.innerHTML = html;
     }
 
-    // Positionnement
     var rect = btn.getBoundingClientRect();
     popup.style.display = 'block';
     var pw = popup.offsetWidth;
@@ -302,28 +296,38 @@
     activeBtn = btn;
   }
 
-  function closePopup() {
-    popup.style.display = 'none';
-    activeBtn = null;
-  }
+  function closePopup() { popup.style.display = 'none'; activeBtn = null; }
 
   document.querySelectorAll('.sites-popup-btn').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      if (popup.style.display !== 'none' && activeBtn === btn) {
-        closePopup();
-      } else {
-        openPopup(btn);
-      }
+      if (popup.style.display !== 'none' && activeBtn === btn) closePopup();
+      else openPopup(btn);
     });
   });
 
   document.getElementById('popup-close').addEventListener('click', closePopup);
-
-  document.addEventListener('click', function(e) {
-    if (!popup.contains(e.target)) closePopup();
-  });
+  document.addEventListener('click', function(e) { if (!popup.contains(e.target)) closePopup(); });
 })();
+
+// ── Modal édition ─────────────────────────────────────────────────────────
+document.getElementById('editReplModal').addEventListener('show.bs.modal', function(e) {
+  var btn  = e.relatedTarget;
+  var form = document.getElementById('editReplForm');
+  form.action = '/sites/tarifs/' + btn.dataset.pk + '/modifier/';
+  document.getElementById('er-label').value    = btn.dataset.label;
+  document.getElementById('er-duration').value = btn.dataset.duration;
+  document.getElementById('er-active').checked = btn.dataset.active === 'true';
+
+  var unitSel = document.getElementById('er-unit');
+  for (var i = 0; i < unitSel.options.length; i++)
+    unitSel.options[i].selected = (unitSel.options[i].value === btn.dataset.unit);
+
+  var checkedPks = btn.dataset.sites ? btn.dataset.sites.split(',') : [];
+  document.querySelectorAll('.er-site-check').forEach(function(cb) {
+    cb.checked = checkedPks.includes(cb.value);
+  });
+});
 
 function toggleAll(containerId, btn) {
   var checks = document.querySelectorAll('#' + containerId + ' input[type="checkbox"]');
@@ -331,28 +335,6 @@ function toggleAll(containerId, btn) {
   checks.forEach(function(c) { c.checked = !allChecked; });
   btn.textContent = allChecked ? 'Tout sélectionner' : 'Tout désélectionner';
 }
-
-document.getElementById('editModal').addEventListener('show.bs.modal', function(e) {
-  var btn = e.relatedTarget;
-  var form = document.getElementById('editForm');
-  form.action = '/sites/tarifs/' + btn.dataset.pk + '/modifier/';
-  document.getElementById('edit-label').value    = btn.dataset.label;
-  document.getElementById('edit-duration').value = btn.dataset.duration;
-  document.getElementById('edit-price').value    = btn.dataset.price;
-  document.getElementById('edit-active').checked = btn.dataset.active === 'true';
-
-  // Sélectionner l'unité
-  var unitSel = document.getElementById('edit-unit');
-  for (var i = 0; i < unitSel.options.length; i++) {
-    unitSel.options[i].selected = (unitSel.options[i].value === btn.dataset.unit);
-  }
-
-  // Cocher les sites
-  var checkedPks = btn.dataset.sites ? btn.dataset.sites.split(',') : [];
-  document.querySelectorAll('.edit-site-check').forEach(function(cb) {
-    cb.checked = checkedPks.includes(cb.value);
-  });
-});
 </script>
 {% endblock %}
 {% endblock %}

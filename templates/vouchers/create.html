@@ -7,9 +7,12 @@
 <div class="col-md-7">
 <div class="card card-bn p-4">
   <h5 class="mb-4"><i class="bi bi-ticket-perforated text-primary me-2"></i>Nouveau lot de vouchers</h5>
-  <form method="post">
+  <form method="post" id="create-form">
     {% csrf_token %}
+    <input type="hidden" name="use_replacement" id="use-replacement-flag" value="0">
+    <input type="hidden" name="repl_tier_pk"    id="repl-tier-pk-input"  value="">
 
+    <!-- Site -->
     <div class="mb-3">
       <label class="form-label fw-semibold">Site <span class="text-danger">*</span></label>
       <select name="site" id="site-select" class="form-select" required>
@@ -20,7 +23,8 @@
       </select>
     </div>
 
-    <div class="mb-3">
+    <!-- Forfaits standards -->
+    <div class="mb-3" id="std-tiers-section">
       <label class="form-label fw-semibold">Forfait tarifaire <span class="text-danger">*</span></label>
       <div id="tiers-hint" class="text-muted small mb-2">Sélectionnez un site pour voir les forfaits disponibles.</div>
       <div class="row g-2" id="tiers-container">
@@ -29,35 +33,99 @@
              data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
           <label class="d-flex align-items-center gap-2 p-3 border rounded-3 tier-card h-100"
                  style="cursor:pointer">
-            <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0 flex-shrink-0" required>
+            <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0 flex-shrink-0">
             <div>
               <div class="fw-semibold">{{ tier.label }}</div>
               <div class="small text-muted">{{ tier.duration_display }}</div>
-              <div class="{% if tier.is_free %}text-success{% else %}text-primary{% endif %} fw-bold">
-                {% if tier.is_free %}Gratuit{% else %}{{ tier.price_htg }} HTG{% endif %}
-              </div>
+              <div class="text-primary fw-bold">{{ tier.price_htg }} HTG</div>
             </div>
           </label>
         </div>
         {% endfor %}
         <div id="no-tiers-msg" class="col-12 d-none">
-          <div class="alert alert-warning py-2">
-            Aucun forfait défini pour ce site.
+          <div class="alert alert-warning py-2 small">
+            Aucun forfait standard défini pour ce site.
             {% if user.is_superadmin %}<a href="{% url 'sites:tiers' %}">Créer un forfait</a>{% endif %}
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Séparateur + bouton Code Remplacement -->
+    <div class="mb-3">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <hr class="flex-grow-1 my-0">
+        <span class="text-muted small">ou</span>
+        <hr class="flex-grow-1 my-0">
+      </div>
+      <button type="button" id="repl-toggle-btn"
+              class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-arrow-repeat"></i> Code Remplacement
+      </button>
+    </div>
+
+    <!-- Section remplacement (cachée par défaut) -->
+    <div id="repl-section" class="d-none mb-3">
+      <div class="border border-warning rounded-3 p-3 bg-warning bg-opacity-10">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold small text-warning"><i class="bi bi-arrow-repeat me-1"></i>Code Remplacement — Gratuit</span>
+          <button type="button" id="repl-close-btn" class="btn-close btn-sm"></button>
+        </div>
+
+        <!-- Pré-définis remplacement (filtrés par site) -->
+        <div id="repl-presets" class="mb-3">
+          <p class="text-muted small mb-1">Pré-définis pour ce site :</p>
+          <div class="row g-2" id="repl-presets-container">
+            {% for rt in repl_tiers %}
+            <div class="col-auto repl-preset-wrap d-none"
+                 data-sites="{% for s in rt.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                 data-duration="{{ rt.duration }}"
+                 data-unit="{{ rt.unit }}"
+                 data-pk="{{ rt.pk }}">
+              <button type="button" class="btn btn-outline-secondary btn-sm repl-preset-btn">
+                {{ rt.label }} — {{ rt.duration_display }}
+              </button>
+            </div>
+            {% endfor %}
+            <div id="no-repl-presets-msg" class="col-12 d-none">
+              <span class="text-muted small">Aucun pré-défini pour ce site.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Durée custom -->
+        <div class="row g-2 align-items-end">
+          <div class="col-5">
+            <label class="form-label small fw-semibold mb-1">Durée <span class="text-danger">*</span></label>
+            <input type="number" name="rep_duration" id="rep-duration" class="form-control form-control-sm"
+                   min="1" placeholder="24">
+          </div>
+          <div class="col-5">
+            <label class="form-label small fw-semibold mb-1">Unité</label>
+            <select name="rep_unit" id="rep-unit" class="form-select form-select-sm">
+              <option value="hours">Heures</option>
+              <option value="days">Jours</option>
+              <option value="months">Mois</option>
+            </select>
+          </div>
+          <div class="col-2">
+            <span class="badge bg-success py-2 w-100">0 HTG</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nombre de vouchers -->
     <div class="mb-3">
       <label class="form-label fw-semibold">Nombre de vouchers</label>
       <div class="d-flex align-items-center gap-3">
-        <input type="number" name="count" value="1" min="1" max="100"
+        <input type="number" name="count" id="count-input" value="50" min="1" max="100"
                class="form-control" style="width:100px">
         <span class="text-muted small">max 100 par lot</span>
       </div>
     </div>
 
+    <!-- Note -->
     <div class="mb-4">
       <label class="form-label fw-semibold">Note / Référence <span class="text-muted small">(optionnel)</span></label>
       <input type="text" name="note" class="form-control"
@@ -65,7 +133,7 @@
     </div>
 
     <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" id="submit-btn">
         <i class="bi bi-plus-circle me-1"></i>Créer les vouchers
       </button>
       <a href="{% url 'vouchers:list' %}" class="btn btn-outline-secondary">Annuler</a>
@@ -79,37 +147,113 @@
 {% block extra_js %}
 <script>
 (function () {
-  var siteSelect = document.getElementById('site-select');
-  var hint       = document.getElementById('tiers-hint');
-  var noMsg      = document.getElementById('no-tiers-msg');
-  var cards      = document.querySelectorAll('.tier-card-wrap');
+  var siteSelect    = document.getElementById('site-select');
+  var hint          = document.getElementById('tiers-hint');
+  var noMsg         = document.getElementById('no-tiers-msg');
+  var stdCards      = document.querySelectorAll('.tier-card-wrap');
+  var replToggle    = document.getElementById('repl-toggle-btn');
+  var replSection   = document.getElementById('repl-section');
+  var replCloseBtn  = document.getElementById('repl-close-btn');
+  var replFlag      = document.getElementById('use-replacement-flag');
+  var replPkInput   = document.getElementById('repl-tier-pk-input');
+  var repDuration   = document.getElementById('rep-duration');
+  var repUnit       = document.getElementById('rep-unit');
+  var countInput    = document.getElementById('count-input');
+  var replPresets   = document.querySelectorAll('.repl-preset-wrap');
+  var noReplMsg     = document.getElementById('no-repl-presets-msg');
+  var replActive    = false;
 
-  function filterTiers() {
-    var sitePk = siteSelect.value;
+  // ── Filtrage forfaits standards par site ────────────────────────────────
+  function filterStdTiers() {
+    var sitePk  = siteSelect.value;
     var visible = 0;
-
-    // Deselect hidden radios
     document.querySelectorAll('input[name="tier"]').forEach(function(r) { r.checked = false; });
-
-    cards.forEach(function(wrap) {
+    stdCards.forEach(function(wrap) {
       var sites = wrap.dataset.sites ? wrap.dataset.sites.split(',') : [];
       var show  = sitePk && sites.includes(sitePk);
       wrap.classList.toggle('d-none', !show);
       if (show) visible++;
     });
-
     hint.classList.toggle('d-none', !!sitePk);
     noMsg.classList.toggle('d-none', !sitePk || visible > 0);
   }
 
-  siteSelect.addEventListener('change', filterTiers);
-  filterTiers();
+  // ── Filtrage pré-définis remplacement par site ──────────────────────────
+  function filterReplPresets() {
+    var sitePk  = siteSelect.value;
+    var visible = 0;
+    replPresets.forEach(function(wrap) {
+      var sites = wrap.dataset.sites ? wrap.dataset.sites.split(',') : [];
+      var show  = !sitePk || sites.includes(sitePk);
+      wrap.classList.toggle('d-none', !show);
+      if (show) visible++;
+    });
+    noReplMsg.classList.toggle('d-none', visible > 0);
+  }
 
+  siteSelect.addEventListener('change', function() {
+    filterStdTiers();
+    filterReplPresets();
+  });
+  filterStdTiers();
+  filterReplPresets();
+
+  // ── Activer/désactiver mode remplacement ────────────────────────────────
+  function activateReplacement() {
+    replActive = true;
+    replSection.classList.remove('d-none');
+    replToggle.classList.add('active', 'btn-warning');
+    replToggle.classList.remove('btn-outline-warning');
+    // Désactiver required sur les radios standards
+    document.querySelectorAll('input[name="tier"]').forEach(function(r) {
+      r.required = false; r.checked = false;
+    });
+    replFlag.value = '1';
+    repDuration.required = true;
+    countInput.value = '1';
+    filterReplPresets();
+  }
+
+  function deactivateReplacement() {
+    replActive = false;
+    replSection.classList.add('d-none');
+    replToggle.classList.remove('active', 'btn-warning');
+    replToggle.classList.add('btn-outline-warning');
+    document.querySelectorAll('input[name="tier"]').forEach(function(r) { r.required = true; });
+    replFlag.value = '0';
+    repDuration.required = false;
+    replPkInput.value = '';
+    countInput.value = '50';
+    // Retirer highlight pré-définis
+    document.querySelectorAll('.repl-preset-btn').forEach(function(b) {
+      b.classList.remove('btn-warning'); b.classList.add('btn-outline-secondary');
+    });
+  }
+
+  replToggle.addEventListener('click', function() {
+    if (replActive) deactivateReplacement(); else activateReplacement();
+  });
+  replCloseBtn.addEventListener('click', deactivateReplacement);
+
+  // ── Clic sur un pré-défini → autofill durée ─────────────────────────────
+  document.querySelectorAll('.repl-preset-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var wrap = btn.closest('.repl-preset-wrap');
+      repDuration.value  = wrap.dataset.duration;
+      repUnit.value      = wrap.dataset.unit;
+      replPkInput.value  = wrap.dataset.pk;
+      document.querySelectorAll('.repl-preset-btn').forEach(function(b) {
+        b.classList.remove('btn-warning'); b.classList.add('btn-outline-secondary');
+      });
+      btn.classList.add('btn-warning'); btn.classList.remove('btn-outline-secondary');
+    });
+  });
+
+  // ── Highlight forfait standard sélectionné ──────────────────────────────
   document.querySelectorAll('.tier-card').forEach(function(card) {
     card.addEventListener('click', function() {
       document.querySelectorAll('.tier-card').forEach(function(c) {
-        c.style.borderColor = '';
-        c.style.background  = '';
+        c.style.borderColor = ''; c.style.background = '';
       });
       card.style.borderColor = '#1A56DB';
       card.style.background  = '#EBF5FF';
