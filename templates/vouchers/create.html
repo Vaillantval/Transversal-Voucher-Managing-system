@@ -218,13 +218,15 @@
   filterStdTiers();
   filterReplPresets();
 
+  var stdTiersSection = document.getElementById('std-tiers-section');
+
   // ── Activer/désactiver mode remplacement ────────────────────────────────
   function activateReplacement() {
     replActive = true;
+    stdTiersSection.classList.add('d-none');   // cache la liste des forfaits
     replSection.classList.remove('d-none');
     replToggle.classList.add('active', 'btn-warning');
     replToggle.classList.remove('btn-outline-warning');
-    // Désactiver required sur les radios standards
     document.querySelectorAll('input[name="tier"]').forEach(function(r) {
       r.required = false; r.checked = false;
     });
@@ -237,6 +239,7 @@
   function deactivateReplacement() {
     replActive = false;
     replSection.classList.add('d-none');
+    stdTiersSection.classList.remove('d-none'); // réaffiche la liste des forfaits
     replToggle.classList.remove('active', 'btn-warning');
     replToggle.classList.add('btn-outline-warning');
     document.querySelectorAll('input[name="tier"]').forEach(function(r) { r.required = true; });
@@ -244,7 +247,7 @@
     repDuration.required = false;
     replPkInput.value = '';
     countInput.value = '50';
-    // Retirer highlight pré-définis
+    countInput.max = '100';
     document.querySelectorAll('.repl-preset-btn').forEach(function(b) {
       b.classList.remove('btn-warning'); b.classList.add('btn-outline-secondary');
     });
