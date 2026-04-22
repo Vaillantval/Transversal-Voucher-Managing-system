@@ -141,7 +141,7 @@ def voucher_list(request):
             n = int(f_dur_val)
             unit_map = {'minutes': 1, 'hours': 60, 'days': 1440, 'months': 43200}
             target_min = n * unit_map.get(f_dur_unit, 1)
-            matched_tier = find_tier(tiers, target_min)
+            matched_tier = find_tier(list(_all_tiers), target_min)
             if matched_tier:
                 sessions = [g for g in sessions if g['tier_label'] == matched_tier.label]
             else:

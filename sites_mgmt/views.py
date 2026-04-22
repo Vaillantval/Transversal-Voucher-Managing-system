@@ -271,7 +271,7 @@ def tier_edit(request, pk):
             tier.label     = request.POST['label']
             tier.duration  = int(request.POST['duration'])
             tier.unit      = request.POST['unit']
-            if not tier.is_replacement:
+            if not tier.is_replacement and not tier.is_admin_code:
                 tier.price_htg = request.POST.get('price_htg') or 0
             tier.is_active = request.POST.get('is_active') == 'on'
             tier.save()
