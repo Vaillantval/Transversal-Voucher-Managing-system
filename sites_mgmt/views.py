@@ -208,6 +208,15 @@ def tier_delete(request, pk):
     return redirect('sites:tiers')
 
 
+@login_required
+@superadmin_required
+def tier_remove_site(request, pk, site_pk):
+    if request.method == 'POST':
+        tier = get_object_or_404(VoucherTier, pk=pk)
+        tier.sites.remove(site_pk)
+    return redirect(request.POST.get('next', 'sites:tiers'))
+
+
 # ─── CONFIGURATION GLOBALE ────────────────────────────────────────────────────
 
 @login_required

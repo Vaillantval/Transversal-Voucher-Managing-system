@@ -43,11 +43,20 @@
         <td class="fw-semibold">{{ tier.label }}</td>
         <td>{{ tier.duration_display }}</td>
         <td>
-          {% for s in tier.sites.all %}
-          <span class="badge bg-secondary rounded-pill me-1">{{ s.name }}</span>
-          {% empty %}
+          {% with sites=tier.sites.all %}
+          {% if sites %}
+          <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                  data-bs-toggle="modal" data-bs-target="#sitesModal"
+                  data-tier-pk="{{ tier.pk }}"
+                  data-tier-label="{{ tier.label }}"
+                  data-sites='[{% for s in sites %}{"pk":{{ s.pk }},"name":"{{ s.name }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'
+                  title="Voir les sites">
+            <i class="bi bi-geo-alt"></i> {{ sites|length }}
+          </button>
+          {% else %}
           <span class="text-muted small">—</span>
-          {% endfor %}
+          {% endif %}
+          {% endwith %}
         </td>
         <td class="fw-bold {% if tier.is_free %}text-success{% else %}text-primary{% endif %}">
           {% if tier.is_free %}Gratuit{% else %}{{ tier.price_htg }} HTG{% endif %}
@@ -85,6 +94,19 @@
       {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Modal sites du forfait -->
+<div class="modal fade" id="sitesModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="sitesModalTitle">Sites du forfait</h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2" id="sitesModalBody"></div>
+    </div>
   </div>
 </div>
 
@@ -226,6 +248,43 @@
 
 {% block extra_js %}
 <script>
+document.getElementById('sitesModal').addEventListener('show.bs.modal', function(e) {
+  var btn    = e.relatedTarget;
+  var tierPk = btn.dataset.tierPk;
+  var label  = btn.dataset.tierLabel;
+  var sites  = JSON.parse(btn.dataset.sites);
+  var next   = window.location.href;
+
+  document.getElementById('sitesModalTitle').textContent = label;
+
+  var body = document.getElementById('sitesModalBody');
+  if (sites.length === 0) {
+    body.innerHTML = '<p class="text-muted small mb-0">Aucun site assigné.</p>';
+    return;
+  }
+
+  var html = '<ul class="list-group list-group-flush">';
+  sites.forEach(function(s) {
+    html += '<li class="list-group-item d-flex justify-content-between align-items-center px-1 py-1 small">'
+          + '<span>' + s.name + '</span>'
+          + '<form method="post" action="/sites/tarifs/' + tierPk + '/sites/' + s.pk + '/retirer/" class="d-inline">'
+          + '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrf() + '">'
+          + '<input type="hidden" name="next" value="' + next + '">'
+          + '<button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="Retirer ce site"'
+          + ' onclick="return confirm(\'Retirer ' + s.name + ' de ce forfait ?\')">'
+          + '<i class="bi bi-x-circle"></i></button>'
+          + '</form>'
+          + '</li>';
+  });
+  html += '</ul>';
+  body.innerHTML = html;
+});
+
+function getCsrf() {
+  var c = document.cookie.split(';').find(function(x) { return x.trim().startsWith('csrftoken='); });
+  return c ? c.trim().split('=')[1] : '';
+}
+
 function toggleAll(containerId, btn) {
   var checks = document.querySelectorAll('#' + containerId + ' input[type="checkbox"]');
   var allChecked = Array.from(checks).every(function(c) { return c.checked; });

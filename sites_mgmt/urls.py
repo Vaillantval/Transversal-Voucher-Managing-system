@@ -11,6 +11,7 @@ urlpatterns = [
     path('tarifs/nouveau/', views.tier_create, name='tier_create'),
     path('tarifs/<int:pk>/modifier/', views.tier_edit, name='tier_edit'),
     path('tarifs/<int:pk>/supprimer/', views.tier_delete, name='tier_delete'),
+    path('tarifs/<int:pk>/sites/<int:site_pk>/retirer/', views.tier_remove_site, name='tier_remove_site'),
     path('api/<str:site_id>/stats/', views.site_stats_json, name='stats_json'),
     path('api/<str:site_id>/guests/', views.site_guests_json, name='guests_json'),
     path('configuration/', views.config_edit, name='config'),
