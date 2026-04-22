@@ -114,6 +114,8 @@ class VoucherTier(models.Model):
     price_htg      = models.DecimalField(max_digits=10, decimal_places=2,
                                          default=0, verbose_name='Prix (HTG)')
     is_replacement = models.BooleanField(default=False, verbose_name='Remplacement')
+    is_admin_code  = models.BooleanField(default=False, verbose_name='Code Admin')
+    max_vouchers   = models.PositiveSmallIntegerField(default=100, verbose_name='Max par création')
     is_active      = models.BooleanField(default=True, verbose_name='Actif')
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -199,8 +199,9 @@ def voucher_create(request):
     else:
         sites = request.user.managed_sites.filter(is_active=True)
 
-    std_tiers  = VoucherTier.objects.filter(is_active=True, is_replacement=False).prefetch_related('sites')
-    repl_tiers = VoucherTier.objects.filter(is_active=True, is_replacement=True).prefetch_related('sites')
+    std_tiers   = VoucherTier.objects.filter(is_active=True, is_replacement=False, is_admin_code=False).prefetch_related('sites')
+    repl_tiers  = VoucherTier.objects.filter(is_active=True, is_replacement=True).prefetch_related('sites')
+    admin_tiers = VoucherTier.objects.filter(is_active=True, is_admin_code=True).prefetch_related('sites')
 
     if request.method == 'POST':
         site_pk = request.POST.get('site')
@@ -225,6 +226,9 @@ def voucher_create(request):
             tier_pk = request.POST.get('tier')
             tier    = get_object_or_404(VoucherTier, pk=tier_pk)
             expire_minutes = tier.duration_minutes
+            if tier.is_admin_code and count > tier.max_vouchers:
+                messages.error(request, f"Ce code admin est limité à {tier.max_vouchers} vouchers par création.")
+                return redirect('vouchers:create')
 
         tier_label  = tier.label if tier else ('Remplacement' if use_replacement else '?')
         default_note = f"BonNet-Remplacement" if use_replacement else f"BonNet-{tier_label}"
@@ -266,10 +270,11 @@ def voucher_create(request):
             messages.error(request, "Échec de la création sur le contrôleur UniFi.")
 
     return render(request, 'vouchers/create.html', {
-        'sites':      sites,
-        'tiers':      std_tiers,
-        'repl_tiers': repl_tiers,
-        'page_title': 'Créer des vouchers',
+        'sites':       sites,
+        'tiers':       std_tiers,
+        'repl_tiers':  repl_tiers,
+        'admin_tiers': admin_tiers,
+        'page_title':  'Créer des vouchers',
     })
 
 

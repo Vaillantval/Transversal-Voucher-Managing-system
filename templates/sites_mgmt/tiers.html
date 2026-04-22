@@ -101,6 +101,75 @@
   </div>
 </div>
 
+<!-- Section Codes Admin -->
+<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+  <div>
+    <span class="fw-semibold"><i class="bi bi-shield-lock text-dark me-1"></i>Codes Admin</span>
+    <span class="text-muted small ms-2">Prix = 0 · quota limité · durée longue</span>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#createAdminModal">
+    <i class="bi bi-plus"></i> Nouveau code admin
+  </button>
+</div>
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Label</th><th>Durée</th><th>Sites</th>
+          <th>Prix</th><th>Max/création</th><th>Statut</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for tier in admin_tiers %}
+      <tr>
+        <td class="fw-semibold">{{ tier.label }} <span class="badge bg-dark ms-1">Admin</span></td>
+        <td>{{ tier.duration_display }}</td>
+        <td>
+          {% with sites=tier.sites.all %}
+          {% if sites %}
+          <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 sites-popup-btn"
+                  data-tier-pk="{{ tier.pk }}"
+                  data-tier-label="{{ tier.label }}"
+                  data-sites='[{% for s in sites %}{"pk":{{ s.pk }},"name":"{{ s.name }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+            <i class="bi bi-geo-alt"></i> {{ sites|length }}
+          </button>
+          {% else %}<span class="text-muted small">—</span>{% endif %}
+          {% endwith %}
+        </td>
+        <td class="text-success fw-bold">Gratuit</td>
+        <td class="fw-semibold">{{ tier.max_vouchers }}</td>
+        <td>
+          {% if tier.is_active %}<span class="badge badge-active rounded-pill">Actif</span>
+          {% else %}<span class="badge badge-expired rounded-pill">Inactif</span>{% endif %}
+        </td>
+        <td class="d-flex gap-1">
+          <button class="btn btn-outline-secondary btn-sm py-0"
+                  data-bs-toggle="modal" data-bs-target="#editAdminModal"
+                  data-pk="{{ tier.pk }}"
+                  data-label="{{ tier.label }}"
+                  data-duration="{{ tier.duration }}"
+                  data-unit="{{ tier.unit }}"
+                  data-max-vouchers="{{ tier.max_vouchers }}"
+                  data-active="{{ tier.is_active|yesno:'true,false' }}"
+                  data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <form method="post" action="{% url 'sites:tier_delete' tier.pk %}"
+                onsubmit="return confirm('Supprimer ce code admin ?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger btn-sm py-0"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-3">Aucun code admin défini{% if site_filter %} pour ce site{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Popover sites (flottant, sans bloquer le scroll) -->
 <div id="sites-popup" style="display:none;position:fixed;z-index:1080;min-width:220px;max-width:300px;
      background:#fff;border:1px solid #dee2e6;border-radius:.5rem;box-shadow:0 4px 16px rgba(0,0,0,.15);">
@@ -247,6 +316,138 @@
   </div>
 </div>
 
+<!-- Modal création Code Admin -->
+<div class="modal fade" id="createAdminModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="{% url 'sites:tier_admin_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-shield-lock me-2"></i>Nouveau code admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Label</label>
+            <input type="text" name="label" class="form-control" value="Code Admin" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Durée</label>
+            <input type="number" name="duration" class="form-control" min="1" value="120" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Unité</label>
+            <select name="unit" class="form-select">
+              <option value="hours">Heures</option>
+              <option value="days" selected>Jours</option>
+              <option value="months">Mois</option>
+              <option value="years">Années</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Max par création</label>
+            <input type="number" name="max_vouchers" class="form-control" min="1" max="100" value="15" required>
+          </div>
+          <div class="col-6">
+            <div class="alert alert-success py-2 small mb-0 mt-4">
+              <i class="bi bi-lock-fill me-1"></i> Prix = 0 HTG (non modifiable)
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label small fw-semibold mb-0">Sites</label>
+              <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
+                      onclick="toggleAll('ca-site-checks', this)">Tout sélectionner</button>
+            </div>
+            <div class="border rounded p-2 d-flex flex-wrap gap-2" id="ca-site-checks">
+              {% for s in all_sites %}
+              <div class="form-check me-3">
+                <input class="form-check-input" type="checkbox" name="sites" value="{{ s.pk }}"
+                       id="ca-site-{{ s.pk }}" checked>
+                <label class="form-check-label small" for="ca-site-{{ s.pk }}">{{ s.name }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-dark btn-sm">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition Code Admin -->
+<div class="modal fade" id="editAdminModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" id="editAdminForm">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Modifier le code admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Label</label>
+            <input type="text" name="label" id="ea-label" class="form-control" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Durée</label>
+            <input type="number" name="duration" id="ea-duration" class="form-control" min="1" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Unité</label>
+            <select name="unit" id="ea-unit" class="form-select">
+              <option value="hours">Heures</option>
+              <option value="days">Jours</option>
+              <option value="months">Mois</option>
+              <option value="years">Années</option>
+            </select>
+          </div>
+          <div class="col-5">
+            <label class="form-label small fw-semibold">Max par création</label>
+            <input type="number" name="max_vouchers" id="ea-max" class="form-control" min="1" max="100" required>
+          </div>
+          <div class="col-4">
+            <div class="alert alert-success py-2 small mb-0 mt-4">
+              <i class="bi bi-lock-fill me-1"></i> Prix = 0 HTG
+            </div>
+          </div>
+          <div class="col-3 d-flex align-items-end pb-1">
+            <div class="form-check">
+              <input type="checkbox" name="is_active" id="ea-active" class="form-check-input">
+              <label class="form-check-label small" for="ea-active">Actif</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label small fw-semibold mb-0">Sites</label>
+              <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
+                      onclick="toggleAll('ea-sites-container', this)">Tout sélectionner</button>
+            </div>
+            <div class="border rounded p-2 d-flex flex-wrap gap-2" id="ea-sites-container">
+              {% for s in all_sites %}
+              <div class="form-check me-3">
+                <input class="form-check-input ea-site-check" type="checkbox"
+                       name="sites" value="{{ s.pk }}" id="ea-site-{{ s.pk }}">
+                <label class="form-check-label small" for="ea-site-{{ s.pk }}">{{ s.name }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-dark btn-sm">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% block extra_js %}
 <script>
 (function () {
@@ -350,6 +551,25 @@ document.getElementById('editModal').addEventListener('show.bs.modal', function(
   // Cocher les sites
   var checkedPks = btn.dataset.sites ? btn.dataset.sites.split(',') : [];
   document.querySelectorAll('.edit-site-check').forEach(function(cb) {
+    cb.checked = checkedPks.includes(cb.value);
+  });
+});
+
+document.getElementById('editAdminModal').addEventListener('show.bs.modal', function(e) {
+  var btn  = e.relatedTarget;
+  var form = document.getElementById('editAdminForm');
+  form.action = '/sites/tarifs/admin/' + btn.dataset.pk + '/modifier/';
+  document.getElementById('ea-label').value    = btn.dataset.label;
+  document.getElementById('ea-duration').value = btn.dataset.duration;
+  document.getElementById('ea-max').value      = btn.dataset.maxVouchers;
+  document.getElementById('ea-active').checked = btn.dataset.active === 'true';
+
+  var unitSel = document.getElementById('ea-unit');
+  for (var i = 0; i < unitSel.options.length; i++)
+    unitSel.options[i].selected = (unitSel.options[i].value === btn.dataset.unit);
+
+  var checkedPks = btn.dataset.sites ? btn.dataset.sites.split(',') : [];
+  document.querySelectorAll('.ea-site-check').forEach(function(cb) {
     cb.checked = checkedPks.includes(cb.value);
   });
 });

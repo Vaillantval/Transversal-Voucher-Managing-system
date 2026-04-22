@@ -140,21 +140,67 @@ def tier_list(request):
     site_filter = request.GET.get('site', '')
     all_sites   = HotspotSite.objects.filter(is_active=True).order_by('name')
 
-    qs = VoucherTier.objects.filter(is_replacement=False).prefetch_related('sites')
+    qs = VoucherTier.objects.filter(is_replacement=False, is_admin_code=False).prefetch_related('sites')
     if site_filter:
         selected_site = all_sites.filter(pk=site_filter).first()
         qs = qs.filter(sites__pk=site_filter)
     else:
         selected_site = None
 
+    admin_qs = VoucherTier.objects.filter(is_admin_code=True).prefetch_related('sites')
+    if site_filter:
+        admin_qs = admin_qs.filter(sites__pk=site_filter)
+
     return render(request, 'sites_mgmt/tiers.html', {
-        'tiers':         qs,
-        'all_sites':     all_sites,
+        'tiers':        qs,
+        'admin_tiers':  admin_qs,
+        'all_sites':    all_sites,
         'selected_site': selected_site,
-        'site_filter':   site_filter,
-        'page_title':    'Forfaits tarifaires',
+        'site_filter':  site_filter,
+        'page_title':   'Forfaits tarifaires',
         'label_presets': VoucherTier.LABEL_PRESETS,
     })
+
+
+@login_required
+@superadmin_required
+def tier_admin_create(request):
+    if request.method == 'POST':
+        try:
+            tier = VoucherTier.objects.create(
+                label         = request.POST.get('label', 'Code Admin'),
+                duration      = int(request.POST.get('duration', 120)),
+                unit          = request.POST.get('unit', 'days'),
+                price_htg     = 0,
+                is_admin_code = True,
+                max_vouchers  = int(request.POST.get('max_vouchers', 15)),
+            )
+            site_pks = request.POST.getlist('sites')
+            if site_pks:
+                tier.sites.set(HotspotSite.objects.filter(pk__in=site_pks))
+            messages.success(request, f'Code Admin « {tier.label} » créé.')
+        except Exception as e:
+            messages.error(request, f'Erreur : {e}')
+    return redirect('sites:tiers')
+
+
+@login_required
+@superadmin_required
+def tier_admin_edit(request, pk):
+    tier = get_object_or_404(VoucherTier, pk=pk, is_admin_code=True)
+    if request.method == 'POST':
+        try:
+            tier.label        = request.POST.get('label', tier.label)
+            tier.duration     = int(request.POST.get('duration', tier.duration))
+            tier.unit         = request.POST.get('unit', tier.unit)
+            tier.max_vouchers = int(request.POST.get('max_vouchers', tier.max_vouchers))
+            tier.is_active    = request.POST.get('is_active') == 'on'
+            tier.save()
+            tier.sites.set(HotspotSite.objects.filter(pk__in=request.POST.getlist('sites')))
+            messages.success(request, f'Code Admin « {tier.label} » mis à jour.')
+        except Exception as e:
+            messages.error(request, f'Erreur : {e}')
+    return redirect('sites:tiers')
 
 
 @login_required

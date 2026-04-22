@@ -30,7 +30,10 @@
       <div class="row g-2" id="tiers-container">
         {% for tier in tiers %}
         <div class="col-md-6 tier-card-wrap d-none"
-             data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
+             data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"
+             data-is-admin="false"
+             data-max-count="100"
+             data-default-count="50">
           <label class="d-flex align-items-center gap-2 p-3 border rounded-3 tier-card h-100"
                  style="cursor:pointer">
             <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0 flex-shrink-0">
@@ -38,6 +41,23 @@
               <div class="fw-semibold">{{ tier.label }}</div>
               <div class="small text-muted">{{ tier.duration_display }}</div>
               <div class="text-primary fw-bold">{{ tier.price_htg }} HTG</div>
+            </div>
+          </label>
+        </div>
+        {% endfor %}
+        {% for tier in admin_tiers %}
+        <div class="col-md-6 tier-card-wrap d-none"
+             data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"
+             data-is-admin="true"
+             data-max-count="{{ tier.max_vouchers }}"
+             data-default-count="10">
+          <label class="d-flex align-items-center gap-2 p-3 border border-dark rounded-3 tier-card h-100"
+                 style="cursor:pointer">
+            <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0 flex-shrink-0">
+            <div>
+              <div class="fw-semibold">{{ tier.label }} <span class="badge bg-dark ms-1" style="font-size:.65rem">Admin</span></div>
+              <div class="small text-muted">{{ tier.duration_display }}</div>
+              <div class="text-success fw-bold">Gratuit · max {{ tier.max_vouchers }}</div>
             </div>
           </label>
         </div>
@@ -249,14 +269,25 @@
     });
   });
 
-  // ── Highlight forfait standard sélectionné ──────────────────────────────
+  // ── Highlight + adapt count quand on sélectionne un forfait ────────────
   document.querySelectorAll('.tier-card').forEach(function(card) {
     card.addEventListener('click', function() {
       document.querySelectorAll('.tier-card').forEach(function(c) {
         c.style.borderColor = ''; c.style.background = '';
       });
-      card.style.borderColor = '#1A56DB';
-      card.style.background  = '#EBF5FF';
+      var wrap = card.closest('.tier-card-wrap');
+      var isAdmin = wrap && wrap.dataset.isAdmin === 'true';
+      if (isAdmin) {
+        card.style.borderColor = '#212529';
+        card.style.background  = '#f8f9fa';
+        countInput.max   = wrap.dataset.maxCount;
+        countInput.value = wrap.dataset.defaultCount;
+      } else {
+        card.style.borderColor = '#1A56DB';
+        card.style.background  = '#EBF5FF';
+        countInput.max   = '100';
+        countInput.value = '50';
+      }
     });
   });
 })();
