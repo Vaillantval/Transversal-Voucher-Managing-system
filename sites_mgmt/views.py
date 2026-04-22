@@ -362,14 +362,127 @@ def config_edit(request):
     from accounts.models import PartnerApplication
     pending_partners = PartnerApplication.objects.filter(status=PartnerApplication.STATUS_PENDING).count()
 
+    conditions_preview = request.session.get('conditions_preview')
+
     return render(request, 'sites_mgmt/config.html', {
-        'config':          config,
-        'autogen':         autogen,
-        'all_sites':       all_sites,
-        'autogen_site_ids': list(autogen.sites.values_list('pk', flat=True)),
-        'pending_partners': pending_partners,
-        'page_title':      'Configuration',
+        'config':              config,
+        'autogen':             autogen,
+        'all_sites':           all_sites,
+        'autogen_site_ids':    list(autogen.sites.values_list('pk', flat=True)),
+        'pending_partners':    pending_partners,
+        'conditions_preview':  conditions_preview,
+        'page_title':          'Configuration',
     })
+
+
+# ─── CONDITIONS PDF ──────────────────────────────────────────────────────────
+
+@login_required
+@superadmin_required
+def conditions_pdf_preview(request):
+    """Reçoit un PDF, extrait le texte, stocke en session pour preview."""
+    if request.method != 'POST':
+        return redirect('sites:config')
+
+    pdf_file = request.FILES.get('conditions_pdf')
+    if not pdf_file:
+        messages.error(request, 'Veuillez sélectionner un fichier PDF.')
+        return redirect('sites:config')
+
+    if not pdf_file.name.lower().endswith('.pdf'):
+        messages.error(request, 'Le fichier doit être au format PDF.')
+        return redirect('sites:config')
+
+    try:
+        from pypdf import PdfReader
+        import io
+        reader = PdfReader(io.BytesIO(pdf_file.read()))
+        text = '\n'.join(
+            page.extract_text() or '' for page in reader.pages
+        ).strip()
+        if not text:
+            messages.error(request, "Impossible d'extraire du texte de ce PDF (PDF scanné ou protégé).")
+            return redirect('sites:config')
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la lecture du PDF : {e}')
+        return redirect('sites:config')
+
+    # Sauvegarder le PDF temporairement sur disque
+    import os, time
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    pdf_file.seek(0)
+    temp_name = f'site_config/conditions_temp_{int(time.time())}.pdf'
+    saved_path = default_storage.save(temp_name, ContentFile(pdf_file.read()))
+
+    request.session['conditions_preview'] = {
+        'text': text,
+        'temp_path': saved_path,
+        'filename': pdf_file.name,
+    }
+    return redirect('sites:config')
+
+
+@login_required
+@superadmin_required
+def conditions_pdf_confirm(request):
+    """Valide le preview en session → sauvegarde dans SiteConfig."""
+    if request.method != 'POST':
+        return redirect('sites:config')
+
+    preview = request.session.get('conditions_preview')
+    if not preview:
+        messages.error(request, 'Aucun aperçu en attente de validation.')
+        return redirect('sites:config')
+
+    from .models import SiteConfig
+    config = SiteConfig.get()
+
+    # Supprimer l'ancien PDF si existant
+    if config.partner_conditions_pdf:
+        try:
+            import os
+            from django.conf import settings
+            old_path = os.path.join(settings.MEDIA_ROOT, config.partner_conditions_pdf.name)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        except Exception:
+            pass
+
+    config.partner_conditions    = preview['text']
+    config.partner_conditions_pdf.name = preview['temp_path']
+    config.save(update_fields=['partner_conditions', 'partner_conditions_pdf'])
+
+    del request.session['conditions_preview']
+    messages.success(request, 'Conditions de partenariat mises à jour.')
+    return redirect('sites:config')
+
+
+@login_required
+@superadmin_required
+def conditions_delete(request):
+    """Supprime le PDF et le texte des conditions."""
+    if request.method != 'POST':
+        return redirect('sites:config')
+
+    from .models import SiteConfig
+    config = SiteConfig.get()
+
+    if config.partner_conditions_pdf:
+        try:
+            config.partner_conditions_pdf.delete(save=False)
+        except Exception:
+            pass
+
+    # Annuler aussi un éventuel preview en session
+    request.session.pop('conditions_preview', None)
+
+    config.partner_conditions     = ''
+    config.partner_conditions_pdf = None
+    config.save(update_fields=['partner_conditions', 'partner_conditions_pdf'])
+
+    messages.success(request, 'Conditions de partenariat supprimées.')
+    return redirect('sites:config')
 
 
 # ─── PARTENAIRES (admin) ─────────────────────────────────────────────────────

@@ -29,3 +29,4 @@ django-ratelimit==4.1.0
 
 # Celery (tâches async + beat scheduler)
 celery[redis]==5.4.0
+pypdf==6.10.2

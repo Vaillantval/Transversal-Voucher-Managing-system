@@ -270,6 +270,17 @@ body::before {
 
       {% if config.partner_conditions %}
       <div class="conditions-box">{{ config.partner_conditions }}</div>
+      <div style="margin-bottom:1.2rem">
+        {% if config.partner_conditions_pdf %}
+        <a href="{{ config.partner_conditions_pdf.url }}" target="_blank"
+           style="display:inline-flex;align-items:center;gap:.4rem;
+                  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
+                  color:#fca5a5;border-radius:8px;padding:.4rem .85rem;
+                  font-size:.8rem;font-weight:600;text-decoration:none;transition:all .2s">
+          <i class="bi bi-file-earmark-pdf-fill"></i> Télécharger les conditions (PDF)
+        </a>
+        {% endif %}
+      </div>
       {% else %}
       <div class="conditions-box" style="color:#475569;font-style:italic">
         Les conditions de partenariat seront affichées ici par l'administrateur.

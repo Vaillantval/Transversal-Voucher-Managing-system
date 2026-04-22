@@ -19,6 +19,9 @@ urlpatterns = [
     path('api/<str:site_id>/stats/', views.site_stats_json, name='stats_json'),
     path('api/<str:site_id>/guests/', views.site_guests_json, name='guests_json'),
     path('configuration/', views.config_edit, name='config'),
+    path('configuration/conditions/preview/', views.conditions_pdf_preview, name='conditions_pdf_preview'),
+    path('configuration/conditions/confirmer/', views.conditions_pdf_confirm, name='conditions_pdf_confirm'),
+    path('configuration/conditions/supprimer/', views.conditions_delete, name='conditions_delete'),
     # Partenaires (admin)
     path('configuration/partenaires/',                       views.partners_view,   name='partners'),
     path('configuration/partenaires/<int:pk>/approuver/',    views.partner_approve, name='partner_approve'),

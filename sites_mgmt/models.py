@@ -43,7 +43,8 @@ class SiteConfig(models.Model):
     footer_text        = models.CharField(max_length=300, blank=True, verbose_name='Texte du footer')
     logo1              = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 1')
     logo2              = models.ImageField(upload_to='site_config/', blank=True, null=True, verbose_name='Logo 2')
-    partner_conditions = models.TextField(blank=True, verbose_name='Conditions de partenariat')
+    partner_conditions     = models.TextField(blank=True, verbose_name='Conditions de partenariat')
+    partner_conditions_pdf = models.FileField(upload_to='site_config/', blank=True, null=True, verbose_name='PDF conditions de partenariat')
 
     class Meta:
         verbose_name = 'Configuration du site'
