@@ -108,7 +108,7 @@
     <span class="text-muted small ms-2">Prix = 0 · quota limité · durée longue</span>
   </div>
   <button class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#createAdminModal">
-    <i class="bi bi-plus"></i> Nouveau code admin
+    <i class="bi bi-plus"></i> Créer forfait admin
   </button>
 </div>
 <div class="card card-bn">
@@ -323,7 +323,7 @@
       <form method="post" action="{% url 'sites:tier_admin_create' %}">
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title"><i class="bi bi-shield-lock me-2"></i>Nouveau code admin</h5>
+          <h5 class="modal-title"><i class="bi bi-shield-lock me-2"></i>Créer forfait admin</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body row g-3">
