@@ -44,9 +44,25 @@ Accès limité aux sites qui lui sont assignés. Synchronisé depuis les admins 
 - Admins assignés au site sélectionné
 - Avertissement si le contrôleur UniFi est inaccessible
 
+### Forfaits (VoucherTier)
+Trois types de forfaits, gérés depuis la page **Tarifs** :
+
+| Type | Prix | Caractéristiques |
+|------|------|-----------------|
+| **Standard** | Libre (HTG) | Forfaits normaux vendus aux clients |
+| **Remplacement** | 0 HTG (verrouillé) | Voucher offert — crée automatiquement un VoucherTier horodaté |
+| **Admin** | 0 HTG (verrouillé) | Code d'accès admin — quantité limitée par `max_vouchers`, durée 120j par défaut |
+
+- Chaque forfait est assigné à un ou plusieurs sites via M2M
+- Un **Forfait Admin** par défaut est créé automatiquement et assigné à tout nouveau site
+- Les forfaits de remplacement sont gérés dans une page dédiée (`/sites/tarifs/remplacements/`)
+
 ### Gestion des vouchers
 - Création par forfait (durée + prix HTG) avec note personnalisée
 - Sélection du site (superadmin) ou site automatique (site_admin)
+- Depuis la page vouchers filtrée sur un site, le bouton « Créer vouchers » pré-sélectionne ce site et affiche directement les forfaits disponibles
+- **Code Remplacement** : toggle dédié qui cache la liste des forfaits standards et propose des pré-définis ou une durée personnalisée (gratuit)
+- **Forfait Admin** : badge « Admin » dans la liste, compteur par défaut 10, max limité par le forfait
 - Suppression unitaire
 - Synchronisation avec UniFi en temps réel
 - Affichage du stock disponible par site
@@ -68,19 +84,36 @@ Accès limité aux sites qui lui sont assignés. Synchronisé depuis les admins 
 - Marquage lu individuel ou tout marquer
 
 ### Génération automatique de vouchers
-- **Activation** : par site, option `auto_generate_vouchers` activée par le superadmin
-- **Déclencheur** : si un site a ≤ 30 vouchers disponibles depuis plus de 36h sans intervention manuelle
-- **Quantité** : 100 vouchers × chaque forfait actif
-- **Nom** : `{Forfait}_{Nom du site}_{Date en français}` — ex : `Forfait 12h_Kay Valcin_20 Avril 2026`
-- **Conditions** : le site doit avoir ≥ 1 device ET des sessions dans les 2 dernières semaines
-- **Email** : notification envoyée aux emails `ADMIN_NOTIFY` avec détail par forfait
-- **Notification** : entrée créée dans le centre de notifications
+Configurée depuis **Configuration → Génération automatique**, avec deux toggles indépendants :
+
+| AutoGen | Notifications | Comportement à la détection |
+|---------|--------------|------------------------------|
+| ON | OFF | Génère immédiatement (pas d'email préalable) |
+| ON | ON | Email d'alerte d'abord → génère après `délai_heures` au prochain cycle |
+| OFF | ON | Email d'alerte uniquement, jamais de génération |
+| OFF | OFF | Combinaison bloquée — au moins l'un doit être actif |
+
+**Génération standard (par forfait)**
+- **Seuil** : < 30 vouchers disponibles pour un forfait précis sur un site
+- **Granularité** : par forfait standard (hors remplacement et admin) — un site peut avoir plusieurs alertes simultanées pour des forfaits différents
+- **Quantité** : `count_per_tier` par forfait (configurable, défaut 100)
+- **Nom des vouchers** : `{Forfait}_{Nom du site}_{Date en français}`
+- **Conditions** : site avec ≥ 1 device ET sessions dans les 2 dernières semaines
+- **Sites concernés** : sélectionnés individuellement dans la configuration
+
+**Génération admin (par forfait admin)**
+- **Déclencheur** : `date du jour >= expires_at` enregistrée dans `AdminVoucherGenLog`, ou absence de log (première fois)
+- **Quantité** : `tier.max_vouchers` par forfait admin
+- **Expiration** : `expires_at` = date de génération + durée du forfait admin
+- **Indépendant du stock** : se déclenche à chaque `check_stock_levels` si la condition date est remplie
+
+**Délai avant génération** : applicable uniquement au mode AutoGen ON + Notif ON — temps d'attente entre l'alerte et la génération, pour laisser l'admin réagir manuellement.
 
 ### Alerte stock faible
-- **Seuil** : ≤ 30 vouchers disponibles
-- **Cooldown** : 1 alerte maximum par site toutes les 24h
-- **Destinataires** : les site_admins du site concerné (email)
-- **Conditions** : site actif avec device et sessions récentes (2 dernières semaines)
+- **Seuil** : < 30 vouchers disponibles **par forfait standard par site** (pas le total du site)
+- **Cooldown** : 1 alerte maximum par forfait par site toutes les 24h
+- **Destinataires** : site_admins du site concerné (si notifications activées)
+- **Conditions** : site actif avec ≥ 1 device et sessions récentes (2 dernières semaines)
 - **Fréquence de vérification** : toutes les 12h (APScheduler)
 
 ### Rapport mensuel automatique
@@ -99,6 +132,7 @@ Accès limité aux sites qui lui sont assignés. Synchronisé depuis les admins 
 - Footer personnalisable de la page de connexion
 - Upload de 2 logos (PNG/JPG) affichés sur la page de connexion et dans le drawer
 - Les logos apparaissent en en-tête des exports PDF (formats raster uniquement)
+- Génération automatique : deux toggles (AutoGen + Notifications), `count_per_tier`, `delay_hours`, sélection des sites
 
 ### Authentification
 - Login avec identifiants UniFi (synchronisation automatique des admins)

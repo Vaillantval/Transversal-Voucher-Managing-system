@@ -73,22 +73,48 @@ python manage.py runserver
 
 | App | Rôle |
 |-----|------|
-| `accounts` | Auth UniFi backend + rôles + gestion utilisateurs |
-| `sites_mgmt` | HotspotSite + VoucherTier (tarifs HTG) |
+| `accounts` | Auth UniFi backend + rôles + gestion utilisateurs + espace partenaire |
+| `sites_mgmt` | HotspotSite + VoucherTier (Standard / Remplacement / Admin) |
 | `vouchers` | VoucherLog — créer / sync / supprimer via UniFi API |
 | `dashboard` | KPIs + charts Chart.js (temps réel) |
 | `reports` | Export PDF / Excel / CSV |
 | `unifi_api` | Client HTTP pyunifi avec cache Redis (3–6 min TTL, pre-warm /2min) |
-| `notifications` | Alertes stock + rapports mensuels automatiques |
+| `notifications` | Alertes stock (par forfait), génération auto, rapports mensuels, AdminVoucherGenLog |
+
+## Forfaits (VoucherTier)
+
+Trois types gérés depuis `/sites/tarifs/` :
+
+| Type | Prix | Usage |
+|------|------|-------|
+| **Standard** | Libre (HTG) | Vente normale |
+| **Remplacement** | 0 HTG | Offert — VoucherTier horodaté créé à la volée |
+| **Admin** | 0 HTG | Accès admin — quantité limitée, régénération automatique à expiration |
+
+- Assignation par site via M2M — un forfait peut couvrir plusieurs sites
+- Forfait Admin par défaut créé automatiquement pour tout nouveau site (signal `post_save`)
 
 ## Notifications & Emails automatiques
 
 ### Alerte stock faible
-- **Déclencheur** : stock ≤ 30 vouchers disponibles sur un site
+- **Déclencheur** : < 30 vouchers disponibles **par forfait standard** sur un site
 - **Filtre** : site doit avoir ≥ 1 device ET des sessions dans les 2 dernières semaines
-- **Destinataires** : site_admins du site concerné (pas le superadmin)
-- **Cooldown** : 1 alerte maximum par site toutes les 24h
+- **Destinataires** : site_admins du site concerné (si notifications activées dans Configuration)
+- **Cooldown** : 1 alerte maximum par forfait par site toutes les 24h
 - **Fréquence de vérification** : toutes les 12 heures
+
+### Génération automatique
+Comportement selon les deux toggles dans Configuration :
+
+| AutoGen | Notifications | Résultat |
+|---------|--------------|----------|
+| ON | OFF | Génération immédiate dès la 1ère détection |
+| ON | ON | Alerte → délai configurable → génération |
+| OFF | ON | Alerte uniquement |
+| OFF | OFF | Bloqué en configuration |
+
+- Génération **standard** : `count_per_tier` vouchers (défaut 100) par forfait standard sous le seuil
+- Génération **admin** : `tier.max_vouchers` vouchers par forfait admin quand `today >= expires_at` (`AdminVoucherGenLog`)
 
 ### Rapport mensuel automatique
 - **Déclencheur** : dernier jour du mois à 8h00 (heure Haïti)
