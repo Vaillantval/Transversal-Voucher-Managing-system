@@ -137,10 +137,23 @@ def site_edit(request, pk):
 @login_required
 @superadmin_required
 def tier_list(request):
-    tiers = VoucherTier.objects.all()
+    site_filter = request.GET.get('site', '')
+    all_sites   = HotspotSite.objects.filter(is_active=True).order_by('name')
+
+    if site_filter:
+        selected_site = all_sites.filter(pk=site_filter).first()
+        tiers = VoucherTier.objects.filter(sites__pk=site_filter).prefetch_related('sites')
+    else:
+        selected_site = None
+        tiers = VoucherTier.objects.prefetch_related('sites').all()
+
     return render(request, 'sites_mgmt/tiers.html', {
-        'tiers': tiers,
-        'page_title': 'Tranches tarifaires',
+        'tiers':         tiers,
+        'all_sites':     all_sites,
+        'selected_site': selected_site,
+        'site_filter':   site_filter,
+        'page_title':    'Forfaits tarifaires',
+        'label_presets': VoucherTier.LABEL_PRESETS,
     })
 
 
@@ -149,18 +162,19 @@ def tier_list(request):
 def tier_create(request):
     if request.method == 'POST':
         try:
-            VoucherTier.objects.create(
-                label=request.POST['label'],
-                min_minutes=int(request.POST['min_minutes']),
-                max_minutes=int(request.POST['max_minutes']),
-                price_htg=request.POST['price_htg'],
+            tier = VoucherTier.objects.create(
+                label     = request.POST['label'],
+                duration  = int(request.POST['duration']),
+                unit      = request.POST['unit'],
+                price_htg = request.POST.get('price_htg') or 0,
             )
-            messages.success(request, 'Tranche tarifaire créée.')
-            return redirect('sites:tiers')
+            site_pks = request.POST.getlist('sites')
+            if site_pks:
+                tier.sites.set(HotspotSite.objects.filter(pk__in=site_pks))
+            messages.success(request, f'Forfait « {tier.label} » créé.')
         except Exception as e:
             messages.error(request, f'Erreur : {e}')
-
-    return redirect('sites:tiers')
+    return redirect(request.POST.get('next', 'sites:tiers'))
 
 
 @login_required
@@ -169,13 +183,15 @@ def tier_edit(request, pk):
     tier = get_object_or_404(VoucherTier, pk=pk)
     if request.method == 'POST':
         try:
-            tier.label        = request.POST['label']
-            tier.min_minutes  = int(request.POST['min_minutes'])
-            tier.max_minutes  = int(request.POST['max_minutes'])
-            tier.price_htg    = request.POST['price_htg']
-            tier.is_active    = request.POST.get('is_active') == 'on'
+            tier.label     = request.POST['label']
+            tier.duration  = int(request.POST['duration'])
+            tier.unit      = request.POST['unit']
+            tier.price_htg = request.POST.get('price_htg') or 0
+            tier.is_active = request.POST.get('is_active') == 'on'
             tier.save()
-            messages.success(request, 'Tranche mise à jour.')
+            site_pks = request.POST.getlist('sites')
+            tier.sites.set(HotspotSite.objects.filter(pk__in=site_pks))
+            messages.success(request, f'Forfait « {tier.label} » mis à jour.')
         except Exception as e:
             messages.error(request, f'Erreur : {e}')
     return redirect('sites:tiers')
@@ -186,8 +202,9 @@ def tier_edit(request, pk):
 def tier_delete(request, pk):
     tier = get_object_or_404(VoucherTier, pk=pk)
     if request.method == 'POST':
+        name = tier.label
         tier.delete()
-        messages.success(request, 'Tranche supprimée.')
+        messages.success(request, f'Forfait « {name} » supprimé.')
     return redirect('sites:tiers')
 
 

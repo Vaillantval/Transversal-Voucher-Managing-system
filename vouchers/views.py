@@ -63,12 +63,22 @@ def voucher_list(request):
 
     sites_to_fetch = sites.filter(unifi_site_id=site_filter) if site_filter else sites
 
+    # ── Tiers par site (M2M) ─────────────────────────────────────
+    from collections import defaultdict as _dd
+    _all_tiers = VoucherTier.objects.filter(is_active=True).prefetch_related('sites')
+    _tiers_by_site_pk = _dd(list)
+    for _t in _all_tiers:
+        for _s in _t.sites.all():
+            _tiers_by_site_pk[_s.pk].append(_t)
+    _unifi_to_pk = {s.unifi_site_id: s.pk for s in sites}
+
     # ── Vouchers disponibles (stock) ─────────────────────────────
     all_vouchers = unifi.get_all_vouchers(sites_to_fetch)
-    tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
 
     for v in all_vouchers:
-        t = find_tier(tiers, v.get('duration', 0))
+        _spk = _unifi_to_pk.get(v.get('site_unifi_id', ''))
+        _st = _tiers_by_site_pk.get(_spk, []) if _spk else []
+        t = find_tier(_st, v.get('duration', 0))
         v['tier_label'] = t.label if t else 'Sans tranche'
         v['price']      = float(t.price_htg) if t else 0
 
@@ -81,7 +91,9 @@ def voucher_list(request):
     sessions   = [g for g in all_guests if g['sold_ts'] >= date_from_ts]
 
     for g in sessions:
-        t = find_tier(tiers, g['duration_minutes'])
+        _spk = _unifi_to_pk.get(g.get('site_unifi_id', ''))
+        _st = _tiers_by_site_pk.get(_spk, []) if _spk else []
+        t = find_tier(_st, g['duration_minutes'])
         g['tier_label']          = t.label if t else 'Sans tranche'
         g['price']               = float(t.price_htg) if t else 0
         g['is_currently_active'] = g.get('end', 0) > now_ts
@@ -156,7 +168,7 @@ def voucher_list(request):
         'total_sessions':     total_sessions,
         'total_revenue':      total_revenue,
         'sites':              sites,
-        'tiers':              tiers,
+        'tiers':              list(_all_tiers),
         'days':               days,
         'custom_value':       custom_value,
         'custom_unit':        cu,
@@ -187,7 +199,7 @@ def voucher_create(request):
     else:
         sites = request.user.managed_sites.filter(is_active=True)
 
-    tiers = VoucherTier.objects.filter(is_active=True)
+    tiers = VoucherTier.objects.filter(is_active=True).prefetch_related('sites')
 
     if request.method == 'POST':
         site_pk = request.POST.get('site')
@@ -201,7 +213,7 @@ def voucher_create(request):
         tier_pk  = request.POST.get('tier')
         note     = request.POST.get('note', '').strip()
         tier     = get_object_or_404(VoucherTier, pk=tier_pk)
-        expire_minutes = tier.max_minutes
+        expire_minutes = tier.duration_minutes
 
         created = unifi.create_vouchers(
             site_id=site.unifi_site_id,
@@ -276,9 +288,10 @@ def sync_vouchers(request, site_pk):
 
     raw_vouchers  = unifi.get_vouchers(site.unifi_site_id)
     created_count = 0
+    site_tiers    = list(VoucherTier.objects.filter(is_active=True, sites=site))
 
     for v in raw_vouchers:
-        tier = VoucherTier.get_price_for_minutes(v.get('duration', 0))
+        tier = find_tier(site_tiers, v.get('duration', 0))
         _, created = VoucherLog.objects.update_or_create(
             unifi_id=v['_id'],
             defaults={

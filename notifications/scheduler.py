@@ -134,7 +134,7 @@ def _auto_generate_vouchers_for_site(site, current_stock: int, count_per_tier: i
         now = timezone.now()
         date_label = f"{now.day} {_MOIS_FR[now.month]} {now.year}"
 
-        tiers = list(VoucherTier.objects.filter(is_active=True))
+        tiers = list(VoucherTier.objects.filter(is_active=True, sites=site))
         if not tiers:
             logger.warning(f"Auto-gen {site.name}: aucun forfait actif.")
             return
@@ -146,7 +146,7 @@ def _auto_generate_vouchers_for_site(site, current_stock: int, count_per_tier: i
             note = f"{tier.label}_{site.name}_{date_label}"
             created = unifi.create_vouchers(
                 site_id=site.unifi_site_id,
-                expire_minutes=tier.max_minutes,
+                expire_minutes=tier.duration_minutes,
                 count=count_per_tier,
                 quota=1,
                 note=note,
@@ -167,7 +167,7 @@ def _auto_generate_vouchers_for_site(site, current_stock: int, count_per_tier: i
                             'created_by': None,
                             'tier': tier,
                             'code': v.get('code', ''),
-                            'duration_minutes': v.get('duration', tier.max_minutes),
+                            'duration_minutes': v.get('duration', tier.duration_minutes),
                             'quota': v.get('quota', 1),
                             'note': note,
                             'price_htg': tier.price_htg,

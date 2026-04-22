@@ -12,14 +12,23 @@ def _fetch_guests_per_site(sites: list, date_from: str, date_to: str):
     """Retourne {site: [guests]} filtrés sur la période."""
     date_from_ts = datetime.fromisoformat(date_from).replace(tzinfo=TZ_HAITI).timestamp()
     date_to_ts   = (datetime.fromisoformat(date_to).replace(tzinfo=TZ_HAITI) + timedelta(days=1)).timestamp()
-    tiers        = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
+
+    # Tiers par site (M2M)
+    _all_tiers = VoucherTier.objects.filter(is_active=True).prefetch_related('sites')
+    tiers_by_site_pk = defaultdict(list)
+    for _t in _all_tiers:
+        for _s in _t.sites.all():
+            tiers_by_site_pk[_s.pk].append(_t)
+    unifi_to_pk = {s.unifi_site_id: s.pk for s in sites}
 
     all_guests = unifi.get_all_guests(sites)
 
     by_site = defaultdict(list)
     for g in all_guests:
         if date_from_ts <= g['sold_ts'] < date_to_ts:
-            t = find_tier(tiers, g['duration_minutes'])
+            _spk = unifi_to_pk.get(g.get('site_unifi_id', ''))
+            _st = tiers_by_site_pk.get(_spk, []) if _spk else []
+            t = find_tier(_st, g['duration_minutes'])
             g['tier_label'] = t.label if t else 'Sans tranche'
             g['price']      = float(t.price_htg) if t else 0
             by_site[g['site_unifi_id']].append(g)

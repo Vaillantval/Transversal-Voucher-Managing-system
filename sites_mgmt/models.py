@@ -87,36 +87,65 @@ class PartnerProductImage(models.Model):
 
 class VoucherTier(models.Model):
     """
-    Tranche tarifaire définie par le superadmin.
-    Ex : durée entre 0 et 720 minutes → 50 HTG
+    Forfait tarifaire par site.
+    Durée fixe (ex: 24 heures) + prix + sites concernés.
     """
-    label = models.CharField(max_length=100, verbose_name='Label', help_text='Ex: Forfait 12h')
-    min_minutes = models.PositiveIntegerField(verbose_name='Durée min (minutes)')
-    max_minutes = models.PositiveIntegerField(verbose_name='Durée max (minutes)')
-    price_htg = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name='Prix (HTG)',
+    UNIT_HOURS  = 'hours'
+    UNIT_DAYS   = 'days'
+    UNIT_MONTHS = 'months'
+    UNIT_YEARS  = 'years'
+    UNIT_CHOICES = [
+        (UNIT_HOURS,  'Heures'),
+        (UNIT_DAYS,   'Jours'),
+        (UNIT_MONTHS, 'Mois'),
+        (UNIT_YEARS,  'Années'),
+    ]
+
+    # Noms courants disponibles comme suggestions
+    LABEL_PRESETS = ['Code_Admin', 'Remplacement', 'Promotionnel', 'Essai']
+
+    label     = models.CharField(max_length=100, verbose_name='Label')
+    duration  = models.PositiveIntegerField(verbose_name='Durée')
+    unit      = models.CharField(max_length=10, choices=UNIT_CHOICES,
+                                 default=UNIT_HOURS, verbose_name='Unité')
+    sites     = models.ManyToManyField(
+        'HotspotSite', blank=True, related_name='tiers', verbose_name='Sites'
     )
+    price_htg = models.DecimalField(max_digits=10, decimal_places=2,
+                                    default=0, verbose_name='Prix (HTG)')
     is_active = models.BooleanField(default=True, verbose_name='Actif')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Tranche tarifaire'
-        verbose_name_plural = 'Tranches tarifaires'
-        ordering = ['min_minutes']
+        verbose_name = 'Forfait tarifaire'
+        verbose_name_plural = 'Forfaits tarifaires'
+        ordering = ['duration', 'unit']
+
+    @property
+    def duration_minutes(self):
+        """Durée convertie en minutes pour l'API UniFi."""
+        multipliers = {
+            self.UNIT_HOURS:  60,
+            self.UNIT_DAYS:   1440,
+            self.UNIT_MONTHS: 43200,
+            self.UNIT_YEARS:  525600,
+        }
+        return self.duration * multipliers.get(self.unit, 60)
+
+    @property
+    def is_free(self):
+        return self.price_htg == 0
+
+    @property
+    def duration_display(self):
+        unit_labels = {
+            self.UNIT_HOURS:  'h',
+            self.UNIT_DAYS:   'j',
+            self.UNIT_MONTHS: 'mois',
+            self.UNIT_YEARS:  'an(s)',
+        }
+        return f"{self.duration} {unit_labels.get(self.unit, self.unit)}"
 
     def __str__(self):
-        h_min = self.min_minutes // 60
-        h_max = self.max_minutes // 60
-        return f"{self.label} ({h_min}h–{h_max}h) = {self.price_htg} HTG"
-
-    @staticmethod
-    @functools.lru_cache(maxsize=256)
-    def get_price_for_minutes(minutes: int):
-        """Retourne la tranche pour une durée. Résultat mis en cache process-level (LRU 256)."""
-        return VoucherTier.objects.filter(
-            is_active=True,
-            min_minutes__lte=minutes,
-            max_minutes__gte=minutes,
-        ).first()
+        price = 'Gratuit' if self.is_free else f"{self.price_htg} HTG"
+        return f"{self.label} — {self.duration_display} — {price}"

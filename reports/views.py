@@ -33,13 +33,21 @@ def _get_report_data(request, site_id, date_from_str, date_to_str):
     sites_list  = list(qs)
     site_label  = sites_list[0].name if len(sites_list) == 1 else 'Tous les sites'
 
-    tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
+    # Tiers par site (M2M)
+    _all_tiers = VoucherTier.objects.filter(is_active=True).prefetch_related('sites')
+    _tiers_by_site_pk = defaultdict(list)
+    for _t in _all_tiers:
+        for _s in _t.sites.all():
+            _tiers_by_site_pk[_s.pk].append(_t)
+    _unifi_to_pk = {s.unifi_site_id: s.pk for s in sites_list}
 
     all_guests = unifi.get_all_guests(sites_list)
     guests = [g for g in all_guests if date_from_ts <= g['sold_ts'] < date_to_ts]
 
     for g in guests:
-        t = find_tier(tiers, g['duration_minutes'])
+        _spk = _unifi_to_pk.get(g.get('site_unifi_id', ''))
+        _st = _tiers_by_site_pk.get(_spk, []) if _spk else []
+        t = find_tier(_st, g['duration_minutes'])
         g['tier_label'] = t.label if t else 'Sans tranche'
         g['price']      = float(t.price_htg) if t else 0
 

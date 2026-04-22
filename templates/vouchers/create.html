@@ -12,42 +12,40 @@
 
     <div class="mb-3">
       <label class="form-label fw-semibold">Site <span class="text-danger">*</span></label>
-      <select name="site" class="form-select" required>
+      <select name="site" id="site-select" class="form-select" required>
         <option value="">— Choisir un site —</option>
         {% for s in sites %}
-        <option value="{{ s.pk }}">{{ s.name }} ({{ s.location }})</option>
+        <option value="{{ s.pk }}">{{ s.name }}{% if s.location %} ({{ s.location }}){% endif %}</option>
         {% endfor %}
       </select>
     </div>
 
     <div class="mb-3">
-      <label class="form-label fw-semibold">Forfait / Tranche tarifaire <span class="text-danger">*</span></label>
-      <div class="row g-2">
+      <label class="form-label fw-semibold">Forfait tarifaire <span class="text-danger">*</span></label>
+      <div id="tiers-hint" class="text-muted small mb-2">Sélectionnez un site pour voir les forfaits disponibles.</div>
+      <div class="row g-2" id="tiers-container">
         {% for tier in tiers %}
-        <div class="col-md-6">
-          <label class="d-flex align-items-center gap-2 p-3 border rounded-3 cursor-pointer tier-card"
+        <div class="col-md-6 tier-card-wrap d-none"
+             data-sites="{% for s in tier.sites.all %}{{ s.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
+          <label class="d-flex align-items-center gap-2 p-3 border rounded-3 tier-card h-100"
                  style="cursor:pointer">
-            <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0" required>
+            <input type="radio" name="tier" value="{{ tier.pk }}" class="form-check-input mt-0 flex-shrink-0" required>
             <div>
               <div class="fw-semibold">{{ tier.label }}</div>
-              <div class="small text-muted">
-                {{ tier.min_minutes|divisibleby:60|yesno:"" }}
-                {{ tier.min_minutes }} – {{ tier.max_minutes }} min
+              <div class="small text-muted">{{ tier.duration_display }}</div>
+              <div class="{% if tier.is_free %}text-success{% else %}text-primary{% endif %} fw-bold">
+                {% if tier.is_free %}Gratuit{% else %}{{ tier.price_htg }} HTG{% endif %}
               </div>
-              <div class="text-primary fw-bold">{{ tier.price_htg }} HTG</div>
             </div>
           </label>
         </div>
-        {% empty %}
-        <div class="col-12">
+        {% endfor %}
+        <div id="no-tiers-msg" class="col-12 d-none">
           <div class="alert alert-warning py-2">
-            Aucune tranche tarifaire définie.
-            {% if user.is_superadmin %}
-            <a href="{% url 'sites:tier_create' %}">Créer une tranche</a>
-            {% endif %}
+            Aucun forfait défini pour ce site.
+            {% if user.is_superadmin %}<a href="{% url 'sites:tiers' %}">Créer un forfait</a>{% endif %}
           </div>
         </div>
-        {% endfor %}
       </div>
     </div>
 
@@ -80,12 +78,43 @@
 
 {% block extra_js %}
 <script>
-document.querySelectorAll('.tier-card').forEach(card => {
-  card.addEventListener('click', () => {
-    document.querySelectorAll('.tier-card').forEach(c => c.style.borderColor = '');
-    card.style.borderColor = '#1A56DB';
-    card.style.background = '#EBF5FF';
+(function () {
+  var siteSelect = document.getElementById('site-select');
+  var hint       = document.getElementById('tiers-hint');
+  var noMsg      = document.getElementById('no-tiers-msg');
+  var cards      = document.querySelectorAll('.tier-card-wrap');
+
+  function filterTiers() {
+    var sitePk = siteSelect.value;
+    var visible = 0;
+
+    // Deselect hidden radios
+    document.querySelectorAll('input[name="tier"]').forEach(function(r) { r.checked = false; });
+
+    cards.forEach(function(wrap) {
+      var sites = wrap.dataset.sites ? wrap.dataset.sites.split(',') : [];
+      var show  = sitePk && sites.includes(sitePk);
+      wrap.classList.toggle('d-none', !show);
+      if (show) visible++;
+    });
+
+    hint.classList.toggle('d-none', !!sitePk);
+    noMsg.classList.toggle('d-none', !sitePk || visible > 0);
+  }
+
+  siteSelect.addEventListener('change', filterTiers);
+  filterTiers();
+
+  document.querySelectorAll('.tier-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.tier-card').forEach(function(c) {
+        c.style.borderColor = '';
+        c.style.background  = '';
+      });
+      card.style.borderColor = '#1A56DB';
+      card.style.background  = '#EBF5FF';
+    });
   });
-});
+})();
 </script>
 {% endblock %}

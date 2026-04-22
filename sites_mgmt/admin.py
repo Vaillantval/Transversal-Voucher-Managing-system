@@ -8,5 +8,6 @@ class HotspotSiteAdmin(admin.ModelAdmin):
 
 @admin.register(VoucherTier)
 class VoucherTierAdmin(admin.ModelAdmin):
-    list_display = ('label', 'min_minutes', 'max_minutes', 'price_htg', 'is_active')
-    ordering = ('min_minutes',)
+    list_display = ('label', 'duration', 'unit', 'price_htg', 'is_active')
+    filter_horizontal = ('sites',)
+    ordering = ('duration', 'unit')

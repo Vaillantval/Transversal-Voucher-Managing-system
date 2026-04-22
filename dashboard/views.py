@@ -65,8 +65,13 @@ def index(request):
 
     now_ts = now_dt.timestamp()
 
-    # Tiers pour matching prix
-    tiers = list(VoucherTier.objects.filter(is_active=True).order_by('min_minutes'))
+    # Tiers par site (M2M)
+    _all_tiers = VoucherTier.objects.filter(is_active=True).prefetch_related('sites')
+    tiers_by_site_pk = defaultdict(list)
+    for _t in _all_tiers:
+        for _s in _t.sites.all():
+            tiers_by_site_pk[_s.pk].append(_t)
+    unifi_to_site_pk = {s.unifi_site_id: s.pk for s in all_sites}
 
     # ── Vouchers disponibles (non utilisés) ──────────────────────────────────
     all_vouchers       = unifi.get_all_vouchers(sites)
@@ -81,7 +86,9 @@ def index(request):
     all_guests = unifi.get_all_guests(sites)
 
     for g in all_guests:
-        t = find_tier(tiers, g['duration_minutes'])
+        _spk = unifi_to_site_pk.get(g.get('site_unifi_id', ''))
+        _site_tiers = tiers_by_site_pk.get(_spk, []) if _spk else []
+        t = find_tier(_site_tiers, g['duration_minutes'])
         g['tier_label'] = t.label if t else 'Sans tranche'
         g['price']      = float(t.price_htg) if t else 0
 
