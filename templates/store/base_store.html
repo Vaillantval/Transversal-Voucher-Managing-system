@@ -76,130 +76,195 @@
     /* Footer */
     .store-footer { background: var(--bn-surface); border-top: 1px solid var(--bn-border); }
 
-    /* Bouton Administration navbar */
-    .btn-login-nav {
-      display:inline-flex;align-items:center;gap:.35rem;
-      background:linear-gradient(135deg,#1d4ed8,#6366f1);
-      color:#fff;font-size:.82rem;font-weight:600;
-      padding:.4rem 1rem;border-radius:8px;text-decoration:none;
-      box-shadow:0 0 0 0 rgba(99,102,241,.5);
-      animation:nav-glow 2.8s ease-in-out infinite;
-      transition:transform .15s,box-shadow .15s;
-    }
-    .btn-login-nav:hover {
-      color:#fff;transform:translateY(-1px);
-      box-shadow:0 6px 20px rgba(99,102,241,.5);
-      animation:none;
-    }
-    @keyframes nav-glow {
-      0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.45)}
-      50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}
-    }
-
-    /* Bouton avatar profil */
-    .btn-avatar {
-      background: none; border: 1.5px solid var(--bn-border);
-      border-radius: 50%; width: 36px; height: 36px;
-      padding: 0; overflow: hidden; cursor: pointer;
-      transition: border-color .2s;
-    }
-    .btn-avatar:hover { border-color: var(--bn-blue); }
-    .btn-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-    /* Offcanvas profil */
-    .profile-offcanvas { background: var(--bn-surface) !important; border-left: 1px solid var(--bn-border) !important; }
-    .profile-offcanvas .offcanvas-header { border-bottom: 1px solid var(--bn-border); }
-    .profile-nav-link {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .75rem 1rem; border-radius: 10px;
-      color: var(--bn-text); text-decoration: none;
-      transition: background .15s;
-    }
-    .profile-nav-link:hover { background: rgba(255,255,255,.05); color: var(--bn-text); }
-    .profile-nav-link .icon { width: 36px; height: 36px; border-radius: 8px;
-      background: rgba(59,130,246,.12); display:flex;align-items:center;justify-content:center;
-      font-size: 1rem; color: var(--bn-blue); flex-shrink:0; }
-    .profile-nav-link.danger .icon { background: rgba(239,68,68,.12); color: #ef4444; }
-    .profile-nav-link.danger { color: #ef4444; }
-
     /* Scroll reveal */
     .reveal { opacity: 0; transform: translateY(24px); transition: opacity .5s, transform .5s; }
     .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── Bouton Mon compte / avatar ──────────────────────────── */
+    .btn-account {
+      display: inline-flex; align-items: center; gap: .45rem;
+      background: linear-gradient(135deg, #1d4ed8, #6366f1);
+      color: #fff; font-size: .82rem; font-weight: 600;
+      padding: .38rem .95rem; border-radius: 8px; border: none; cursor: pointer;
+      animation: nav-glow 2.8s ease-in-out infinite;
+      transition: transform .15s, opacity .15s;
+    }
+    .btn-account:hover { color: #fff; transform: translateY(-1px); opacity: .9; animation: none; }
+    @keyframes nav-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,.45); }
+      50%      { box-shadow: 0 0 0 8px rgba(99,102,241,0); }
+    }
+    .btn-avatar {
+      background: none; border: 2px solid var(--bn-border);
+      border-radius: 50%; width: 36px; height: 36px;
+      padding: 0; overflow: hidden; cursor: pointer;
+      transition: border-color .2s; flex-shrink: 0;
+    }
+    .btn-avatar:hover { border-color: var(--bn-blue); }
+    .btn-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .btn-avatar .avatar-init {
+      width: 100%; height: 100%;
+      background: linear-gradient(135deg, var(--bn-blue), #6366f1);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #fff; font-size: .9rem;
+    }
+
+    /* ── Panel compte (dropdown custom) ─────────────────────── */
+    .account-dropdown { position: relative; }
+    .account-panel {
+      position: absolute; right: 0; top: calc(100% + 10px);
+      width: 300px;
+      background: var(--bn-surface);
+      border: 1px solid var(--bn-border);
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.55);
+      z-index: 1050;
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      animation: panel-in .18s ease;
+    }
+    .account-panel.open { display: flex; }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .panel-header {
+      padding: 1rem 1.1rem .85rem;
+      border-bottom: 1px solid var(--bn-border);
+    }
+    .panel-body { padding: .5rem .55rem; }
+
+    /* Nav links dans le panel */
+    .profile-nav-link {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .68rem .85rem; border-radius: 10px;
+      color: var(--bn-text); text-decoration: none;
+      transition: background .15s; cursor: pointer;
+      border: none; background: transparent;
+      width: 100%; text-align: left; font-size: .92rem;
+    }
+    .profile-nav-link:hover { background: rgba(255,255,255,.06); color: var(--bn-text); }
+    .profile-nav-link .icon {
+      width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+      background: rgba(59,130,246,.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; color: var(--bn-blue);
+    }
+    .profile-nav-link.danger { color: #ef4444; }
+    .profile-nav-link.danger .icon { background: rgba(239,68,68,.12); color: #ef4444; }
+    .profile-nav-link.danger:hover { background: rgba(239,68,68,.08); }
+
+    /* Formulaire adresse (collapse) */
+    #addressPanel { padding: .25rem .3rem .1rem; }
+    #addressPanel .form-control {
+      background: var(--bn-card); border-color: var(--bn-border);
+      color: var(--bn-text); font-size: .82rem;
+    }
+    #addressPanel .form-control:focus {
+      background: var(--bn-card); border-color: var(--bn-blue);
+      color: var(--bn-text); box-shadow: 0 0 0 2px rgba(59,130,246,.2);
+    }
+
+    /* ── Zone Administration ─────────────────────────────────── */
+    .admin-zone {
+      margin: .4rem .55rem .65rem;
+      border-radius: 12px;
+      border: 1px solid rgba(251,191,36,.22);
+      overflow: hidden; position: relative;
+      animation: admin-border 3s ease-in-out infinite;
+    }
+    @keyframes admin-border {
+      0%,100% { border-color: rgba(251,191,36,.2); box-shadow: none; }
+      50%      { border-color: rgba(251,191,36,.55); box-shadow: 0 0 14px rgba(251,191,36,.12); }
+    }
+    .admin-zone::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(105deg, transparent 35%, rgba(251,191,36,.07) 50%, transparent 65%);
+      background-size: 250% 100%;
+      animation: admin-shimmer 2.6s ease-in-out infinite;
+    }
+    @keyframes admin-shimmer {
+      0%   { background-position: 250% 0; }
+      100% { background-position: -250% 0; }
+    }
+    .admin-btn {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .75rem 1rem; width: 100%;
+      background: rgba(251,191,36,.05);
+      border: none; cursor: pointer; color: #fbbf24;
+      font-size: .88rem; font-weight: 600; text-align: left;
+      transition: background .15s; position: relative; z-index: 1;
+    }
+    .admin-btn:hover { background: rgba(251,191,36,.12); }
+    .admin-btn .icon {
+      width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+      background: rgba(251,191,36,.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; color: #fbbf24;
+    }
+    .admin-badge {
+      margin-left: auto; font-size: .65rem; font-weight: 700;
+      letter-spacing: .05em; text-transform: uppercase;
+      background: rgba(251,191,36,.18); color: #fbbf24;
+      padding: .15rem .45rem; border-radius: 6px; white-space: nowrap;
+    }
+
+    /* ── Modal Administration ────────────────────────────────── */
+    .admin-modal .modal-content {
+      background: var(--bn-surface);
+      border: 1px solid rgba(251,191,36,.25);
+      border-radius: 18px;
+    }
+    .admin-modal .modal-header { border-color: var(--bn-border); }
+    .admin-modal .modal-footer { border-color: var(--bn-border); flex-direction: column; gap: .5rem; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 575.98px) {
+      .account-panel {
+        position: fixed;
+        top: 60px; left: .75rem; right: .75rem;
+        width: auto; min-width: auto;
+        border-radius: 14px;
+        max-height: calc(100dvh - 80px);
+        overflow-y: auto;
+      }
+    }
+    @media (min-width: 576px) and (max-width: 991.98px) {
+      .account-panel { width: 320px; }
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-<!-- Profil Offcanvas -->
-<div class="offcanvas offcanvas-end profile-offcanvas" tabindex="-1" id="profileDrawer" aria-labelledby="profileDrawerLabel" style="width:300px">
-  <div class="offcanvas-header py-3 px-4">
-    {% if store_user %}
-    <div class="d-flex align-items-center gap-3">
-      {% if store_user.avatar_url %}
-      <img src="{{ store_user.avatar_url }}" width="44" height="44" class="rounded-circle" style="object-fit:cover" alt="">
-      {% else %}
-      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--bn-blue),#6366f1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;color:#fff">
-        {{ store_user.first_name|first|upper }}
+<!-- ── Modal Administration ───────────────────────────────────────────────── -->
+<div class="modal fade admin-modal" id="adminModal" tabindex="-1" aria-labelledby="adminModalLabel">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <div class="d-flex align-items-center gap-2">
+          <span style="font-size:1.5rem">🔐</span>
+          <h5 class="modal-title mb-0" id="adminModalLabel" style="color:#fbbf24">Zone Partenaires</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      {% endif %}
-      <div>
-        <div class="fw-700" style="font-weight:700;line-height:1.2">{{ store_user.full_name }}</div>
-        <div class="small" style="color:var(--bn-muted)">{{ store_user.email }}</div>
+      <div class="modal-body pt-3">
+        <p class="mb-2">Cette section est réservée aux <strong>partenaires officiels de BonNet</strong>.</p>
+        <p class="small mb-0" style="color:var(--bn-muted)">
+          Vous avez un accès partenaire ? Connectez-vous ci-dessous.<br>
+          Pas encore partenaire ? Rejoignez notre réseau et générez des revenus en partageant la connectivité BonNet dans votre quartier.
+        </p>
       </div>
-    </div>
-    {% else %}
-    <span id="profileDrawerLabel" class="fw-bold">Mon compte</span>
-    {% endif %}
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-  </div>
-  <div class="offcanvas-body p-3 d-flex flex-column gap-1">
-    {% if store_user %}
-      <a href="{% url 'store:my_orders' %}" class="profile-nav-link">
-        <span class="icon"><i class="bi bi-ticket-perforated"></i></span>
-        <span>Mes codes</span>
-      </a>
-      <a href="{% url 'store:cart_view' %}" class="profile-nav-link">
-        <span class="icon"><i class="bi bi-cart3"></i></span>
-        <span>Mon panier</span>
-      </a>
-      <a href="#" class="profile-nav-link" data-bs-toggle="collapse" data-bs-target="#addressPanel">
-        <span class="icon"><i class="bi bi-geo-alt"></i></span>
-        <span>Mon adresse</span>
-        <i class="bi bi-chevron-down ms-auto small"></i>
-      </a>
-      <div class="collapse ps-2 pe-1" id="addressPanel">
-        <form method="post" action="{% url 'store:update_profile' %}" class="mt-2">
-          {% csrf_token %}
-          <div class="mb-2">
-            <label class="form-label small mb-1" style="color:var(--bn-muted)">Téléphone</label>
-            <input type="text" name="phone" value="{{ store_user.phone }}" class="form-control form-control-sm"
-                   style="background:var(--bn-card);border-color:var(--bn-border);color:var(--bn-text)">
-          </div>
-          <div class="mb-2">
-            <label class="form-label small mb-1" style="color:var(--bn-muted)">Adresse</label>
-            <textarea name="address" rows="2" class="form-control form-control-sm"
-                      style="background:var(--bn-card);border-color:var(--bn-border);color:var(--bn-text)">{{ store_user.address }}</textarea>
-          </div>
-          <button class="btn btn-sm btn-bn-primary w-100">Enregistrer</button>
-        </form>
+      <div class="modal-footer">
+        <a href="{% url 'accounts:login' %}" class="btn btn-bn-primary w-100 d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-box-arrow-in-right"></i> Oui, j'ai un accès partenaire
+        </a>
+        <a href="{% url 'store:partner' %}" class="btn btn-bn-outline w-100 d-flex align-items-center justify-content-center gap-2" data-bs-dismiss="modal">
+          <i class="bi bi-stars"></i> Devenir partenaire BonNet
+        </a>
+        <button class="btn btn-link w-100" style="color:var(--bn-muted);font-size:.85rem" data-bs-dismiss="modal">Annuler</button>
       </div>
-      <hr style="border-color:var(--bn-border);margin:.5rem 0">
-      <a href="{% url 'store:store_logout' %}" class="profile-nav-link danger">
-        <span class="icon"><i class="bi bi-box-arrow-left"></i></span>
-        <span>Se déconnecter</span>
-      </a>
-    {% else %}
-      <p class="text-center small mt-3 mb-4" style="color:var(--bn-muted)">Connectez-vous pour retrouver vos codes, votre historique et votre panier.</p>
-      <a href="{% url 'store:google_login' %}" class="btn btn-bn-primary d-flex align-items-center justify-content-center gap-2">
-        <svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M43.6 20.5H42V20H24v8h11.3C33.65 32.95 29.15 36 24 36c-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.16 7.95 3.05l5.66-5.66C34.04 6.54 29.27 4 24 4 12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20c0-1.34-.14-2.65-.4-3.5z" fill="#FFC107"/><path d="M6.3 14.7l6.58 4.83C14.66 16.1 19.05 13 24 13c3.06 0 5.84 1.16 7.95 3.05l5.66-5.66C34.04 6.54 29.27 4 24 4 16.32 4 9.66 8.34 6.3 14.7z" fill="#FF3D00"/><path d="M24 44c5.17 0 9.86-1.97 13.41-5.18l-6.19-5.24C29.15 35.3 26.69 36 24 36c-5.13 0-9.61-3.04-11.29-7.46l-6.53 5.03C9.52 39.72 16.28 44 24 44z" fill="#4CAF50"/><path d="M43.6 20.5H42V20H24v8h11.3c-.82 2.32-2.38 4.3-4.38 5.66l6.19 5.24C36.97 38.02 44 33 44 24c0-1.34-.14-2.65-.4-3.5z" fill="#1976D2"/></svg>
-        Se connecter avec Google
-      </a>
-    {% endif %}
-    <div class="mt-auto pt-3" style="border-top:1px solid var(--bn-border)">
-      <a href="{% url 'accounts:login' %}" class="profile-nav-link" style="color:var(--bn-muted);font-size:.85rem">
-        <span class="icon" style="background:rgba(100,116,139,.12);color:var(--bn-muted)"><i class="bi bi-shield-lock"></i></span>
-        <span>Administration</span>
-      </a>
     </div>
   </div>
 </div>
@@ -210,6 +275,8 @@
     <span class="brand-bon">Bon</span><span class="brand-net">Net</span>
   </a>
   <div class="ms-auto d-flex align-items-center gap-2">
+
+    <!-- Panier -->
     <a href="{% url 'store:cart_view' %}" class="btn btn-outline-secondary btn-sm position-relative">
       <i class="bi bi-cart3"></i>
       {% if cart_count %}
@@ -217,21 +284,114 @@
             style="background:var(--bn-blue);font-size:.65rem">{{ cart_count }}</span>
       {% endif %}
     </a>
-    {% if store_user %}
-    <button class="btn-avatar" data-bs-toggle="offcanvas" data-bs-target="#profileDrawer" aria-label="Mon compte">
-      {% if store_user.avatar_url %}
-      <img src="{{ store_user.avatar_url }}" alt="">
+
+    <!-- Bouton Mon compte -->
+    <div class="account-dropdown">
+      {% if store_user %}
+      <button class="btn-avatar" id="accountToggle" aria-label="Mon compte">
+        {% if store_user.avatar_url %}
+        <img src="{{ store_user.avatar_url }}" alt="{{ store_user.first_name }}">
+        {% else %}
+        <div class="avatar-init">{{ store_user.first_name|first|upper }}</div>
+        {% endif %}
+      </button>
       {% else %}
-      <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--bn-blue),#6366f1);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff">
-        {{ store_user.first_name|first|upper }}
-      </div>
+      <button class="btn-account" id="accountToggle">
+        <i class="bi bi-person-circle"></i>
+        <span class="d-none d-sm-inline">Mon compte</span>
+      </button>
       {% endif %}
-    </button>
-    {% else %}
-    <button class="btn-login-nav d-none d-md-inline-flex border-0" data-bs-toggle="offcanvas" data-bs-target="#profileDrawer">
-      <i class="bi bi-person-circle"></i> Mon compte
-    </button>
-    {% endif %}
+
+      <!-- Panel -->
+      <div class="account-panel" id="accountPanel">
+
+        <!-- En-tête -->
+        <div class="panel-header">
+          {% if store_user %}
+          <div class="d-flex align-items-center gap-3">
+            {% if store_user.avatar_url %}
+            <img src="{{ store_user.avatar_url }}" width="46" height="46" class="rounded-circle" style="object-fit:cover" alt="">
+            {% else %}
+            <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--bn-blue),#6366f1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;color:#fff;flex-shrink:0">
+              {{ store_user.first_name|first|upper }}
+            </div>
+            {% endif %}
+            <div style="min-width:0">
+              <div class="fw-bold text-truncate" style="line-height:1.2">{{ store_user.full_name }}</div>
+              <div class="small text-truncate" style="color:var(--bn-muted)">{{ store_user.email }}</div>
+            </div>
+          </div>
+          {% else %}
+          <div class="fw-bold mb-1">Mon compte</div>
+          <div class="small" style="color:var(--bn-muted)">Connectez-vous pour accéder à vos codes et votre historique.</div>
+          {% endif %}
+        </div>
+
+        <!-- Corps -->
+        <div class="panel-body">
+          {% if store_user %}
+            <a href="{% url 'store:my_orders' %}" class="profile-nav-link">
+              <span class="icon"><i class="bi bi-ticket-perforated"></i></span>
+              <span>Mes codes</span>
+            </a>
+            <a href="{% url 'store:cart_view' %}" class="profile-nav-link">
+              <span class="icon"><i class="bi bi-cart3"></i></span>
+              <span>Mon panier</span>
+              {% if cart_count %}<span class="badge rounded-pill ms-auto" style="background:var(--bn-blue);font-size:.7rem">{{ cart_count }}</span>{% endif %}
+            </a>
+
+            <!-- Adresse collapse -->
+            <button class="profile-nav-link" type="button" data-bs-toggle="collapse" data-bs-target="#addressPanel">
+              <span class="icon"><i class="bi bi-geo-alt"></i></span>
+              <span>Mon adresse</span>
+              <i class="bi bi-chevron-down ms-auto small"></i>
+            </button>
+            <div class="collapse" id="addressPanel">
+              <form method="post" action="{% url 'store:update_profile' %}" class="p-2 pt-1">
+                {% csrf_token %}
+                <div class="mb-2">
+                  <label class="form-label small mb-1" style="color:var(--bn-muted)">Téléphone</label>
+                  <input type="text" name="phone" value="{{ store_user.phone }}" class="form-control form-control-sm" placeholder="+509 …">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label small mb-1" style="color:var(--bn-muted)">Adresse</label>
+                  <textarea name="address" rows="2" class="form-control form-control-sm" placeholder="Votre adresse…">{{ store_user.address }}</textarea>
+                </div>
+                <button class="btn btn-bn-primary btn-sm w-100">Enregistrer</button>
+              </form>
+            </div>
+
+            <hr style="border-color:var(--bn-border);margin:.45rem 0">
+            <a href="{% url 'store:store_logout' %}" class="profile-nav-link danger">
+              <span class="icon"><i class="bi bi-box-arrow-left"></i></span>
+              <span>Se déconnecter</span>
+            </a>
+
+          {% else %}
+            <a href="{% url 'store:google_login' %}" class="btn btn-bn-primary w-100 d-flex align-items-center justify-content-center gap-2 mb-2 mt-1">
+              <svg width="17" height="17" viewBox="0 0 48 48" fill="none">
+                <path d="M43.6 20.5H42V20H24v8h11.3C33.65 32.95 29.15 36 24 36c-6.63 0-12-5.37-12-12s5.37-12 12-12c3.06 0 5.84 1.16 7.95 3.05l5.66-5.66C34.04 6.54 29.27 4 24 4 12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20c0-1.34-.14-2.65-.4-3.5z" fill="#FFC107"/>
+                <path d="M6.3 14.7l6.58 4.83C14.66 16.1 19.05 13 24 13c3.06 0 5.84 1.16 7.95 3.05l5.66-5.66C34.04 6.54 29.27 4 24 4 16.32 4 9.66 8.34 6.3 14.7z" fill="#FF3D00"/>
+                <path d="M24 44c5.17 0 9.86-1.97 13.41-5.18l-6.19-5.24C29.15 35.3 26.69 36 24 36c-5.13 0-9.61-3.04-11.29-7.46l-6.53 5.03C9.52 39.72 16.28 44 24 44z" fill="#4CAF50"/>
+                <path d="M43.6 20.5H42V20H24v8h11.3c-.82 2.32-2.38 4.3-4.38 5.66l6.19 5.24C36.97 38.02 44 33 44 24c0-1.34-.14-2.65-.4-3.5z" fill="#1976D2"/>
+              </svg>
+              Se connecter avec Google
+            </a>
+          {% endif %}
+        </div>
+
+        <!-- Zone Administration -->
+        <div class="admin-zone">
+          <button class="admin-btn" data-bs-toggle="modal" data-bs-target="#adminModal">
+            <span class="icon"><i class="bi bi-shield-lock"></i></span>
+            <span>Administration</span>
+            <span class="admin-badge">Partenaires</span>
+          </button>
+        </div>
+
+      </div><!-- /account-panel -->
+    </div><!-- /account-dropdown -->
+
   </div>
 </nav>
 
@@ -255,7 +415,6 @@
     <p class="mb-1">© 2026 <strong>BonNet</strong> · Transversal — WiFi Haïti</p>
     <p class="mb-0">
       <a href="{% url 'store:partner' %}" class="text-decoration-none me-3" style="color:var(--bn-muted)">Devenir partenaire</a>
-      <a href="{% url 'dashboard:index' %}" class="text-decoration-none" style="color:var(--bn-muted)">Espace admin</a>
     </p>
   </div>
 </footer>
@@ -267,6 +426,30 @@ const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
 }, { threshold: 0.1 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Account panel toggle (reste ouvert quand on interagit dedans)
+(function() {
+  const toggle  = document.getElementById('accountToggle');
+  const panel   = document.getElementById('accountPanel');
+  if (!toggle || !panel) return;
+
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.toggle('open');
+  });
+
+  // Ferme si clic en dehors du panel ET du toggle
+  document.addEventListener('click', e => {
+    if (!panel.contains(e.target) && !toggle.contains(e.target)) {
+      panel.classList.remove('open');
+    }
+  });
+
+  // Ferme si on ouvre la modale admin (le panel reste sinon en arrière)
+  document.getElementById('adminModal')?.addEventListener('show.bs.modal', () => {
+    panel.classList.remove('open');
+  });
+})();
 </script>
 {% block extra_js %}{% endblock %}
 </body>
