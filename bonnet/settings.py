@@ -159,6 +159,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
                 'sites_mgmt.context_processors.site_config',
+                'store.context_processors.store_user',
             ],
         },
     },
@@ -229,6 +230,10 @@ PLOPPLOP_CLIENT_ID  = os.getenv('PLOPPLOP_CLIENT_ID', '')
 TWILIO_ACCOUNT_SID  = os.getenv('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN   = os.getenv('TWILIO_AUTH_TOKEN', '')
 TWILIO_FROM_NUMBER  = os.getenv('TWILIO_FROM_NUMBER', '')
+
+# Google OAuth (store)
+GOOGLE_CLIENT_ID     = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
 
 # UniFi Controller
 UNIFI_HOST = os.getenv('UNIFI_HOST', 'p989.cloudunifi.com')

@@ -1,0 +1,70 @@
+{% extends 'store/base_store.html' %}
+{% block title %}Mes commandes · BonNet{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:780px">
+
+  <!-- En-tête profil -->
+  <div class="d-flex align-items-center gap-3 mb-5">
+    {% if store_user.avatar_url %}
+    <img src="{{ store_user.avatar_url }}" width="64" height="64" class="rounded-circle" style="object-fit:cover" alt="">
+    {% else %}
+    <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--bn-blue),#6366f1);display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;color:#fff">
+      {{ store_user.first_name|first|upper }}
+    </div>
+    {% endif %}
+    <div>
+      <h4 class="mb-0 fw-bold">{{ store_user.full_name }}</h4>
+      <div class="small" style="color:var(--bn-muted)">{{ store_user.email }}</div>
+    </div>
+  </div>
+
+  <!-- Commandes -->
+  <h5 class="section-title mb-4">Mes codes WiFi</h5>
+
+  {% if orders %}
+    {% for order in orders %}
+    <div class="mb-4" style="background:var(--bn-card);border:1px solid var(--bn-border);border-radius:14px;overflow:hidden">
+      <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--bn-border)">
+        <div>
+          <span class="small fw-bold" style="color:var(--bn-muted)">{{ order.reference }}</span>
+          <div class="small mt-1" style="color:var(--bn-muted)">{{ order.created_at|date:"d M Y · H\hi" }}</div>
+        </div>
+        <span class="badge rounded-pill
+          {% if order.status == 'delivered' %}bg-success
+          {% elif order.status == 'failed' %}bg-danger
+          {% elif order.status == 'pending' %}bg-warning text-dark
+          {% else %}bg-primary{% endif %}">
+          {{ order.get_status_display }}
+        </span>
+      </div>
+      <div class="px-4 py-3">
+        {% for item in order.items.all %}
+        <div class="mb-3">
+          <div class="fw-600 mb-1" style="font-weight:600">{{ item.quantity }}× {{ item.tier.label }} — {{ item.site.name }}</div>
+          {% if item.voucher_codes %}
+          <div class="d-flex flex-wrap gap-2 mt-1">
+            {% for code in item.voucher_codes %}
+            <span class="badge font-monospace px-3 py-2" style="background:rgba(59,130,246,.15);color:var(--bn-blue);font-size:.85rem;border:1px solid rgba(59,130,246,.3)">
+              {{ code }}
+            </span>
+            {% endfor %}
+          </div>
+          {% elif order.status == 'pending' or order.status == 'paid' or order.status == 'processing' %}
+          <div class="small mt-1" style="color:var(--bn-muted)"><i class="bi bi-hourglass-split me-1"></i>Livraison en cours…</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        <div class="text-end mt-2 small fw-bold" style="color:var(--bn-muted)">Total : {{ order.total_htg }} HTG</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="text-center py-5" style="color:var(--bn-muted)">
+    <i class="bi bi-bag-x" style="font-size:3rem;display:block;margin-bottom:1rem;opacity:.4"></i>
+    <p>Vous n'avez pas encore passé de commande.</p>
+    <a href="{% url 'store:storefront' %}" class="btn btn-bn-primary mt-2">Voir les plans</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

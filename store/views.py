@@ -7,8 +7,9 @@ from django.contrib import messages
 from django.core.cache import cache
 
 from sites_mgmt.models import HotspotSite, VoucherTier
-from .models import StoreBanner, CustomerProfile, Cart, CartItem, Order, OrderItem
+from .models import StoreBanner, CustomerProfile, Cart, CartItem, Order, OrderItem, StoreUser
 from .services.plopplop import create_transaction, verify_transaction
+from .google_auth import build_google_auth_url, exchange_code, get_or_create_store_user, merge_session_cart
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,22 @@ def filter_plans_for_storefront(tiers):
     return filtered
 
 
+def _get_store_user(request):
+    uid = request.session.get('store_user_id')
+    if not uid:
+        return None
+    try:
+        return StoreUser.objects.get(pk=uid)
+    except StoreUser.DoesNotExist:
+        request.session.pop('store_user_id', None)
+        return None
+
+
 def _get_or_create_cart(request):
+    store_user = _get_store_user(request)
+    if store_user:
+        cart, _ = Cart.objects.get_or_create(store_user=store_user)
+        return cart
     if not request.session.session_key:
         request.session.create()
     cart, _ = Cart.objects.get_or_create(session_key=request.session.session_key)
@@ -241,3 +257,71 @@ def order_status_api(request, order_ref):
 
 def partner_page(request):
     return redirect('accounts:partner_register')
+
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+
+def google_login(request):
+    next_url = request.GET.get('next', '')
+    if next_url:
+        request.session['google_next'] = next_url
+    return redirect(build_google_auth_url(request))
+
+
+def google_callback(request):
+    state_in   = request.GET.get('state', '')
+    state_sess = request.session.pop('google_oauth_state', None)
+    if not state_sess or state_in != state_sess:
+        messages.error(request, 'Erreur d\'authentification. Veuillez réessayer.')
+        return redirect('store:storefront')
+
+    code = request.GET.get('code')
+    if not code:
+        messages.error(request, 'Connexion Google annulée.')
+        return redirect('store:storefront')
+
+    try:
+        userinfo   = exchange_code(request, code)
+        store_user = get_or_create_store_user(userinfo)
+        merge_session_cart(request, store_user)
+        request.session['store_user_id'] = store_user.pk
+        messages.success(request, f'Bienvenue, {store_user.first_name} !')
+    except Exception as e:
+        logger.error(f'Google OAuth callback error: {e}')
+        messages.error(request, 'Impossible de se connecter avec Google. Réessayez.')
+        return redirect('store:storefront')
+
+    next_url = request.session.pop('google_next', '')
+    return redirect(next_url or 'store:storefront')
+
+
+def store_logout(request):
+    request.session.pop('store_user_id', None)
+    return redirect('store:storefront')
+
+
+# ── Profil client ─────────────────────────────────────────────────────────────
+
+def my_orders(request):
+    store_user = _get_store_user(request)
+    if not store_user:
+        return redirect('store:google_login')
+    profiles = store_user.profiles.prefetch_related('orders__items__tier', 'orders__items__site').all()
+    orders = Order.objects.filter(customer__in=profiles).order_by('-created_at')
+    return render(request, 'store/my_orders.html', {
+        'store_user': store_user,
+        'orders':     orders,
+        'cart_count': _get_or_create_cart(request).item_count,
+    })
+
+
+@require_POST
+def update_profile(request):
+    store_user = _get_store_user(request)
+    if not store_user:
+        return redirect('store:google_login')
+    store_user.phone   = request.POST.get('phone', '').strip()
+    store_user.address = request.POST.get('address', '').strip()
+    store_user.save(update_fields=['phone', 'address'])
+    messages.success(request, 'Profil mis à jour.')
+    return redirect('store:my_orders')
