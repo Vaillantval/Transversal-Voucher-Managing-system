@@ -128,6 +128,7 @@ INSTALLED_APPS = [
     'reports',
     'notifications.apps.NotificationsConfig',
     'unifi_api',
+    'store',
     'django_apscheduler',
 ]
 
@@ -222,6 +223,12 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# PlopPlop & Twilio
+PLOPPLOP_CLIENT_ID  = os.getenv('PLOPPLOP_CLIENT_ID', '')
+TWILIO_ACCOUNT_SID  = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN   = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_FROM_NUMBER  = os.getenv('TWILIO_FROM_NUMBER', '')
 
 # UniFi Controller
 UNIFI_HOST = os.getenv('UNIFI_HOST', 'p989.cloudunifi.com')

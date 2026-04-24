@@ -24,6 +24,8 @@ class HotspotSite(models.Model):
         limit_choices_to={'role': User.ROLE_SITE_ADMIN},
         verbose_name='Administrateurs assignés',
     )
+    latitude   = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='Latitude')
+    longitude  = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name='Longitude')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

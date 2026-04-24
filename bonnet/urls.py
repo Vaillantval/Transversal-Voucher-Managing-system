@@ -91,7 +91,7 @@ urlpatterns = [
     path('vouchers/', include('vouchers.urls')),
     path('reports/', include('reports.urls')),
     path('notifications/', include('notifications.urls')),
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
+    path('', include('store.urls')),
 ]
 
 # Serve media files in all environments (dev + prod)

@@ -1,0 +1,205 @@
+{% extends 'store/base_store.html' %}
+{% block title %}BonNet WiFi — Plans Internet Haïti{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+<style>
+  /* Hero / Slider */
+  .swiper { width:100%; height:420px; border-radius:0; }
+  @media(max-width:576px){ .swiper { height:280px; } }
+  .swiper-slide {
+    background: linear-gradient(135deg,#07101f,#0d2145);
+    display:flex; align-items:center; justify-content:center; padding:2rem;
+  }
+  .slide-img-wrap { position:absolute;inset:0;overflow:hidden;opacity:.18; }
+  .slide-img-wrap img { width:100%;height:100%;object-fit:cover; }
+  .slide-content { position:relative;z-index:2;text-align:center;max-width:600px; }
+  .slide-content h1 { font-size:clamp(1.4rem,4vw,2.4rem);font-weight:900;line-height:1.15; }
+  .slide-content p  { color:#94a3b8;font-size:1rem;margin-top:.5rem; }
+
+  /* GPS hint */
+  #nearest-hint { font-size:.82rem;color:var(--bn-green);min-height:1.2em; }
+
+  /* Modal */
+  .modal-content { background:var(--bn-card);border:1px solid var(--bn-border);border-radius:16px; }
+  .modal-header { border-bottom:1px solid var(--bn-border); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Slider ── -->
+{% if banners %}
+<div class="swiper">
+  <div class="swiper-wrapper">
+    {% for b in banners %}
+    <div class="swiper-slide">
+      {% if b.image %}<div class="slide-img-wrap"><img src="{{ b.image.url }}" alt=""></div>{% endif %}
+      <div class="slide-content">
+        <h1>{{ b.title }}</h1>
+        {% if b.subtitle %}<p>{{ b.subtitle }}</p>{% endif %}
+        <a href="#plans" class="btn btn-bn-primary mt-3">{{ b.cta_text }}</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="swiper-pagination"></div>
+</div>
+{% else %}
+<!-- Hero fallback si pas de bannières -->
+<div class="py-5 text-center" style="background:linear-gradient(135deg,#07101f,#0d2145)">
+  <div class="container py-3">
+    <h1 class="fw-900 display-5 mb-2">WiFi rapide &amp; fiable en Haïti</h1>
+    <p class="text-muted mb-4">Achetez votre code d'accès en quelques secondes.</p>
+    <a href="#plans" class="btn btn-bn-primary px-4">Voir les plans</a>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Plans ── -->
+<section id="plans" class="container py-5">
+  <div class="text-center mb-4 reveal">
+    <h2 class="section-title">Nos plans WiFi</h2>
+    <p class="section-sub">Choisissez la durée qui vous convient — paiement 100 % mobile haïtien</p>
+    <div id="nearest-hint" class="mt-2"></div>
+  </div>
+
+  {% if plans %}
+  <div class="row g-3 justify-content-center">
+    {% for plan in plans %}
+    <div class="col-6 col-md-4 col-lg-3 reveal">
+      <div class="plan-card h-100 p-3 d-flex flex-column text-center">
+        <div class="plan-duration mb-1">Plan {{ plan.duration_display }}</div>
+        <div class="plan-price my-2">{{ plan.price_htg }} <small style="font-size:1rem;-webkit-text-fill-color:var(--bn-muted)">HTG</small></div>
+        <p class="small text-muted flex-grow-1 mb-3">Internet illimité pendant {{ plan.duration_display }}</p>
+        <button class="btn btn-bn-primary btn-sm w-100"
+                data-bs-toggle="modal" data-bs-target="#planModal"
+                data-tier="{{ plan.pk }}"
+                data-label="{{ plan.label }}"
+                data-duration="{{ plan.duration_display }}"
+                data-price="{{ plan.price_htg }}">
+          Voir détails
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-center text-muted">Aucun plan disponible pour le moment.</p>
+  {% endif %}
+</section>
+
+<!-- ── Section partenaire ── -->
+<section class="py-5" style="background:var(--bn-surface)">
+  <div class="container">
+    <div class="row align-items-center g-4 reveal">
+      <div class="col-md-7">
+        <h2 class="section-title">Devenez partenaire BonNet</h2>
+        <p class="text-muted mt-2 mb-3">Générez des revenus passifs en hébergeant un point d'accès WiFi dans votre zone. Nous fournissons l'équipement, la formation et le support technique.</p>
+        <ul class="list-unstyled text-muted small">
+          <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Revenu mensuel garanti</li>
+          <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Équipement fourni et installé</li>
+          <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Support technique 7j/7</li>
+        </ul>
+        <a href="{% url 'store:partner' %}" class="btn btn-bn-outline mt-2">
+          <i class="bi bi-person-plus me-1"></i>Postuler maintenant
+        </a>
+      </div>
+      <div class="col-md-5 text-center d-none d-md-block">
+        <i class="bi bi-wifi" style="font-size:7rem;color:var(--bn-blue);opacity:.3"></i>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Modal Plan ── -->
+<div class="modal fade" id="planModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPlanLabel">Plan</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'store:cart_add' %}" id="addToCartForm">
+        {% csrf_token %}
+        <input type="hidden" name="tier_id" id="modal-tier-id">
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <div class="plan-price" id="modal-price"></div>
+            <div class="text-muted small" id="modal-duration"></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Site WiFi</label>
+            <select name="site_id" id="modal-site-select" class="form-select" required>
+              <option value="">Choisir un site…</option>
+              {% for site in sites %}
+              <option value="{{ site.pk }}">{{ site.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Quantité</label>
+            <input type="number" name="quantity" class="form-control" min="1" max="10" value="1">
+          </div>
+        </div>
+        <div class="modal-footer border-top" style="border-color:var(--bn-border)!important">
+          <button type="submit" name="buy_now" value="1" class="btn btn-bn-primary flex-grow-1">
+            <i class="bi bi-lightning-fill me-1"></i>Acheter maintenant
+          </button>
+          <button type="submit" class="btn btn-bn-outline flex-grow-1">
+            <i class="bi bi-cart-plus me-1"></i>Ajouter au panier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+// Swiper
+new Swiper('.swiper', {
+  loop: true, autoplay: { delay: 5000, disableOnInteraction: false },
+  pagination: { el: '.swiper-pagination', clickable: true },
+});
+
+// Modal — remplir les données du plan cliqué
+const planModal = document.getElementById('planModal');
+planModal.addEventListener('show.bs.modal', e => {
+  const btn = e.relatedTarget;
+  document.getElementById('modalPlanLabel').textContent  = 'Plan ' + btn.dataset.duration;
+  document.getElementById('modal-price').textContent     = btn.dataset.price + ' HTG';
+  document.getElementById('modal-duration').textContent  = 'Internet pendant ' + btn.dataset.duration;
+  document.getElementById('modal-tier-id').value         = btn.dataset.tier;
+});
+
+// GPS — site le plus proche
+const SITES = {{ sites_json|safe }};
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    let closest = null, minDist = Infinity;
+    SITES.forEach(s => {
+      if (!s.latitude) return;
+      const d = haversine(latitude, longitude, s.latitude, s.longitude);
+      if (d < minDist) { minDist = d; closest = s; }
+    });
+    if (closest) {
+      document.querySelectorAll('[name="site_id"]').forEach(sel => sel.value = closest.id);
+      document.getElementById('nearest-hint').textContent =
+        '📍 Site le plus proche : ' + closest.name + ' (' + minDist.toFixed(1) + ' km)';
+    }
+  }, () => {});
+}
+</script>
+{% endblock %}

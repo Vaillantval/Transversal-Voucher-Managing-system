@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BonNet WiFi{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root {
+      --bn-bg:      #07101f;
+      --bn-surface: #0d1b2e;
+      --bn-card:    #111f33;
+      --bn-border:  rgba(255,255,255,.08);
+      --bn-blue:    #3b82f6;
+      --bn-green:   #10b981;
+      --bn-text:    #e2e8f0;
+      --bn-muted:   #64748b;
+    }
+    body { background: var(--bn-bg); color: var(--bn-text); font-family: 'Inter', system-ui, sans-serif; }
+
+    /* Navbar */
+    .store-nav {
+      background: rgba(7,16,31,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--bn-border);
+      position: sticky; top: 0; z-index: 1030;
+    }
+    .store-nav .navbar-brand { font-weight: 800; letter-spacing: -.5px; }
+    .store-nav .brand-bon  { color: #fff; }
+    .store-nav .brand-net  { color: var(--bn-blue); }
+
+    /* Cards plans */
+    .plan-card {
+      background: var(--bn-card);
+      border: 1px solid var(--bn-border);
+      border-radius: 16px;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+      overflow: hidden;
+    }
+    .plan-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 60px rgba(59,130,246,.18);
+      border-color: var(--bn-blue);
+    }
+    .plan-price {
+      font-size: 2.4rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--bn-blue), var(--bn-green));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .plan-duration { font-size: .95rem; color: var(--bn-muted); }
+
+    /* Sections */
+    .section-title { font-size: 1.7rem; font-weight: 800; }
+    .section-sub   { color: var(--bn-muted); font-size: 1rem; }
+
+    /* Boutons */
+    .btn-bn-primary {
+      background: linear-gradient(135deg, var(--bn-blue), #2563eb);
+      border: none; color: #fff; font-weight: 600;
+      border-radius: 10px; padding: .6rem 1.4rem;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-bn-primary:hover { opacity: .88; transform: translateY(-1px); color: #fff; }
+
+    .btn-bn-outline {
+      border: 1.5px solid var(--bn-blue); color: var(--bn-blue);
+      background: transparent; font-weight: 600; border-radius: 10px;
+      padding: .6rem 1.4rem; transition: background .2s, color .2s;
+    }
+    .btn-bn-outline:hover { background: var(--bn-blue); color: #fff; }
+
+    /* Messages */
+    .messages-wrap { position: fixed; top: 70px; right: 1rem; z-index: 2000; max-width: 360px; }
+
+    /* Footer */
+    .store-footer { background: var(--bn-surface); border-top: 1px solid var(--bn-border); }
+
+    /* Scroll reveal */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .5s, transform .5s; }
+    .reveal.visible { opacity: 1; transform: none; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="store-nav navbar navbar-expand-lg px-3 px-md-4">
+  <a class="navbar-brand" href="{% url 'store:storefront' %}">
+    <span class="brand-bon">Bon</span><span class="brand-net">Net</span>
+  </a>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <a href="{% url 'store:cart_view' %}" class="btn btn-outline-secondary btn-sm position-relative">
+      <i class="bi bi-cart3"></i>
+      {% if cart_count %}
+      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+            style="background:var(--bn-blue);font-size:.65rem">{{ cart_count }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex">
+      <i class="bi bi-speedometer2 me-1"></i>Dashboard
+    </a>
+  </div>
+</nav>
+
+<!-- Flash messages -->
+{% if messages %}
+<div class="messages-wrap">
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% block content %}{% endblock %}
+
+<!-- Footer -->
+<footer class="store-footer py-4 mt-5">
+  <div class="container text-center text-muted small">
+    <p class="mb-1">© 2026 <strong>BonNet</strong> · Transversal — WiFi Haïti</p>
+    <p class="mb-0">
+      <a href="{% url 'store:partner' %}" class="text-decoration-none me-3" style="color:var(--bn-muted)">Devenir partenaire</a>
+      <a href="{% url 'dashboard:index' %}" class="text-decoration-none" style="color:var(--bn-muted)">Espace admin</a>
+    </p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
