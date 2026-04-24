@@ -318,9 +318,8 @@ def config_edit(request):
     all_sites = HotspotSite.objects.filter(is_active=True).order_by('name')
 
     if request.method == 'POST':
-        # Logos, footer & conditions partenaire
-        config.footer_text        = request.POST.get('footer_text', '').strip()
-        config.partner_conditions = request.POST.get('partner_conditions', '').strip()
+        # Logos & footer
+        config.footer_text = request.POST.get('footer_text', '').strip()
 
         if request.FILES.get('logo1'):
             config.logo1 = request.FILES['logo1']
@@ -362,16 +361,13 @@ def config_edit(request):
     from accounts.models import PartnerApplication
     pending_partners = PartnerApplication.objects.filter(status=PartnerApplication.STATUS_PENDING).count()
 
-    conditions_preview = request.session.get('conditions_preview')
-
     return render(request, 'sites_mgmt/config.html', {
-        'config':              config,
-        'autogen':             autogen,
-        'all_sites':           all_sites,
-        'autogen_site_ids':    list(autogen.sites.values_list('pk', flat=True)),
-        'pending_partners':    pending_partners,
-        'conditions_preview':  conditions_preview,
-        'page_title':          'Configuration',
+        'config':           config,
+        'autogen':          autogen,
+        'all_sites':        all_sites,
+        'autogen_site_ids': list(autogen.sites.values_list('pk', flat=True)),
+        'pending_partners': pending_partners,
+        'page_title':       'Configuration',
     })
 
 
@@ -382,16 +378,16 @@ def config_edit(request):
 def conditions_pdf_preview(request):
     """Reçoit un PDF, extrait le texte, stocke en session pour preview."""
     if request.method != 'POST':
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     pdf_file = request.FILES.get('conditions_pdf')
     if not pdf_file:
         messages.error(request, 'Veuillez sélectionner un fichier PDF.')
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     if not pdf_file.name.lower().endswith('.pdf'):
         messages.error(request, 'Le fichier doit être au format PDF.')
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     try:
         from pypdf import PdfReader
@@ -402,10 +398,10 @@ def conditions_pdf_preview(request):
         ).strip()
         if not text:
             messages.error(request, "Impossible d'extraire du texte de ce PDF (PDF scanné ou protégé).")
-            return redirect('sites:config')
+            return redirect('sites:partners')
     except Exception as e:
         messages.error(request, f'Erreur lors de la lecture du PDF : {e}')
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     # Sauvegarder le PDF temporairement sur disque
     import os, time
@@ -420,7 +416,7 @@ def conditions_pdf_preview(request):
         'temp_path': saved_path,
         'filename': pdf_file.name,
     }
-    return redirect('sites:config')
+    return redirect('sites:partners')
 
 
 @login_required
@@ -428,12 +424,12 @@ def conditions_pdf_preview(request):
 def conditions_pdf_confirm(request):
     """Valide le preview en session → sauvegarde dans SiteConfig."""
     if request.method != 'POST':
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     preview = request.session.get('conditions_preview')
     if not preview:
         messages.error(request, 'Aucun aperçu en attente de validation.')
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     from .models import SiteConfig
     config = SiteConfig.get()
@@ -455,34 +451,44 @@ def conditions_pdf_confirm(request):
 
     del request.session['conditions_preview']
     messages.success(request, 'Conditions de partenariat mises à jour.')
-    return redirect('sites:config')
+    return redirect('sites:partners')
 
 
 @login_required
 @superadmin_required
 def conditions_delete(request):
-    """Supprime le PDF et le texte des conditions."""
+    """Annule le preview en cours OU supprime les conditions enregistrées."""
     if request.method != 'POST':
-        return redirect('sites:config')
+        return redirect('sites:partners')
 
     from .models import SiteConfig
     config = SiteConfig.get()
 
+    # Si un preview est en session → on annule juste le preview, les conditions sauvegardées restent intactes
+    preview = request.session.pop('conditions_preview', None)
+    if preview:
+        try:
+            from django.core.files.storage import default_storage
+            if default_storage.exists(preview['temp_path']):
+                default_storage.delete(preview['temp_path'])
+        except Exception:
+            pass
+        messages.info(request, 'Aperçu annulé.')
+        return redirect('sites:partners')
+
+    # Pas de preview → suppression des conditions enregistrées
     if config.partner_conditions_pdf:
         try:
             config.partner_conditions_pdf.delete(save=False)
         except Exception:
             pass
 
-    # Annuler aussi un éventuel preview en session
-    request.session.pop('conditions_preview', None)
-
     config.partner_conditions     = ''
     config.partner_conditions_pdf = None
     config.save(update_fields=['partner_conditions', 'partner_conditions_pdf'])
 
     messages.success(request, 'Conditions de partenariat supprimées.')
-    return redirect('sites:config')
+    return redirect('sites:partners')
 
 
 # ─── PARTENAIRES (admin) ─────────────────────────────────────────────────────
@@ -490,26 +496,21 @@ def conditions_delete(request):
 @login_required
 @superadmin_required
 def partners_view(request):
-    """Gestion des demandes partenaires + éditeur des conditions."""
+    """Gestion des demandes partenaires + conditions de partenariat PDF."""
     from accounts.models import PartnerApplication
     from .models import SiteConfig
 
     config = SiteConfig.get()
-
-    if request.method == 'POST' and 'save_conditions' in request.POST:
-        config.partner_conditions = request.POST.get('partner_conditions', '')
-        config.save(update_fields=['partner_conditions'])
-        messages.success(request, 'Conditions de partenariat mises à jour.')
-        return redirect('sites:partners')
-
     applications  = PartnerApplication.objects.select_related('user').all()
     pending_count = applications.filter(status=PartnerApplication.STATUS_PENDING).count()
+    conditions_preview = request.session.get('conditions_preview')
 
     return render(request, 'sites_mgmt/partners.html', {
-        'config':        config,
-        'applications':  applications,
-        'pending_count': pending_count,
-        'page_title':    'Gestion des partenaires',
+        'config':              config,
+        'applications':        applications,
+        'pending_count':       pending_count,
+        'conditions_preview':  conditions_preview,
+        'page_title':          'Gestion des partenaires',
     })
 
 

@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     'dashboard',
     'reports',
     'notifications.apps.NotificationsConfig',
+    'unifi_api',
     'django_apscheduler',
 ]
 
