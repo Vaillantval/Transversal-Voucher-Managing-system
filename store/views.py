@@ -225,6 +225,15 @@ def order_confirm(request, order_ref):
     return render(request, 'store/confirm.html', {'order': order})
 
 
+def plopplop_return(request):
+    """Landing page statique configurée dans le dashboard PlopPlop.
+    PlopPlop redirige ici avec ?refference_id=BONNET-XXXXXXXX après paiement."""
+    order_ref = request.GET.get('refference_id', '').strip()
+    if order_ref:
+        return redirect('store:order_confirm', order_ref=order_ref)
+    return redirect('store:storefront')
+
+
 def order_status_api(request, order_ref):
     order = get_object_or_404(Order, reference=order_ref)
 
