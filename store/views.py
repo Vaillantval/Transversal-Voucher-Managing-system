@@ -65,13 +65,21 @@ def storefront(request):
 
     cart = _get_or_create_cart(request)
 
+    partner_perks = [
+        ('cash-coin',        'Revenu mensuel'),
+        ('tools',            'Équipement fourni'),
+        ('headset',          'Support 7j/7'),
+        ('graph-up-arrow',   'Croissance garantie'),
+    ]
+
     return render(request, 'store/storefront.html', {
-        'banners':     banners,
-        'plans':       plans,
-        'sites':       sites,
-        'sites_json':  sites_json,
-        'profile':     profile,
-        'cart_count':  cart.item_count,
+        'banners':        banners,
+        'plans':          plans,
+        'sites':          sites,
+        'sites_json':     sites_json,
+        'profile':        profile,
+        'cart_count':     cart.item_count,
+        'partner_perks':  partner_perks,
     })
 
 

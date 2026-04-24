@@ -23,6 +23,100 @@
   /* Modal */
   .modal-content { background:var(--bn-card);border:1px solid var(--bn-border);border-radius:16px; }
   .modal-header { border-bottom:1px solid var(--bn-border); }
+
+  /* ── Section Devenir membre ── */
+  .partner-section {
+    background: #060e1c;
+    border-top: 1px solid var(--bn-border);
+    border-bottom: 1px solid var(--bn-border);
+  }
+
+  /* Fond orbes animées */
+  .partner-bg { position:absolute;inset:0;overflow:hidden;pointer-events:none; }
+  .orb {
+    position:absolute; border-radius:50%;
+    filter:blur(80px); opacity:.25;
+    animation: drift 8s ease-in-out infinite alternate;
+  }
+  .orb-1 { width:400px;height:400px;background:#3b82f6;top:-100px;left:-80px;animation-delay:0s; }
+  .orb-2 { width:300px;height:300px;background:#10b981;bottom:-80px;right:-60px;animation-delay:3s; }
+  .orb-3 { width:200px;height:200px;background:#8b5cf6;top:40%;left:55%;animation-delay:1.5s; }
+
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(30px,20px) scale(1.12); }
+  }
+
+  .grid-lines {
+    position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,.06) 1px, transparent 1px);
+    background-size:48px 48px;
+  }
+
+  /* Badge clignotant */
+  .partner-badge {
+    display:inline-flex;align-items:center;gap:.5rem;
+    background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);
+    border-radius:999px;padding:.3rem .9rem;color:var(--bn-blue);
+    margin-bottom:.5rem;
+  }
+  .badge-dot {
+    width:8px;height:8px;border-radius:50%;background:var(--bn-blue);
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity:1;transform:scale(1); }
+    50%      { opacity:.4;transform:scale(.7); }
+  }
+
+  /* Titre gradient animé */
+  .partner-title { font-size:clamp(2rem,5vw,3.2rem);font-weight:900;line-height:1.1; }
+  .partner-gradient {
+    background: linear-gradient(90deg, #3b82f6, #10b981, #8b5cf6, #3b82f6);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 4s linear infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+
+  /* Cartes avantages */
+  .perk-card {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--bn-border);
+    transition: background .2s, border-color .2s, transform .2s;
+  }
+  .perk-card:hover {
+    background: rgba(59,130,246,.1);
+    border-color: rgba(59,130,246,.4);
+    transform: translateY(-3px);
+  }
+
+  /* Bouton CTA principal */
+  .btn-partner {
+    display:inline-flex;align-items:center;gap:.3rem;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color:#fff;font-weight:700;font-size:1rem;
+    padding:.8rem 2rem;border-radius:12px;
+    text-decoration:none;border:none;
+    box-shadow: 0 0 0 0 rgba(59,130,246,.5);
+    animation: glow-pulse 2.5s ease-in-out infinite;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn-partner:hover {
+    color:#fff;transform:translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 40px rgba(59,130,246,.45);
+    animation: none;
+  }
+  @keyframes glow-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,.5); }
+    50%      { box-shadow: 0 0 0 14px rgba(59,130,246,0); }
+  }
 </style>
 {% endblock %}
 
@@ -89,24 +183,51 @@
   {% endif %}
 </section>
 
-<!-- ── Section partenaire ── -->
-<section class="py-5" style="background:var(--bn-surface)">
-  <div class="container">
-    <div class="row align-items-center g-4 reveal">
-      <div class="col-md-7">
-        <h2 class="section-title">Devenez partenaire BonNet</h2>
-        <p class="text-muted mt-2 mb-3">Générez des revenus passifs en hébergeant un point d'accès WiFi dans votre zone. Nous fournissons l'équipement, la formation et le support technique.</p>
-        <ul class="list-unstyled text-muted small">
-          <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Revenu mensuel garanti</li>
-          <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Équipement fourni et installé</li>
-          <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Support technique 7j/7</li>
-        </ul>
-        <a href="{% url 'store:partner' %}" class="btn btn-bn-outline mt-2">
-          <i class="bi bi-person-plus me-1"></i>Postuler maintenant
+<!-- ── Section Devenir membre ── -->
+<section class="partner-section py-5 py-md-6 position-relative overflow-hidden">
+  <!-- Fond animé -->
+  <div class="partner-bg" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-lines"></div>
+  </div>
+
+  <div class="container position-relative" style="z-index:2">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-10 col-lg-8 text-center reveal">
+
+        <!-- Badge animé -->
+        <div class="partner-badge mb-3">
+          <span class="badge-dot"></span>
+          <span class="small fw-semibold">Programme Partenaire — Places limitées</span>
+        </div>
+
+        <h2 class="partner-title mb-3">
+          Devenez<br>
+          <span class="partner-gradient">membre BonNet</span>
+        </h2>
+        <p class="text-muted mb-4" style="font-size:1.05rem;max-width:480px;margin:0 auto 1.5rem">
+          Hébergez un point d'accès WiFi dans votre zone et générez des revenus passifs.
+          L'équipement, la formation et le support sont fournis.
+        </p>
+
+        <div class="row g-3 justify-content-center mb-4">
+          {% for icon, text in partner_perks %}
+          <div class="col-6 col-md-3">
+            <div class="perk-card p-3 rounded-3 text-center">
+              <i class="bi bi-{{ icon }} mb-2 d-block" style="font-size:1.5rem;color:var(--bn-blue)"></i>
+              <div class="small fw-semibold">{{ text }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <a href="{% url 'store:partner' %}" class="btn-partner">
+          <i class="bi bi-person-plus-fill me-2"></i>Devenir membre maintenant
+          <i class="bi bi-arrow-right ms-2"></i>
         </a>
-      </div>
-      <div class="col-md-5 text-center d-none d-md-block">
-        <i class="bi bi-wifi" style="font-size:7rem;color:var(--bn-blue);opacity:.3"></i>
+
       </div>
     </div>
   </div>
