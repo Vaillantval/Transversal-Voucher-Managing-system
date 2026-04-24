@@ -297,6 +297,50 @@ planModal.addEventListener('show.bs.modal', e => {
   document.getElementById('modal-tier-id').value         = btn.dataset.tier;
 });
 
+// ── Toast notification ──
+function showToast(msg, type='success') {
+  let wrap = document.getElementById('toast-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'toast-wrap';
+    wrap.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem';
+    document.body.appendChild(wrap);
+  }
+  const t = document.createElement('div');
+  const bg = type === 'success' ? '#10b981' : '#ef4444';
+  t.style.cssText = `background:${bg};color:#fff;padding:.7rem 1.2rem;border-radius:10px;font-size:.88rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:.5rem;opacity:0;transform:translateY(12px);transition:all .25s`;
+  t.innerHTML = `<i class="bi bi-${type==='success'?'check-circle':'exclamation-circle'}-fill"></i>${msg}`;
+  wrap.appendChild(t);
+  requestAnimationFrame(() => { t.style.opacity='1'; t.style.transform='none'; });
+  setTimeout(() => {
+    t.style.opacity='0'; t.style.transform='translateY(12px)';
+    setTimeout(() => t.remove(), 300);
+  }, 2800);
+}
+
+// ── Ajouter au panier (AJAX) ──
+document.getElementById('addToCartForm').addEventListener('submit', function(e) {
+  const isBuyNow = document.activeElement && document.activeElement.name === 'buy_now';
+  if (isBuyNow) return; // laisser le form se soumettre normalement pour buy_now
+  e.preventDefault();
+  const form = this;
+  const data = new FormData(form);
+  fetch(form.action, { method:'POST', body:data, headers:{'X-Requested-With':'XMLHttpRequest'} })
+    .then(r => r.json())
+    .then(res => {
+      if (res.added) {
+        // Mettre à jour le badge panier
+        document.querySelectorAll('.cart-badge').forEach(b => { b.textContent = res.cart_count; b.style.display=''; });
+        const badge = document.querySelector('.store-nav .position-absolute');
+        if (badge) badge.textContent = res.cart_count;
+        // Fermer le modal
+        bootstrap.Modal.getInstance(document.getElementById('planModal'))?.hide();
+        showToast('Ajouté au panier !');
+      }
+    })
+    .catch(() => showToast('Erreur réseau, réessayez.', 'error'));
+});
+
 // GPS — site le plus proche
 const SITES = {{ sites_json|safe }};
 

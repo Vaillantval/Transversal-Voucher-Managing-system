@@ -119,7 +119,7 @@ def cart_add(request):
         item.save(update_fields=['quantity'])
 
     if request.POST.get('buy_now'):
-        return redirect('store:checkout')
+        return redirect('store:cart_view')
 
     return JsonResponse({'cart_count': cart.item_count, 'added': True})
 

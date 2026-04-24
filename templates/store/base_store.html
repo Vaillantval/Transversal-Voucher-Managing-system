@@ -76,6 +76,26 @@
     /* Footer */
     .store-footer { background: var(--bn-surface); border-top: 1px solid var(--bn-border); }
 
+    /* Bouton Se connecter navbar */
+    .btn-login-nav {
+      display:inline-flex;align-items:center;gap:.35rem;
+      background:linear-gradient(135deg,#1d4ed8,#6366f1);
+      color:#fff;font-size:.82rem;font-weight:600;
+      padding:.4rem 1rem;border-radius:8px;text-decoration:none;
+      box-shadow:0 0 0 0 rgba(99,102,241,.5);
+      animation:nav-glow 2.8s ease-in-out infinite;
+      transition:transform .15s,box-shadow .15s;
+    }
+    .btn-login-nav:hover {
+      color:#fff;transform:translateY(-1px);
+      box-shadow:0 6px 20px rgba(99,102,241,.5);
+      animation:none;
+    }
+    @keyframes nav-glow {
+      0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.45)}
+      50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}
+    }
+
     /* Scroll reveal */
     .reveal { opacity: 0; transform: translateY(24px); transition: opacity .5s, transform .5s; }
     .reveal.visible { opacity: 1; transform: none; }
@@ -97,7 +117,7 @@
             style="background:var(--bn-blue);font-size:.65rem">{{ cart_count }}</span>
       {% endif %}
     </a>
-    <a href="{% url 'accounts:login' %}" class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex">
+    <a href="{% url 'accounts:login' %}" class="btn-login-nav d-none d-md-inline-flex">
       <i class="bi bi-box-arrow-in-right me-1"></i>Se connecter
     </a>
   </div>
