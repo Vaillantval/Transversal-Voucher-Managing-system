@@ -60,7 +60,7 @@
           {% for val, label in payment_methods %}
           <div class="form-check">
             <input class="form-check-input" type="radio" name="payment_method"
-                   id="pm_{{ val }}" value="{{ val }}" {% if val == 'all' %}checked{% endif %}>
+                   id="pm_{{ val }}" value="{{ val }}" {% if val == 'moncash' %}checked{% endif %}>
             <label class="form-check-label small" for="pm_{{ val }}">{{ label }}</label>
           </div>
           {% endfor %}

@@ -156,10 +156,8 @@ def cart_view(request):
             session_key=request.session.session_key
         ).first()
     payment_methods = [
-        ('all',      'Toutes méthodes'),
-        ('moncash',  'MonCash'),
-        ('natcash',  'NatCash'),
-        ('kashpaw',  'Kashpaw'),
+        ('moncash', 'MonCash'),
+        ('natcash', 'NatCash'),
     ]
     return render(request, 'store/cart.html', {
         'cart':             cart,
@@ -173,7 +171,7 @@ def cart_view(request):
 def initiate_checkout(request):
     full_name      = request.POST.get('full_name', '').strip()
     phone          = request.POST.get('phone', '').strip()
-    payment_method = request.POST.get('payment_method', 'all')
+    payment_method = request.POST.get('payment_method', 'moncash')
 
     if not full_name or not phone:
         messages.error(request, 'Nom et numéro de téléphone obligatoires.')
