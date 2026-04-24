@@ -126,6 +126,7 @@ INSTALLED_APPS = [
     'vouchers',
     'dashboard',
     'reports',
+    'unifi_api',
     'notifications.apps.NotificationsConfig',
     'django_apscheduler',
 ]
