@@ -629,6 +629,32 @@ def partner_reject(request, pk):
     application.reviewed_at = timezone.now()
     application.save()
 
+    # Email au candidat rejeté
+    try:
+        from notifications.email_service import send_email
+        note_html = (
+            f"<p style='color:#64748b;font-size:.9rem'><strong>Motif :</strong> {application.admin_notes}</p>"
+            if application.admin_notes else ""
+        )
+        send_email(
+            to=[application.email],
+            subject='[BonNet] Votre demande de partenariat',
+            html=f"""
+            <div style="font-family:sans-serif;max-width:560px;margin:auto">
+              <h2 style="color:#1d4ed8">Bonjour {application.first_name},</h2>
+              <p>Après examen de votre demande de partenariat BonNet, nous ne sommes
+              malheureusement pas en mesure de donner une suite favorable à votre
+              candidature pour le moment.</p>
+              {note_html}
+              <p>N'hésitez pas à soumettre une nouvelle demande ultérieurement ou à
+              nous contacter pour plus d'informations.</p>
+              <p style="color:#64748b;font-size:.85rem">— L'équipe BonNet</p>
+            </div>
+            """,
+        )
+    except Exception:
+        pass
+
     messages.success(request, f'Demande de {application.first_name} {application.last_name} rejetée.')
     return redirect('sites:partners')
 

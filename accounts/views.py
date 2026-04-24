@@ -200,6 +200,67 @@ def partner_register(request):
                 accepted_equipment=True,
                 accepted_conditions=True,
             )
+
+            from django.conf import settings
+            from notifications.email_service import send_email
+
+            # Email de confirmation au candidat
+            try:
+                send_email(
+                    to=[email],
+                    subject='[BonNet] Votre demande de partenariat a été reçue',
+                    html=f"""
+                    <div style="font-family:sans-serif;max-width:560px;margin:auto">
+                      <h2 style="color:#1d4ed8">Merci, {first_name}&nbsp;!</h2>
+                      <p>Nous avons bien reçu votre demande de partenariat BonNet.</p>
+                      <p>Notre équipe va l'examiner dans les meilleurs délais. Vous recevrez
+                      une réponse à cette adresse email dès qu'elle aura été traitée.</p>
+                      <p style="color:#64748b;font-size:.9rem">
+                        Récapitulatif de votre demande :<br>
+                        <strong>Nom :</strong> {first_name} {last_name}<br>
+                        <strong>Téléphone :</strong> {phone}<br>
+                        <strong>Adresse :</strong> {address}
+                      </p>
+                      <p style="color:#64748b;font-size:.85rem">— L'équipe BonNet</p>
+                    </div>
+                    """,
+                )
+            except Exception:
+                pass
+
+            # Notification à l'admin
+            try:
+                admin_notify = getattr(settings, 'ADMIN_NOTIFY', '')
+                admin_emails = [e.strip() for e in admin_notify.split(',') if e.strip()]
+                if admin_emails:
+                    partners_url = request.build_absolute_uri('/sites/partenaires/')
+                    send_email(
+                        to=admin_emails,
+                        subject=f'[BonNet] 🆕 Nouvelle demande partenaire — {first_name} {last_name}',
+                        html=f"""
+                        <div style="font-family:sans-serif;max-width:560px;margin:auto">
+                          <h2 style="color:#1d4ed8">Nouvelle demande partenaire</h2>
+                          <table style="border-collapse:collapse;margin:16px 0;width:100%">
+                            <tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600;width:140px">Nom</td>
+                                <td style="padding:6px 12px">{first_name} {last_name}</td></tr>
+                            <tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Email</td>
+                                <td style="padding:6px 12px">{email}</td></tr>
+                            <tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Téléphone</td>
+                                <td style="padding:6px 12px">{phone}</td></tr>
+                            <tr><td style="padding:6px 12px;background:#f3f4f6;font-weight:600">Adresse</td>
+                                <td style="padding:6px 12px">{address}</td></tr>
+                          </table>
+                          <a href="{partners_url}"
+                             style="display:inline-block;background:#1d4ed8;color:#fff;
+                                    padding:.65rem 1.4rem;border-radius:8px;text-decoration:none;font-weight:600">
+                            Voir la demande →
+                          </a>
+                        </div>
+                        """,
+                    )
+            except Exception:
+                pass
+
             return redirect('accounts:partner_success')
 
     return render(request, 'accounts/partner_register.html', {
