@@ -172,20 +172,28 @@ def cart_remove(request):
 
 def cart_view(request):
     cart = _get_or_create_cart(request)
-    profile = None
-    if request.session.session_key:
-        profile = CustomerProfile.objects.filter(
-            session_key=request.session.session_key
-        ).first()
-    payment_methods = [
-        ('moncash', 'MonCash'),
-        ('natcash', 'NatCash'),
-    ]
+    store_user = _get_store_user(request)
+
+    prefill_name = ''
+    prefill_phone = ''
+    if store_user:
+        cp = CustomerProfile.objects.filter(store_user=store_user).first()
+        prefill_name  = cp.full_name if cp else store_user.full_name
+        prefill_phone = cp.phone     if cp else store_user.phone
+    elif request.session.session_key:
+        cp = CustomerProfile.objects.filter(session_key=request.session.session_key).first()
+        if cp:
+            prefill_name  = cp.full_name
+            prefill_phone = cp.phone
+
+    payment_methods = [('moncash', 'MonCash'), ('natcash', 'NatCash')]
     return render(request, 'store/cart.html', {
-        'cart':             cart,
-        'cart_count':       cart.item_count,
-        'profile':          profile,
-        'payment_methods':  payment_methods,
+        'cart':          cart,
+        'cart_count':    cart.item_count,
+        'prefill_name':  prefill_name,
+        'prefill_phone': prefill_phone,
+        'has_prefill':   bool(prefill_name or prefill_phone),
+        'payment_methods': payment_methods,
     })
 
 
@@ -204,10 +212,23 @@ def initiate_checkout(request):
         messages.error(request, 'Votre panier est vide.')
         return redirect('store:storefront')
 
-    profile, _ = CustomerProfile.objects.update_or_create(
-        session_key=request.session.session_key,
-        defaults={'full_name': full_name, 'phone': phone},
-    )
+    store_user = _get_store_user(request)
+    if store_user:
+        profile, _ = CustomerProfile.objects.update_or_create(
+            store_user=store_user,
+            defaults={'full_name': full_name, 'phone': phone},
+        )
+        if store_user.full_name != full_name or store_user.phone != phone:
+            store_user.full_name = full_name
+            store_user.phone = phone
+            store_user.save(update_fields=['full_name', 'phone'])
+    else:
+        if not request.session.session_key:
+            request.session.create()
+        profile, _ = CustomerProfile.objects.update_or_create(
+            session_key=request.session.session_key,
+            defaults={'full_name': full_name, 'phone': phone},
+        )
 
     total = cart.total
     order = Order.objects.create(customer=profile, total_htg=total)
@@ -349,8 +370,18 @@ def update_profile(request):
     store_user = _get_store_user(request)
     if not store_user:
         return redirect('store:google_login')
-    store_user.phone   = request.POST.get('phone', '').strip()
-    store_user.address = request.POST.get('address', '').strip()
-    store_user.save(update_fields=['phone', 'address'])
+    full_name = request.POST.get('full_name', '').strip()
+    phone     = request.POST.get('phone', '').strip()
+    address   = request.POST.get('address', '').strip()
+    if full_name:
+        store_user.full_name = full_name
+    store_user.phone   = phone
+    store_user.address = address
+    store_user.save(update_fields=['full_name', 'phone', 'address'])
+    # Sync CustomerProfile if it exists
+    CustomerProfile.objects.filter(store_user=store_user).update(
+        full_name=store_user.full_name,
+        phone=phone,
+    )
     messages.success(request, 'Profil mis à jour.')
     return redirect('store:my_orders')

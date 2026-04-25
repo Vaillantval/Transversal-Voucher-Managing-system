@@ -19,6 +19,36 @@
     </div>
   </div>
 
+  <!-- Édition profil -->
+  <div class="p-4 rounded-3 mb-5" style="background:var(--bn-card);border:1px solid var(--bn-border)">
+    <h5 class="fw-bold mb-3"><i class="bi bi-person-gear me-2" style="color:var(--bn-blue)"></i>Mon profil</h5>
+    {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} py-2 small mb-3">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+    <form method="post" action="{% url 'store:update_profile' %}">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold small">Nom complet</label>
+          <input type="text" name="full_name" class="form-control" value="{{ store_user.full_name }}" placeholder="Jean Pierre">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold small">Téléphone</label>
+          <input type="tel" name="phone" class="form-control" value="{{ store_user.phone }}" placeholder="+50934567890">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Adresse</label>
+          <input type="text" name="address" class="form-control" value="{{ store_user.address }}" placeholder="Ville, quartier…">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-bn-primary mt-3 px-4">
+        <i class="bi bi-check2 me-1"></i>Enregistrer
+      </button>
+    </form>
+  </div>
+
   <!-- Commandes -->
   <h5 class="section-title mb-4">Mes codes WiFi</h5>
 

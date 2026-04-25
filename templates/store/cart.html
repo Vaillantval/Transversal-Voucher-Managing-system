@@ -37,9 +37,10 @@
   <!-- Formulaire checkout -->
   <div class="p-4 rounded-3" style="background:var(--bn-card);border:1px solid var(--bn-border)">
     <h5 class="fw-bold mb-3">Vos informations</h5>
-    {% if profile %}
+    {% if has_prefill %}
     <div class="alert alert-info py-2 small mb-3">
-      <i class="bi bi-person-check me-1"></i>Bienvenue, <strong>{{ profile.full_name }}</strong> — vos infos sont pré-remplies.
+      <i class="bi bi-person-check me-1"></i>Vos informations sont pré-remplies.
+      {% if store_user %}<a href="{% url 'store:my_orders' %}" class="ms-1 small">Modifier</a>{% endif %}
     </div>
     {% endif %}
     <form method="post" action="{% url 'store:checkout' %}">
@@ -47,12 +48,12 @@
       <div class="mb-3">
         <label class="form-label fw-semibold small">Nom complet</label>
         <input type="text" name="full_name" class="form-control" required
-               value="{{ profile.full_name|default:'' }}" placeholder="Jean Pierre">
+               value="{{ prefill_name }}" placeholder="Jean Pierre">
       </div>
       <div class="mb-3">
         <label class="form-label fw-semibold small">Numéro de téléphone</label>
         <input type="tel" name="phone" class="form-control" required
-               value="{{ profile.phone|default:'' }}" placeholder="+50934567890">
+               value="{{ prefill_phone }}" placeholder="+50934567890">
       </div>
       <div class="mb-4">
         <label class="form-label fw-semibold small">Méthode de paiement</label>
