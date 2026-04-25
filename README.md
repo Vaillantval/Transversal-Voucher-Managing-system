@@ -1,28 +1,38 @@
-# BonNet — Gestion Vouchers WiFi Haïti
+# BonNet — WiFi Haïti · Gestion Vouchers + Store E-commerce
 
-Application Django de gestion des coupons de connexion internet
-sur les sites Starlink/UniFi déployés en Haïti.
+Application Django en deux volets :
+- **Espace admin** — gestion des vouchers WiFi UniFi, sites, tarifs, rapports
+- **Store public** — vente de forfaits WiFi en ligne (MonCash / NatCash via PlopPlop)
+
+Déployé sur Railway · Domaine : **bon.net.ht**
+
+---
 
 ## Stack technique
 
 | Composant | Détail |
 |-----------|--------|
 | **Backend** | Django 5.2 + PostgreSQL (Railway) |
-| **Cache** | Redis (Railway) via django-redis — partagé entre workers |
+| **Cache / Sessions** | Redis (Railway) via django-redis |
+| **Tâches async** | Celery + Redis (livraison vouchers) |
 | **API UniFi** | pyunifi — contrôleur p989.cloudunifi.com |
+| **Paiement** | PlopPlop (MonCash / NatCash) |
+| **SMS** | Twilio (envoi des codes après paiement) |
 | **Emails** | Resend (API HTTP) |
+| **Auth store** | Google OAuth2 custom (sans django-allauth) |
 | **Scheduler** | APScheduler + django-apscheduler |
 | **Export** | reportlab (PDF), openpyxl (Excel), csv natif |
-| **Frontend** | Bootstrap 5.3 + Chart.js 4.4 (CDN) |
+| **Frontend** | Bootstrap 5.3 + Chart.js 4.4 + Swiper.js (CDN) |
 | **Thème admin** | django-jazzmin (dark) |
 | **Déploiement** | Docker multi-stage + Railway.app + Gunicorn + WhiteNoise |
+
+---
 
 ## Installation locale
 
 ```bash
-# 1. Cloner le projet
-git clone <repo>
-cd bonnet
+# 1. Cloner
+git clone <repo> && cd bonnet
 
 # 2. Environnement virtuel
 python -m venv .venv
@@ -46,107 +56,147 @@ python manage.py ensure_superadmin
 python manage.py runserver
 ```
 
+---
+
 ## Variables d'environnement
 
+### Core
 | Variable | Obligatoire | Description |
 |----------|-------------|-------------|
 | `SECRET_KEY` | Prod | Clé secrète Django |
 | `DEBUG` | Non | `True` en dev, `False` en prod |
 | `DATABASE_URL` | Prod | URL PostgreSQL Railway (auto-injectée) |
-| `UNIFI_HOST` | Oui | Hôte contrôleur UniFi |
-| `UNIFI_PORT` | Oui | Port (défaut 8443) |
-| `UNIFI_USERNAME` | Oui | Identifiant UniFi |
-| `UNIFI_PASSWORD` | Oui | Mot de passe UniFi |
-| `RESEND_API_KEY` | Prod | Clé API Resend (emails) |
-| `RESEND_FROM_EMAIL` | Prod | Expéditeur email (domaine vérifié Resend) |
-| `REDIS_URL` | Prod | URL Redis Railway (copier depuis le service Redis) |
-| `ADMIN_NOTIFY` | Prod | Emails destinataires rapports (virgule-séparés) |
+| `REDIS_URL` | Prod | URL Redis Railway |
+| `ALLOWED_HOSTS` | Prod | Domaines autorisés (virgule-séparés) |
+| `CSRF_TRUSTED_ORIGINS` | Prod | Origins CSRF (ex: `https://bon.net.ht`) |
 
-## Structure des rôles
+### UniFi
+| Variable | Description |
+|----------|-------------|
+| `UNIFI_HOST` | Hôte contrôleur UniFi |
+| `UNIFI_PORT` | Port (défaut 8443) |
+| `UNIFI_USERNAME` | Identifiant UniFi |
+| `UNIFI_PASSWORD` | Mot de passe UniFi |
 
-| Rôle | Droits |
-|------|--------|
-| **superadmin** | Tous les sites, tarifs, rapports complets, gestion utilisateurs |
-| **site_admin** | Sites assignés uniquement, vouchers, export filtré |
+### Emails & Notifications
+| Variable | Description |
+|----------|-------------|
+| `RESEND_API_KEY` | Clé API Resend |
+| `RESEND_FROM_EMAIL` | Expéditeur (domaine vérifié Resend) |
+| `ADMIN_NOTIFY` | Emails admins pour alertes/rapports (virgule-séparés) |
+
+### Store (paiement + auth)
+| Variable | Description |
+|----------|-------------|
+| `PLOPPLOP_CLIENT_ID` | Client ID marchand PlopPlop |
+| `TWILIO_ACCOUNT_SID` | Account SID Twilio |
+| `TWILIO_AUTH_TOKEN` | Auth Token Twilio |
+| `TWILIO_FROM_NUMBER` | Numéro expéditeur SMS (ex: `+1XXXXXXXXXX`) |
+| `GOOGLE_CLIENT_ID` | OAuth2 client ID Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | OAuth2 client secret Google Cloud Console |
+
+---
 
 ## Apps Django
 
 | App | Rôle |
 |-----|------|
-| `accounts` | Auth UniFi backend + rôles + gestion utilisateurs + espace partenaire |
-| `sites_mgmt` | HotspotSite + VoucherTier (Standard / Remplacement / Admin) |
-| `vouchers` | VoucherLog — créer / sync / supprimer via UniFi API |
-| `dashboard` | KPIs + charts Chart.js (temps réel) |
+| `accounts` | Auth UniFi backend + rôles + gestion utilisateurs + formulaire partenaire public |
+| `sites_mgmt` | HotspotSite (GPS) + VoucherTier + SiteConfig + PartnerProduct |
+| `vouchers` | VoucherLog — stock de vouchers actifs (source prioritaire pour le store) |
+| `dashboard` | KPIs + charts temps réel |
 | `reports` | Export PDF / Excel / CSV |
-| `unifi_api` | Client HTTP pyunifi avec cache Redis (3–6 min TTL, pre-warm /2min) |
-| `notifications` | Alertes stock (par forfait), génération auto, rapports mensuels, AdminVoucherGenLog |
+| `unifi_api` | Client pyunifi avec cache Redis (TTL 3–6min, pre-warm /2min) |
+| `notifications` | Alertes stock, génération auto, rapports mensuels, AdminVoucherGenLog |
+| `store` | Store public : StoreUser, Cart, Order, PlopPlop, Celery delivery, Google OAuth |
+
+---
+
+## Architecture du store public
+
+### Deux types d'utilisateurs (totalement séparés)
+
+| | Admin (`User`) | Client (`StoreUser`) |
+|---|---|---|
+| Auth | UniFi backend / Django | Google OAuth2 custom |
+| Session | `request.user` Django | `request.session['store_user_id']` |
+| Accès | `/dashboard/` + `/admin/` | `/` + `/mon-compte/` |
+
+### Workflow d'achat
+
+```
+1. Storefront → clic plan → modal 2 étapes
+   └─ Étape 1 : choix du site
+   └─ Étape 2 : vrais tiers du site (/site/<id>/tiers/)
+       → pré-sélection du tier le plus proche de la durée approximative
+
+2. Panier → checkout POST → PlopPlop create_transaction
+   → redirect page paiement (MonCash ou NatCash)
+
+3. PlopPlop → return URL : https://bon.net.ht/commande/
+   → redirect /commande/BONNET-XXXX/
+
+4. Polling JS /3s → verify_transaction
+   → si payé : Redis lock (cache.add) → deliver_order.delay (Celery)
+
+5. Celery deliver_order :
+   └─ Priorité : VoucherLog stock actif (select_for_update skip_locked)
+   └─ Fallback : unifi.create_vouchers()
+   → SMS Twilio avec les codes → page affiche les codes
+```
+
+---
 
 ## Forfaits (VoucherTier)
 
-Trois types gérés depuis `/sites/tarifs/` :
-
 | Type | Prix | Usage |
 |------|------|-------|
-| **Standard** | Libre (HTG) | Vente normale |
-| **Remplacement** | 0 HTG | Offert — VoucherTier horodaté créé à la volée |
-| **Admin** | 0 HTG | Accès admin — quantité limitée, régénération automatique à expiration |
+| **Standard** | Libre (HTG) | Vente admin + store public |
+| **Remplacement** | 0 HTG | Offert — créé à la volée |
+| **Admin** | 0 HTG | Accès admin — régénération automatique |
 
-- Assignation par site via M2M — un forfait peut couvrir plusieurs sites
-- Forfait Admin par défaut créé automatiquement pour tout nouveau site (signal `post_save`)
+- Assignation par site via M2M
+- Forfait Admin par défaut créé automatiquement pour tout nouveau site
 
-## Notifications & Emails automatiques
+---
 
-### Alerte stock faible
-- **Déclencheur** : < 30 vouchers disponibles **par forfait standard** sur un site
-- **Filtre** : site doit avoir ≥ 1 device ET des sessions dans les 2 dernières semaines
-- **Destinataires** : site_admins du site concerné (si notifications activées dans Configuration)
-- **Cooldown** : 1 alerte maximum par forfait par site toutes les 24h
-- **Fréquence de vérification** : toutes les 12 heures
+## Notifications & Emails
 
-### Génération automatique
-Comportement selon les deux toggles dans Configuration :
+### Partenaires
+- Soumission → email confirmation au candidat + alerte `ADMIN_NOTIFY`
+- Approbation → email identifiants + création compte + site UniFi
+- Rejet → email poli au candidat (motif si renseigné)
 
-| AutoGen | Notifications | Résultat |
-|---------|--------------|----------|
-| ON | OFF | Génération immédiate dès la 1ère détection |
-| ON | ON | Alerte → délai configurable → génération |
-| OFF | ON | Alerte uniquement |
-| OFF | OFF | Bloqué en configuration |
+### Stock & Génération automatique
+- Alerte stock < 30 vouchers par forfait standard par site (toutes les 12h)
+- Génération auto selon les toggles AutoGen / Notifications dans Configuration
+- Génération admin quand `today >= expires_at` (AdminVoucherGenLog)
 
-- Génération **standard** : `count_per_tier` vouchers (défaut 100) par forfait standard sous le seuil
-- Génération **admin** : `tier.max_vouchers` vouchers par forfait admin quand `today >= expires_at` (`AdminVoucherGenLog`)
+### Rapport mensuel
+- Dernier jour du mois à 8h00 (heure Haïti) → Excel + PDF → `ADMIN_NOTIFY`
 
-### Rapport mensuel automatique
-- **Déclencheur** : dernier jour du mois à 8h00 (heure Haïti)
-- **Contenu** : 1 fichier Excel (feuille résumé global + 1 feuille par site) + 1 PDF (tableau récap + détail par site)
-- **Destinataires** : emails dans `ADMIN_NOTIFY`
-
-### Envoi manuel d'un rapport
 ```bash
-python manage.py send_report_now           # 30 derniers jours
-python manage.py send_report_now --days 60 # 60 derniers jours
+# Envoi manuel
+python manage.py send_report_now
+python manage.py send_report_now --days 60
 ```
 
-## Exports disponibles
+---
 
-- **CSV** : données brutes (compatible Excel, Google Sheets)
-- **Excel** : rapport multi-feuilles (résumé global + détail + par forfait + graphique)
-- **PDF** : rapport formaté avec tableau récap par site + détail transactions
-
-## Architecture Railway (3 services)
+## Architecture Railway
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Railway Project : BonNet                               │
 │                                                         │
 │  [web]         Django + Gunicorn  → pages & API         │
-│  [redis]       Redis              → cache partagé       │
+│  [redis]       Redis              → cache + Celery      │
 │  [postgresql]  PostgreSQL         → données             │
 │                                                         │
-│  web ──REDIS_URL──► Redis    (cache vouchers/guests)    │
-│  web ──DATABASE_URL──► PostgreSQL  (users, logs…)       │
+│  web ──REDIS_URL──► Redis    (cache UniFi + Celery)     │
+│  web ──DATABASE_URL──► PostgreSQL  (users, orders…)     │
 │  web ──HTTPS──► p989.cloudunifi.com  (UniFi API)        │
-│                 (appelé seulement par le pre-warm /2min) │
+│  web ──HTTPS──► PlopPlop / Twilio / Google / Resend     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -155,18 +205,34 @@ python manage.py send_report_now --days 60 # 60 derniers jours
 startCommand = "python manage.py migrate --noinput && python manage.py ensure_superadmin && gunicorn bonnet.wsgi --bind 0.0.0.0:$PORT --workers 1 --timeout 120"
 ```
 
-> ⚠️ `--workers 1` obligatoire — APScheduler démarre dans chaque worker Gunicorn ; plusieurs workers créeraient des jobs en double.
+> ⚠️ `--workers 1` obligatoire — APScheduler démarre dans chaque worker ; plusieurs workers = jobs en double.
 
-### Ajout du service Redis
-1. Railway → **Add Service → Database → Redis**
-2. Copier la valeur de `REDIS_URL` depuis le service Redis
-3. L'ajouter manuellement dans les variables du service web
-4. Redéployer → le cache bascule automatiquement sur Redis
+### Configuration Google Cloud Console
+Dans **APIs & Services → Credentials → OAuth Client ID** :
+- Authorized redirect URIs : `https://bon.net.ht/auth/google/callback/`
+- Authorized JavaScript origins : `https://bon.net.ht`
+
+### Return URL PlopPlop
+```
+https://bon.net.ht/commande/
+```
+(PlopPlop redirige vers `?refference_id=BONNET-XXXX`, la vue lit et redirige vers la page de confirmation)
+
+---
+
+## Structure des rôles admin
+
+| Rôle | Droits |
+|------|--------|
+| **superadmin** | Tous les sites, tarifs, rapports complets, gestion utilisateurs, partenaires |
+| **site_admin** | Sites assignés uniquement, vouchers, export filtré |
+
+---
 
 ## Prochaines étapes suggérées
 
 - [ ] Vérification du domaine `bon.net.ht` sur Resend pour l'envoi production
+- [ ] Exposer Django comme backend REST pour app mobile (JWT, endpoints)
+- [ ] MEDIA_ROOT depuis env var sur Railway (logos/PDF perdus sinon)
 - [ ] QR codes sur les vouchers imprimés
 - [ ] Notifications WhatsApp/SMS quand un device passe offline
-- [ ] App mobile légère pour les vendeurs terrain
-- [ ] Tableau comparatif performance entre sites
