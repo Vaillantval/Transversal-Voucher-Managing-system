@@ -34,6 +34,22 @@
     <span class="plan-price" style="font-size:1.6rem">{{ cart.total }} HTG</span>
   </div>
 
+  <!-- Incitation Google (anonyme uniquement) -->
+  {% if not store_user %}
+  <div class="p-3 rounded-3 mb-4 d-flex align-items-center gap-3" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25)">
+    <div style="font-size:1.6rem;line-height:1">
+      <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M43.611 20.083H42V20H24v8h11.303C33.973 32.281 29.418 35 24 35c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" fill="#FFC107"/><path d="M6.306 14.691l6.571 4.819C14.655 16.108 19.001 13 24 13c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" fill="#FF3D00"/><path d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 35c-5.399 0-9.947-3.674-11.292-8.65l-6.522 5.025C9.505 39.556 16.227 44 24 44z" fill="#4CAF50"/><path d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l6.19 5.238C42.012 35.245 44 30 44 24c0-1.341-.138-2.65-.389-3.917z" fill="#1976D2"/></svg>
+    </div>
+    <div class="flex-grow-1">
+      <div class="fw-semibold small mb-1" style="color:var(--bn-text)">Connectez-vous pour un achat plus rapide</div>
+      <div class="small" style="color:var(--bn-muted)">Vos infos pré-remplies, historique de vos codes, accès depuis n'importe quel appareil.</div>
+    </div>
+    <a href="{% url 'store:google_login' %}?next={% url 'store:cart_view' %}" class="btn btn-sm btn-outline-secondary text-nowrap">
+      <i class="bi bi-google me-1"></i>Connexion
+    </a>
+  </div>
+  {% endif %}
+
   <!-- Formulaire checkout -->
   <div class="p-4 rounded-3" style="background:var(--bn-card);border:1px solid var(--bn-border)">
     <h5 class="fw-bold mb-3">Vos informations</h5>
@@ -43,17 +59,20 @@
       {% if store_user %}<a href="{% url 'store:my_orders' %}" class="ms-1 small">Modifier</a>{% endif %}
     </div>
     {% endif %}
-    <form method="post" action="{% url 'store:checkout' %}">
+    <form id="checkoutForm" method="post" action="{% url 'store:checkout' %}">
       {% csrf_token %}
       <div class="mb-3">
         <label class="form-label fw-semibold small">Nom complet</label>
-        <input type="text" name="full_name" class="form-control" required
+        <input type="text" name="full_name" id="fieldName" class="form-control" required
                value="{{ prefill_name }}" placeholder="Jean Pierre">
       </div>
       <div class="mb-3">
-        <label class="form-label fw-semibold small">Numéro de téléphone</label>
-        <input type="tel" name="phone" class="form-control" required
+        <label class="form-label fw-semibold small">
+          Numéro de téléphone <span class="text-danger">*</span>
+        </label>
+        <input type="tel" name="phone" id="fieldPhone" class="form-control" required
                value="{{ prefill_phone }}" placeholder="+50934567890">
+        <div id="phoneError" class="invalid-feedback">Veuillez entrer un numéro de téléphone valide.</div>
       </div>
       <div class="mb-4">
         <label class="form-label fw-semibold small">Méthode de paiement</label>
@@ -67,7 +86,7 @@
           {% endfor %}
         </div>
       </div>
-      <button type="submit" class="btn btn-bn-primary w-100 py-2 fs-6">
+      <button type="submit" id="payBtn" class="btn btn-bn-primary w-100 py-2 fs-6">
         <i class="bi bi-credit-card me-2"></i>Payer {{ cart.total }} HTG
       </button>
     </form>
@@ -81,4 +100,35 @@
   </div>
   {% endif %}
 </div>
+
+<script>
+(function () {
+  const form = document.getElementById('checkoutForm');
+  if (!form) return;
+  const phoneInput = document.getElementById('fieldPhone');
+  const phoneError = document.getElementById('phoneError');
+
+  function validatePhone() {
+    const val = phoneInput.value.trim();
+    const ok = val.length >= 8 && /[\d]/.test(val);
+    phoneInput.classList.toggle('is-invalid', !ok);
+    phoneInput.classList.toggle('is-valid', ok);
+    return ok;
+  }
+
+  phoneInput.addEventListener('blur', validatePhone);
+  phoneInput.addEventListener('input', function () {
+    if (phoneInput.classList.contains('is-invalid')) validatePhone();
+  });
+
+  form.addEventListener('submit', function (e) {
+    const nameVal = document.getElementById('fieldName').value.trim();
+    const phoneOk = validatePhone();
+    if (!nameVal || !phoneOk) {
+      e.preventDefault();
+      if (!phoneOk) phoneInput.focus();
+    }
+  });
+})();
+</script>
 {% endblock %}
