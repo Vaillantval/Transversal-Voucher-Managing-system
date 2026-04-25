@@ -121,8 +121,7 @@ def check_stock_levels():
                         ).first()
                         if pending_alert:
                             logger.info(f"Auto-gen std {site.name} / {tier.label} (stock={count})")
-                            pending_alert.auto_gen_triggered = True
-                            pending_alert.save(update_fields=['auto_gen_triggered'])
+                            pending_alert.delete()
                             _auto_generate_vouchers_for_tier(site, tier, count, autogen.count_per_tier)
                     continue
 
@@ -158,6 +157,8 @@ def check_stock_levels():
                             notif.save(update_fields=['email_sent'])
                 except Exception as e:
                     logger.error(f"Email stock alert {site.name}/{tier.label}: {e}")
+
+        _cleanup_old_notifications()
 
     except Exception as e:
         logger.error(f"check_stock_levels error: {e}", exc_info=True)
@@ -443,6 +444,36 @@ def send_monthly_reports():
 
     except Exception as e:
         logger.error(f"send_monthly_reports error: {e}", exc_info=True)
+
+
+def _cleanup_old_notifications():
+    """
+    Supprime automatiquement les notifications obsolètes :
+    - Lues depuis plus de 7 jours (basé sur created_at comme proxy)
+    - auto_generated lues depuis plus de 7 jours
+    - monthly_report lues depuis plus de 30 jours
+    """
+    try:
+        from .models import Notification
+        cutoff_7  = timezone.now() - timedelta(days=7)
+        cutoff_30 = timezone.now() - timedelta(days=30)
+
+        deleted, _ = Notification.objects.filter(
+            is_read=True,
+            type__in=[Notification.TYPE_STOCK_LOW, Notification.TYPE_AUTO_GENERATED],
+            created_at__lt=cutoff_7,
+        ).delete()
+
+        deleted_r, _ = Notification.objects.filter(
+            is_read=True,
+            type=Notification.TYPE_MONTHLY_REPORT,
+            created_at__lt=cutoff_30,
+        ).delete()
+
+        if deleted or deleted_r:
+            logger.info(f"Cleanup notifications: {deleted + deleted_r} supprimée(s)")
+    except Exception as e:
+        logger.error(f"_cleanup_old_notifications: {e}")
 
 
 def send_weekly_store_report():
