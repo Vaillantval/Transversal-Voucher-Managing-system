@@ -76,13 +76,17 @@
       </div>
       <div class="mb-4">
         <label class="form-label fw-semibold small">Méthode de paiement</label>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-3 flex-wrap mt-1">
+          {% load static %}
           {% for val, label in payment_methods %}
-          <div class="form-check">
-            <input class="form-check-input" type="radio" name="payment_method"
+          <label for="pm_{{ val }}" class="pm-card {% if val == 'moncash' %}pm-selected{% endif %}">
+            <input class="pm-radio" type="radio" name="payment_method"
                    id="pm_{{ val }}" value="{{ val }}" {% if val == 'moncash' %}checked{% endif %}>
-            <label class="form-check-label small" for="pm_{{ val }}">{{ label }}</label>
-          </div>
+            <img src="{% static 'img/'|add:val|add:'.png' %}" alt="{{ label }}" height="32"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+            <span class="pm-fallback" style="display:none">{{ label }}</span>
+            <span class="pm-label small fw-semibold">{{ label }}</span>
+          </label>
           {% endfor %}
         </div>
       </div>
@@ -101,7 +105,33 @@
   {% endif %}
 </div>
 
+<style>
+.pm-card {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem 1rem;
+  border-radius: 10px;
+  border: 2px solid var(--bn-border);
+  background: var(--bn-surface);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  user-select: none;
+}
+.pm-card:hover { border-color: var(--bn-blue); }
+.pm-card.pm-selected { border-color: var(--bn-blue); background: rgba(59,130,246,.08); }
+.pm-radio { display: none; }
+.pm-label { color: var(--bn-text); }
+</style>
+
 <script>
+document.querySelectorAll('.pm-radio').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.pm-card').forEach(c => c.classList.remove('pm-selected'));
+    this.closest('.pm-card').classList.add('pm-selected');
+  });
+});
+
 (function () {
   const form = document.getElementById('checkoutForm');
   if (!form) return;
