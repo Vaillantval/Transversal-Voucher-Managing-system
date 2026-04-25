@@ -231,7 +231,7 @@ def initiate_checkout(request):
         )
 
     total = cart.total
-    order = Order.objects.create(customer=profile, total_htg=total)
+    order = Order.objects.create(customer=profile, total_htg=total, payment_method=payment_method)
     for item in cart.items.select_related('tier', 'site').all():
         OrderItem.objects.create(
             order=order,

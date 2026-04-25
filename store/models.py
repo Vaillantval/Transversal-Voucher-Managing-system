@@ -116,9 +116,17 @@ class Order(models.Model):
         (STATUS_FAILED,     'Échoué'),
     ]
 
+    PAYMENT_MONCASH = 'moncash'
+    PAYMENT_NATCASH = 'natcash'
+    PAYMENT_CHOICES = [
+        (PAYMENT_MONCASH, 'MonCash'),
+        (PAYMENT_NATCASH, 'NatCash'),
+    ]
+
     reference               = models.CharField(max_length=30, unique=True, default=_gen_reference)
     customer                = models.ForeignKey(CustomerProfile, on_delete=models.PROTECT, related_name='orders')
     status                  = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    payment_method          = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default=PAYMENT_MONCASH, verbose_name='Méthode de paiement')
     total_htg               = models.DecimalField(max_digits=10, decimal_places=2)
     plopplop_transaction_id = models.CharField(max_length=64, blank=True)
     created_at              = models.DateTimeField(auto_now_add=True)
