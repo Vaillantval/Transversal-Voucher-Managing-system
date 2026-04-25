@@ -49,7 +49,13 @@ function pollPayment() {
         document.getElementById('success').style.display = 'block';
         const codes = data.codes || [];
         document.getElementById('codes-list').innerHTML = codes.length
-          ? codes.map(c => `<div class="fw-bold fs-3 mb-2 p-2 rounded" style="background:var(--bn-card);letter-spacing:.15em">${c}</div>`).join('')
+          ? codes.map(c => `
+              <div class="d-flex align-items-center justify-content-between gap-2 mb-2 px-3 py-2 rounded" style="background:var(--bn-card);border:1px solid var(--bn-border)">
+                <span class="fw-bold font-monospace fs-4" style="letter-spacing:.15em">${c}</span>
+                <button onclick="copyCode(this,'${c}')" class="btn btn-sm btn-outline-secondary flex-shrink-0" title="Copier">
+                  <i class="bi bi-copy"></i>
+                </button>
+              </div>`).join('')
           : '<p class="text-muted small">Les codes arriveront par SMS sous peu.</p>';
       } else if (data.status === 'failed') {
         document.getElementById('waiting').style.display = 'none';
@@ -60,6 +66,18 @@ function pollPayment() {
       }
     })
     .catch(() => setTimeout(pollPayment, 5000));
+}
+
+function copyCode(btn, code) {
+  navigator.clipboard.writeText(code).then(function() {
+    const icon = btn.querySelector('i');
+    icon.className = 'bi bi-check2';
+    btn.classList.replace('btn-outline-secondary', 'btn-outline-success');
+    setTimeout(function() {
+      icon.className = 'bi bi-copy';
+      btn.classList.replace('btn-outline-success', 'btn-outline-secondary');
+    }, 2000);
+  });
 }
 
 pollPayment();
