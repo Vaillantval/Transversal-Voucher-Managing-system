@@ -88,18 +88,18 @@
 {% if groups %}
 <div class="d-flex flex-column gap-3" id="notif-groups">
 
-  {% for site_label, site, notifs in groups %}
-  {% with unread_count=0 %}
-  {% with group_unread=notifs|length %}
+  {% for site_label, site, notifs, unread_count in groups %}
 
   <div class="site-group" id="group-{{ forloop.counter }}">
-    <div class="site-group-header {% for n in notifs %}{% if not n.is_read %}has-unread{% endif %}{% endfor %}"
+    <div class="site-group-header {% if unread_count %}has-unread{% endif %}"
          onclick="toggleGroup({{ forloop.counter }})">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-wifi text-primary"></i>
-        <span class="fw-600">{{ site_label }}</span>
+        <span class="fw-600" style="color:#111827">{{ site_label }}</span>
         <span class="badge bg-secondary" style="font-size:.72rem">{{ notifs|length }}</span>
-        {% for n in notifs %}{% if not n.is_read %}<span class="badge bg-primary" style="font-size:.68rem">non lues</span>{% endif %}{% endfor %}
+        {% if unread_count %}
+          <span class="badge bg-primary" style="font-size:.68rem">{{ unread_count }} non lu{{ unread_count|pluralize:"e,es" }}</span>
+        {% endif %}
       </div>
       <i class="bi bi-chevron-down toggle-icon" id="icon-{{ forloop.counter }}"></i>
     </div>
@@ -157,8 +157,6 @@
     </div>
   </div>
 
-  {% endwith %}
-  {% endwith %}
   {% endfor %}
 
 </div>

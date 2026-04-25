@@ -9,7 +9,7 @@ from .models import Notification
 
 
 def _group_by_site(qs):
-    """Retourne une liste ordonnée de (site_label, site_obj_or_None, [notifs])."""
+    """Retourne une liste ordonnée de (site_label, site_obj_or_None, [notifs], unread_count)."""
     groups = defaultdict(list)
     site_objs = {}
     for n in qs:
@@ -19,14 +19,14 @@ def _group_by_site(qs):
             site_objs[key] = n.site
 
     result = []
-    # Sites nommés d'abord, triés par nom
     for site_id, notifs in sorted(groups.items(), key=lambda x: (
-        x[0] == 0,  # "Sans site" en dernier
+        x[0] == 0,
         site_objs.get(x[0], None) and site_objs[x[0]].name or '',
     )):
         site = site_objs.get(site_id)
         label = site.name if site else 'Général'
-        result.append((label, site, notifs))
+        unread_count = sum(1 for n in notifs if not n.is_read)
+        result.append((label, site, notifs, unread_count))
     return result
 
 
