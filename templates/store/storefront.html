@@ -24,6 +24,28 @@
   .modal-content { background:var(--bn-card);border:1px solid var(--bn-border);border-radius:16px; }
   .modal-header { border-bottom:1px solid var(--bn-border); }
 
+  /* Tier option cards */
+  .tier-option {
+    flex:1;min-width:80px;max-width:130px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:.65rem .4rem;
+    border:1.5px solid var(--bn-border);
+    border-radius:10px;cursor:pointer;text-align:center;
+    transition:border-color .15s,background .15s;
+    user-select:none;
+  }
+  .tier-option:hover { border-color:var(--bn-blue);background:rgba(59,130,246,.06); }
+  .tier-option.selected { border-color:var(--bn-blue);background:rgba(59,130,246,.14); }
+  .tier-option .t-duration { font-size:.8rem;color:var(--bn-muted);margin-bottom:.2rem; }
+  .tier-option .t-price { font-size:1.05rem;font-weight:800;color:var(--bn-blue); }
+
+  /* Alerte site sélectionné */
+  .site-banner {
+    display:flex;align-items:center;gap:.6rem;
+    background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);
+    border-radius:10px;padding:.6rem .85rem;margin-bottom:.85rem;font-size:.88rem;
+  }
+
   /* ── Section Devenir membre ── */
   .partner-section {
     background: #060e1c;
@@ -171,7 +193,8 @@
                 data-tier="{{ plan.pk }}"
                 data-label="{{ plan.label }}"
                 data-duration="{{ plan.duration_display }}"
-                data-price="{{ plan.price_htg }}">
+                data-price="{{ plan.price_htg }}"
+                data-approx-minutes="{{ plan.duration_minutes }}">
           Voir détails
         </button>
       </div>
@@ -238,32 +261,72 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="modalPlanLabel">Plan</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="post" action="{% url 'store:cart_add' %}" id="addToCartForm">
-        {% csrf_token %}
-        <input type="hidden" name="tier_id" id="modal-tier-id">
-        <div class="modal-body">
-          <div class="text-center mb-3">
-            <div class="plan-price" id="modal-price"></div>
-            <div class="text-muted small" id="modal-duration"></div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold small">Site WiFi</label>
-            <select name="site_id" id="modal-site-select" class="form-select" required>
-              <option value="">Choisir un site…</option>
-              {% for site in sites %}
-              <option value="{{ site.pk }}">{{ site.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold small">Quantité</label>
-            <input type="number" name="quantity" class="form-control" min="1" max="10" value="1">
+        <div>
+          <h5 class="modal-title mb-0" id="modalPlanLabel">Choisir un forfait</h5>
+          <div class="small mt-1" style="color:var(--bn-muted)">
+            Plan approximatif : <span id="modal-approx-label" class="fw-semibold" style="color:var(--bn-blue)"></span>
           </div>
         </div>
-        <div class="modal-footer border-top" style="border-color:var(--bn-border)!important">
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="post" action="{% url 'store:cart_add' %}" id="addToCartForm">
+        {% csrf_token %}
+        <input type="hidden" name="site_id"  id="modal-site-id">
+        <input type="hidden" name="tier_id"  id="modal-tier-id">
+
+        <div class="modal-body">
+
+          <!-- Étape 1 : sélection du site -->
+          <div id="step-site">
+            <label class="form-label fw-semibold small mb-2">
+              <i class="bi bi-geo-alt me-1" style="color:var(--bn-blue)"></i>Sélectionnez votre site WiFi
+            </label>
+            <select id="modal-site-select" class="form-select mb-2">
+              <option value="">Choisir un site…</option>
+              {% for site in sites %}
+              <option value="{{ site.pk }}" data-name="{{ site.name }}">{{ site.name }}</option>
+              {% endfor %}
+            </select>
+            <div id="site-loading" class="text-center py-2" style="display:none">
+              <div class="spinner-border spinner-border-sm" style="color:var(--bn-blue)"></div>
+              <span class="small ms-2" style="color:var(--bn-muted)">Chargement des forfaits…</span>
+            </div>
+          </div>
+
+          <!-- Étape 2 : forfaits du site sélectionné -->
+          <div id="step-tiers" style="display:none">
+            <!-- Bandeau site -->
+            <div class="site-banner">
+              <i class="bi bi-wifi" style="color:var(--bn-blue);font-size:1rem"></i>
+              <span>Forfaits disponibles pour <strong id="modal-site-name"></strong></span>
+              <button type="button" id="change-site-btn"
+                      class="ms-auto btn btn-link p-0 text-decoration-none"
+                      style="font-size:.78rem;color:var(--bn-muted)">
+                Changer
+              </button>
+            </div>
+
+            <!-- Grille de tiers -->
+            <div id="tiers-grid" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+            <!-- Aucun forfait -->
+            <div id="no-tiers-msg" class="text-center py-2" style="display:none;color:var(--bn-muted)">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              Aucun forfait disponible pour ce site.
+            </div>
+
+            <!-- Quantité -->
+            <div id="qty-row" style="display:none">
+              <label class="form-label fw-semibold small">Quantité</label>
+              <input type="number" name="quantity" class="form-control" min="1" max="10" value="1">
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer border-top" id="modal-footer"
+             style="border-color:var(--bn-border)!important;display:none!important">
           <button type="submit" name="buy_now" value="1" class="btn btn-bn-primary flex-grow-1">
             <i class="bi bi-lightning-fill me-1"></i>Acheter maintenant
           </button>
@@ -272,6 +335,7 @@
           </button>
         </div>
       </form>
+
     </div>
   </div>
 </div>
@@ -287,15 +351,120 @@ new Swiper('.swiper', {
   pagination: { el: '.swiper-pagination', clickable: true },
 });
 
-// Modal — remplir les données du plan cliqué
-const planModal = document.getElementById('planModal');
+// ── Modal Plan ───────────────────────────────────────────────────────────────
+let approxMinutes = 0;
+
+const planModal   = document.getElementById('planModal');
+const stepSite    = document.getElementById('step-site');
+const stepTiers   = document.getElementById('step-tiers');
+const siteLoading = document.getElementById('site-loading');
+const tiersGrid   = document.getElementById('tiers-grid');
+const noTiersMsg  = document.getElementById('no-tiers-msg');
+const qtyRow      = document.getElementById('qty-row');
+const modalFooter = document.getElementById('modal-footer');
+
+function resetModal() {
+  stepSite.style.display  = '';
+  stepTiers.style.display = 'none';
+  modalFooter.style.setProperty('display', 'none', 'important');
+  document.getElementById('modal-site-select').value = '';
+  document.getElementById('modal-site-id').value  = '';
+  document.getElementById('modal-tier-id').value  = '';
+  tiersGrid.innerHTML = '';
+  qtyRow.style.display    = 'none';
+  noTiersMsg.style.display = 'none';
+}
+
 planModal.addEventListener('show.bs.modal', e => {
   const btn = e.relatedTarget;
-  document.getElementById('modalPlanLabel').textContent  = 'Plan ' + btn.dataset.duration;
-  document.getElementById('modal-price').textContent     = btn.dataset.price + ' HTG';
-  document.getElementById('modal-duration').textContent  = 'Internet pendant ' + btn.dataset.duration;
-  document.getElementById('modal-tier-id').value         = btn.dataset.tier;
+  approxMinutes = parseInt(btn.dataset.approxMinutes || 0);
+  document.getElementById('modal-approx-label').textContent =
+    btn.dataset.duration + ' — ' + btn.dataset.price + ' HTG';
+  resetModal();
 });
+
+// Sélection d'un site → charger ses tiers
+document.getElementById('modal-site-select').addEventListener('change', function() {
+  const siteId   = this.value;
+  const siteName = this.options[this.selectedIndex]?.dataset.name || '';
+  if (!siteId) return;
+  loadTiers(siteId, siteName);
+});
+
+// Bouton "Changer de site"
+document.getElementById('change-site-btn').addEventListener('click', () => {
+  stepTiers.style.display = 'none';
+  stepSite.style.display  = '';
+  modalFooter.style.setProperty('display', 'none', 'important');
+  document.getElementById('modal-site-select').value = '';
+  document.getElementById('modal-site-id').value  = '';
+  document.getElementById('modal-tier-id').value  = '';
+});
+
+async function loadTiers(siteId, siteName) {
+  siteLoading.style.display = '';
+  stepSite.querySelector('select').disabled = true;
+
+  try {
+    const resp = await fetch(`/site/${siteId}/tiers/`);
+    const data = await resp.json();
+    renderTiers(data.tiers, siteId, siteName);
+  } catch {
+    noTiersMsg.style.display = '';
+    stepTiers.style.display  = '';
+    stepSite.style.display   = 'none';
+  } finally {
+    siteLoading.style.display = 'none';
+    stepSite.querySelector('select').disabled = false;
+  }
+}
+
+function renderTiers(tiers, siteId, siteName) {
+  document.getElementById('modal-site-name').textContent = siteName;
+  document.getElementById('modal-site-id').value = siteId;
+  tiersGrid.innerHTML = '';
+  noTiersMsg.style.display = 'none';
+  qtyRow.style.display     = 'none';
+  modalFooter.style.setProperty('display', 'none', 'important');
+
+  stepSite.style.display  = 'none';
+  stepTiers.style.display = '';
+
+  if (!tiers.length) {
+    noTiersMsg.style.display = '';
+    return;
+  }
+
+  // Trouver le tier le plus proche de la durée approximative
+  let closestId = tiers[0].id;
+  let minDiff   = Infinity;
+  tiers.forEach(t => {
+    const diff = Math.abs(t.duration_minutes - approxMinutes);
+    if (diff < minDiff) { minDiff = diff; closestId = t.id; }
+  });
+
+  tiers.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'tier-option' + (t.id === closestId ? ' selected' : '');
+    card.dataset.tierId = t.id;
+    card.innerHTML = `
+      <div class="t-duration">${t.duration_display}</div>
+      <div class="t-price">${t.price_htg} HTG</div>`;
+    card.addEventListener('click', () => selectTier(card, t.id));
+    tiersGrid.appendChild(card);
+  });
+
+  // Pré-sélectionner le plus proche
+  selectTier(tiersGrid.querySelector('.tier-option.selected'), closestId);
+}
+
+function selectTier(card, tierId) {
+  tiersGrid.querySelectorAll('.tier-option').forEach(c => c.classList.remove('selected'));
+  if (card) card.classList.add('selected');
+  document.getElementById('modal-tier-id').value = tierId;
+  qtyRow.style.display = '';
+  modalFooter.style.removeProperty('display');
+}
 
 // ── Toast notification ──
 function showToast(msg, type='success') {
@@ -360,9 +529,15 @@ if (navigator.geolocation) {
       if (d < minDist) { minDist = d; closest = s; }
     });
     if (closest) {
-      document.querySelectorAll('[name="site_id"]').forEach(sel => sel.value = closest.id);
       document.getElementById('nearest-hint').textContent =
         '📍 Site le plus proche : ' + closest.name + ' (' + minDist.toFixed(1) + ' km)';
+      // Pré-sélectionner dans le select du modal
+      const sel = document.getElementById('modal-site-select');
+      sel.value = closest.id;
+      // Si le modal est déjà ouvert, déclencher le chargement des tiers
+      if (stepTiers && stepSite && stepSite.style.display !== 'none') {
+        loadTiers(String(closest.id), closest.name);
+      }
     }
   }, () => {});
 }

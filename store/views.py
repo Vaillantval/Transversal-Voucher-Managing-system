@@ -105,12 +105,31 @@ def plan_detail_api(request, tier_id):
     )
     sites = list(tier.sites.filter(is_active=True).values('id', 'name'))
     return JsonResponse({
-        'id':              tier.pk,
-        'label':           tier.label,
+        'id':               tier.pk,
+        'label':            tier.label,
         'duration_display': tier.duration_display,
-        'price_htg':       str(tier.price_htg),
-        'sites':           sites,
+        'price_htg':        str(tier.price_htg),
+        'sites':            sites,
     })
+
+
+def site_tiers_api(request, site_id):
+    """Retourne les tiers actifs disponibles pour un site donné."""
+    site = get_object_or_404(HotspotSite, pk=site_id, is_active=True)
+    tiers = VoucherTier.objects.filter(
+        sites=site, is_active=True, is_replacement=False,
+        is_admin_code=False, price_htg__gt=0,
+    ).order_by('duration_minutes')
+    return JsonResponse({'tiers': [
+        {
+            'id':               t.pk,
+            'label':            t.label,
+            'duration_display': t.duration_display,
+            'price_htg':        str(t.price_htg),
+            'duration_minutes': t.duration_minutes,
+        }
+        for t in tiers
+    ]})
 
 
 @require_POST
