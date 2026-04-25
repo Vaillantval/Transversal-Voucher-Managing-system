@@ -130,7 +130,7 @@ def index(request):
         site_bd[sid]['revenue'] += g['price']
         if g.get('end', 0) > now_ts:
             site_bd[sid]['active_sessions'] += 1
-    site_breakdown = sorted(site_bd.values(), key=lambda x: -x['sold'])
+    site_breakdown = sorted(site_bd.values(), key=lambda x: -x['revenue'])
 
     # ── Mode tous les sites ──────────────────────────────────────────────────
     live_stats = []

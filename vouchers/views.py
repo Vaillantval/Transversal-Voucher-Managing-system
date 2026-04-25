@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.http import JsonResponse
 from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 
@@ -323,6 +324,38 @@ def voucher_delete(request, unifi_id):
         else:
             messages.error(request, "Erreur lors de la révocation.")
     return redirect('vouchers:list')
+
+
+@login_required
+def voucher_search(request):
+    code = request.GET.get('code', '').strip()
+    if not code or not code.isdigit() or len(code) != 10:
+        return JsonResponse({'error': 'Format invalide — 10 chiffres requis.'}, status=400)
+
+    try:
+        log = VoucherLog.objects.select_related('site', 'tier', 'created_by').get(code=code)
+    except VoucherLog.DoesNotExist:
+        return JsonResponse({'found': False})
+
+    if not request.user.is_superadmin:
+        allowed = request.user.managed_sites.values_list('pk', flat=True)
+        if log.site_id not in allowed:
+            return JsonResponse({'found': False})
+
+    return JsonResponse({
+        'found': True,
+        'code': log.code,
+        'site': log.site.name if log.site else '—',
+        'tier': log.tier.label if log.tier else '—',
+        'status': log.get_status_display(),
+        'status_key': log.status,
+        'price_htg': str(log.price_htg) if log.price_htg is not None else '—',
+        'duration_minutes': log.duration_minutes,
+        'created_at': log.created_at.strftime('%d/%m/%Y %H:%M') if log.created_at else '—',
+        'used_at': log.used_at.strftime('%d/%m/%Y %H:%M') if log.used_at else None,
+        'expires_at': log.expires_at.strftime('%d/%m/%Y %H:%M') if log.expires_at else None,
+        'note': log.note or '—',
+    })
 
 
 @login_required

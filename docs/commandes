@@ -11,3 +11,25 @@ cp .env.example .env   # remplir UNIFI_PASSWORD + DB
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
+
+
+ID client : <GOOGLE_CLIENT_ID>
+
+secret client: <GOOGLE_CLIENT_SECRET>
+
+
+en fait :autre choses, ecoute, je vais ajouter une extention e-commerce ace site: apres le slapsh screen, je veux avoir une interface de vente de
+
+  produits et de services, les produits seront des forfaits avec leurs prix. les services c est si quelqu un veut devenir partenaire de BonNet..on
+
+  lui donne les conditions et la possiblite de s applique, comme on le fait deja depuis le login screen, l'ecran des produits doit contenir des
+
+  petite animation appropriees, slider(qui seront gerer dans configurations par le superadmin), et doit etres bien ranger. pour l affiche des
+
+  forfait, ce cera les meme que ceux crees  par le superadmin depuis la page tarif. mais on filtera un peu : si deux forfait on moins de 5h d
+
+  ecart on prend le plus petit, si 2 forfaits on meme duree, on prend celui qui est moins cher pour l affiche. dans l affichage des forfait on va
+
+  les appeles, "Plan", ex:  Plan 12h, 50 HTG, internet illimite pendant 12h. en cliquant sur l un deux ca doit affiche une petit boite de dialogue
+
+  de details (on peut donc soit mettre dans le panier, sois acheter immediatement).  devra creer les service panier et tout, les fonctionnalites e-commerce dans django. dans le processus d achat de coupons, l utilisateurs clique sur achter, (au tout premier achat on lui demande quelque info de lui, son nom , numero de telephone  par exemple... on 
