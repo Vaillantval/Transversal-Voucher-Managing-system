@@ -119,7 +119,7 @@ def site_tiers_api(request, site_id):
     tiers = VoucherTier.objects.filter(
         sites=site, is_active=True, is_replacement=False,
         is_admin_code=False, price_htg__gt=0,
-    ).order_by('duration_minutes')
+    ).order_by('duration', 'unit')
     return JsonResponse({'tiers': [
         {
             'id':               t.pk,
