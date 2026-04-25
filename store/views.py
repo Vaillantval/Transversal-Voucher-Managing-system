@@ -116,10 +116,13 @@ def plan_detail_api(request, tier_id):
 def site_tiers_api(request, site_id):
     """Retourne les tiers actifs disponibles pour un site donné."""
     site = get_object_or_404(HotspotSite, pk=site_id, is_active=True)
-    tiers = VoucherTier.objects.filter(
-        sites=site, is_active=True, is_replacement=False,
-        is_admin_code=False, price_htg__gt=0,
-    ).order_by('duration', 'unit')
+    tiers = sorted(
+        VoucherTier.objects.filter(
+            sites=site, is_active=True, is_replacement=False,
+            is_admin_code=False, price_htg__gt=0,
+        ),
+        key=lambda t: t.duration_minutes,
+    )
     return JsonResponse({'tiers': [
         {
             'id':               t.pk,
