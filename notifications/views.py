@@ -49,8 +49,8 @@ def notification_list(request):
         qs = qs.filter(is_read=True)
 
     groups = _group_by_site(qs[:200])
-    total  = sum(len(notifs) for _, _, notifs in groups)
-    unread = sum(1 for _, _, notifs in groups for n in notifs if not n.is_read)
+    total  = sum(len(notifs) for _, _, notifs, _ in groups)
+    unread = sum(u for _, _, _, u in groups)
 
     return render(request, 'notifications/list.html', {
         'groups':      groups,
