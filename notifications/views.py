@@ -85,6 +85,10 @@ def mark_all_read(request):
         site_ids = request.user.managed_sites.values_list('pk', flat=True)
         qs = Notification.objects.filter(is_read=False, site_id__in=site_ids)
 
+    type_filter = request.GET.get('type', '')
+    if type_filter in (Notification.TYPE_STOCK_LOW, Notification.TYPE_MONTHLY_REPORT, Notification.TYPE_AUTO_GENERATED):
+        qs = qs.filter(type=type_filter)
+
     count = qs.update(is_read=True)
     return JsonResponse({'ok': True, 'marked': count})
 

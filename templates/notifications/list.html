@@ -53,8 +53,8 @@
     </h5>
     <p class="text-muted small mb-0">{{ total }} notification{{ total|pluralize }} — groupées par site</p>
   </div>
-  {% if total %}
-  <button class="btn btn-sm btn-outline-secondary" id="btn-mark-all">
+  {% if unread %}
+  <button class="btn btn-sm btn-outline-secondary" id="btn-mark-all" data-type="{{ type_filter }}">
     <i class="bi bi-check2-all me-1"></i>Tout marquer comme lu
   </button>
   {% endif %}
@@ -78,6 +78,8 @@
     <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapports
   </a>
   <div class="ms-auto d-flex gap-1">
+    <a href="?{% if type_filter %}type={{ type_filter }}{% endif %}"
+       class="btn btn-sm {% if not read_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">Tous</a>
     <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}read=0"
        class="btn btn-sm {% if read_filter == '0' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Non lus</a>
     <a href="?{% if type_filter %}type={{ type_filter }}&{% endif %}read=1"
@@ -239,9 +241,11 @@ document.querySelectorAll('.btn-delete').forEach(btn => {
   });
 });
 
-// Tout marquer comme lu
-document.getElementById('btn-mark-all')?.addEventListener('click', () => {
-  postJSON('/notifications/read-all/').then(data => {
+// Tout marquer comme lu (respecte le filtre type actif)
+document.getElementById('btn-mark-all')?.addEventListener('click', function() {
+  const typeFilter = this.dataset.type || '';
+  const url = '/notifications/read-all/' + (typeFilter ? '?type=' + typeFilter : '');
+  postJSON(url).then(data => {
     if (data.ok) location.reload();
   });
 });
