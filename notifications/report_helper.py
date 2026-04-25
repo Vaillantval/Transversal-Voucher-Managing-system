@@ -356,3 +356,171 @@ def generate_pdf_bytes(sites: list, date_from: str, date_to: str) -> bytes:
     doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def generate_store_weekly_pdf_bytes(date_from: str, date_to: str) -> bytes:
+    """PDF du rapport hebdomadaire des ventes store (Orders)."""
+    import io
+    from datetime import datetime
+    from collections import defaultdict
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm, mm
+    from reportlab.lib import colors
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                    Paragraph, Spacer, HRFlowable)
+    from store.models import Order, OrderItem
+    from sites_mgmt.utils import TZ_HAITI
+
+    BLUE      = colors.HexColor('#1A56DB')
+    BLUE_DARK = colors.HexColor('#1E40AF')
+    BLUE_LIGHT= colors.HexColor('#DBEAFE')
+    ROW_ALT   = colors.HexColor('#F0F7FF')
+    GREEN     = colors.HexColor('#065F46')
+
+    dt_from = datetime.fromisoformat(date_from).replace(tzinfo=TZ_HAITI)
+    dt_to   = (datetime.fromisoformat(date_to).replace(tzinfo=TZ_HAITI)
+               .replace(hour=23, minute=59, second=59))
+
+    orders = list(
+        Order.objects.filter(
+            created_at__gte=dt_from,
+            created_at__lte=dt_to,
+            status=Order.STATUS_DELIVERED,
+        ).select_related('customer').prefetch_related('items__tier', 'items__site')
+        .order_by('-created_at')
+    )
+
+    # Agrégats
+    total_revenue = sum(o.total_htg for o in orders)
+    by_site  = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+    by_tier  = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+    for o in orders:
+        for item in o.items.all():
+            site_name = item.site.name if item.site else '—'
+            tier_label = item.tier.label if item.tier else '—'
+            qty = item.quantity
+            rev = float(item.unit_price) * qty
+            by_site[site_name]['count']   += qty
+            by_site[site_name]['revenue'] += rev
+            by_tier[tier_label]['count']  += qty
+            by_tier[tier_label]['revenue']+= rev
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=landscape(A4),
+        rightMargin=1.5*cm, leftMargin=1.5*cm,
+        topMargin=2*cm, bottomMargin=1.5*cm,
+    )
+    styles   = getSampleStyleSheet()
+    title_st = ParagraphStyle('t',  parent=styles['Title'],   textColor=BLUE, fontSize=16)
+    h2_st    = ParagraphStyle('h2', parent=styles['Heading2'],textColor=BLUE_DARK, fontSize=12, spaceAfter=4)
+    sub_st   = ParagraphStyle('sub',parent=styles['Normal'],  textColor=colors.HexColor('#6B7280'), fontSize=9)
+
+    hf    = ('FONTNAME',    (0,0),(-1,0), 'Helvetica-Bold')
+    hbg   = ('BACKGROUND',  (0,0),(-1,0), BLUE_DARK)
+    hfg   = ('TEXTCOLOR',   (0,0),(-1,0), colors.white)
+    base_style = [hf, hbg, hfg,
+                  ('ALIGN',(0,0),(-1,-1),'CENTER'),
+                  ('FONTSIZE',(0,0),(-1,-1),8),
+                  ('BOX',(0,0),(-1,-1),0.5,colors.grey),
+                  ('GRID',(0,0),(-1,-1),0.25,colors.lightgrey),
+                  ('TOPPADDING',(0,0),(-1,-1),4),
+                  ('BOTTOMPADDING',(0,0),(-1,-1),4)]
+
+    elements = []
+    elements.append(Paragraph("BonNet — Rapport hebdomadaire des ventes", title_st))
+    elements.append(Paragraph(
+        f"Période : {date_from}  →  {date_to}  |  Généré le {datetime.now(TZ_HAITI).strftime('%d/%m/%Y %H:%M')}",
+        sub_st,
+    ))
+    elements.append(HRFlowable(width="100%", thickness=1, color=BLUE))
+    elements.append(Spacer(1, 6*mm))
+
+    # ── KPIs ─────────────────────────────────────────────────────────────────
+    kpi_data = [
+        ['Commandes livrées', 'Forfaits vendus', 'Revenu total (HTG)'],
+        [str(len(orders)),
+         str(sum(v['count'] for v in by_tier.values())),
+         f"{float(total_revenue):,.2f} HTG"],
+    ]
+    kpi_table = Table(kpi_data, colWidths=[6*cm, 6*cm, 7*cm])
+    kpi_style = base_style + [
+        ('FONTNAME',(0,1),(-1,1),'Helvetica-Bold'),
+        ('FONTSIZE',(0,1),(-1,1),13),
+        ('TEXTCOLOR',(0,1),(-1,1),BLUE_DARK),
+        ('BACKGROUND',(0,1),(-1,1),BLUE_LIGHT),
+    ]
+    kpi_table.setStyle(TableStyle(kpi_style))
+    elements.append(kpi_table)
+    elements.append(Spacer(1, 8*mm))
+
+    # ── Recap par site ────────────────────────────────────────────────────────
+    elements.append(Paragraph("Ventes par site", h2_st))
+    site_data = [['Site', 'Forfaits vendus', 'Revenu (HTG)']]
+    for sname, vals in sorted(by_site.items()):
+        site_data.append([sname, str(vals['count']), f"{vals['revenue']:,.2f} HTG"])
+    site_data.append(['TOTAL',
+                      str(sum(v['count'] for v in by_site.values())),
+                      f"{sum(v['revenue'] for v in by_site.values()):,.2f} HTG"])
+    n_sites = len(by_site)
+    site_tbl = Table(site_data, colWidths=[8*cm, 5*cm, 6*cm])
+    site_style = base_style + [
+        ('ALIGN',(0,1),(0,-1),'LEFT'),
+        ('FONTNAME',(0,n_sites+1),(-1,n_sites+1),'Helvetica-Bold'),
+        ('BACKGROUND',(0,n_sites+1),(-1,n_sites+1),BLUE_LIGHT),
+    ]
+    for i in range(1, n_sites+1):
+        if i % 2 == 0:
+            site_style.append(('BACKGROUND',(0,i),(-1,i),ROW_ALT))
+    site_tbl.setStyle(TableStyle(site_style))
+    elements.append(site_tbl)
+    elements.append(Spacer(1, 8*mm))
+
+    # ── Recap par forfait ─────────────────────────────────────────────────────
+    elements.append(Paragraph("Ventes par forfait", h2_st))
+    tier_data = [['Forfait', 'Qté vendue', 'Revenu (HTG)']]
+    for tlabel, vals in sorted(by_tier.items()):
+        tier_data.append([tlabel, str(vals['count']), f"{vals['revenue']:,.2f} HTG"])
+    n_tiers = len(by_tier)
+    tier_tbl = Table(tier_data, colWidths=[8*cm, 5*cm, 6*cm])
+    tier_style = base_style + [
+        ('ALIGN',(0,1),(0,-1),'LEFT'),
+    ]
+    for i in range(1, n_tiers+1):
+        if i % 2 == 0:
+            tier_style.append(('BACKGROUND',(0,i),(-1,i),ROW_ALT))
+    tier_tbl.setStyle(TableStyle(tier_style))
+    elements.append(tier_tbl)
+    elements.append(Spacer(1, 8*mm))
+
+    # ── Détail des commandes ──────────────────────────────────────────────────
+    elements.append(Paragraph("Détail des commandes", h2_st))
+    if orders:
+        det_data = [['Référence', 'Date', 'Client', 'Téléphone', 'Site(s)', 'Montant HTG']]
+        for o in orders:
+            sites_str = ', '.join(
+                {item.site.name for item in o.items.all() if item.site}
+            ) or '—'
+            det_data.append([
+                o.reference,
+                o.created_at.astimezone(TZ_HAITI).strftime('%d/%m %H:%M'),
+                (o.customer.full_name[:20] if o.customer else '—'),
+                (o.customer.phone if o.customer else '—'),
+                sites_str[:25],
+                f"{float(o.total_htg):,.2f}",
+            ])
+        det_tbl = Table(det_data, colWidths=[4.5*cm, 2.8*cm, 4*cm, 3.5*cm, 5*cm, 3.5*cm], repeatRows=1)
+        det_style = base_style[:]
+        n_orders = len(orders)
+        for i in range(1, n_orders+1):
+            if i % 2 == 0:
+                det_style.append(('BACKGROUND',(0,i),(-1,i),ROW_ALT))
+        det_tbl.setStyle(TableStyle(det_style))
+        elements.append(det_tbl)
+    else:
+        elements.append(Paragraph("Aucune commande livrée sur cette période.", styles['Normal']))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()

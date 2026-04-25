@@ -445,6 +445,84 @@ def send_monthly_reports():
         logger.error(f"send_monthly_reports error: {e}", exc_info=True)
 
 
+def send_weekly_store_report():
+    """Envoie chaque lundi à 8h le rapport PDF des ventes store de la semaine écoulée."""
+    try:
+        from collections import defaultdict
+        from .email_service import send_email, build_weekly_store_report_html
+        from .report_helper import generate_store_weekly_pdf_bytes
+        from store.models import Order
+        from sites_mgmt.utils import TZ_HAITI
+
+        admin_notify = getattr(settings, 'ADMIN_NOTIFY', '')
+        to_emails = [e.strip() for e in admin_notify.split(',') if e.strip()]
+        if not to_emails:
+            logger.warning("ADMIN_NOTIFY non configuré — rapport hebdo non envoyé.")
+            return
+
+        today      = date.today()
+        date_to    = today - timedelta(days=1)          # hier (dimanche)
+        date_from  = date_to - timedelta(days=6)        # lundi précédent
+        date_from_s = date_from.isoformat()
+        date_to_s   = date_to.isoformat()
+
+        from django.utils import timezone as tz
+        from sites_mgmt.utils import TZ_HAITI
+        import datetime as _dt
+        dt_from = _dt.datetime.combine(date_from, _dt.time.min).replace(tzinfo=TZ_HAITI)
+        dt_to   = _dt.datetime.combine(date_to,   _dt.time.max).replace(tzinfo=TZ_HAITI)
+
+        orders = list(
+            Order.objects.filter(
+                created_at__gte=dt_from,
+                created_at__lte=dt_to,
+                status=Order.STATUS_DELIVERED,
+            ).prefetch_related('items__tier', 'items__site')
+        )
+
+        total_revenue = float(sum(o.total_htg for o in orders))
+        by_site = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+        by_tier = defaultdict(lambda: {'count': 0, 'revenue': 0.0})
+        for o in orders:
+            for item in o.items.all():
+                sname  = item.site.name  if item.site  else '—'
+                tlabel = item.tier.label if item.tier  else '—'
+                qty    = item.quantity
+                rev    = float(item.unit_price) * qty
+                by_site[sname]['count']   += qty
+                by_site[sname]['revenue'] += rev
+                by_tier[tlabel]['count']  += qty
+                by_tier[tlabel]['revenue']+= rev
+
+        attachments = []
+        try:
+            pdf_bytes = generate_store_weekly_pdf_bytes(date_from_s, date_to_s)
+            attachments.append({
+                "filename": f"bonnet_ventes_{date_from_s}_{date_to_s}.pdf",
+                "content":  list(pdf_bytes),
+            })
+        except Exception as e:
+            logger.error(f"Weekly PDF generation: {e}")
+
+        html = build_weekly_store_report_html(
+            date_from_s, date_to_s,
+            n_orders=len(orders),
+            total_revenue=total_revenue,
+            by_site=dict(by_site),
+            by_tier=dict(by_tier),
+        )
+        send_email(
+            to=to_emails,
+            subject=f"[BonNet] Rapport hebdo ventes — {date_from_s} → {date_to_s}",
+            html=html,
+            attachments=attachments or None,
+        )
+        logger.info(f"Rapport hebdo store envoyé : {len(orders)} commandes, {total_revenue:.2f} HTG")
+
+    except Exception as e:
+        logger.error(f"send_weekly_store_report error: {e}", exc_info=True)
+
+
 def prewarm_cache():
     """Pré-charge les données UniFi de tous les sites dans le cache Redis."""
     try:
@@ -511,6 +589,15 @@ def start():
         trigger=CronTrigger(day='last', hour=8, minute=0, timezone=settings.TIME_ZONE),
         id='send_monthly_reports',
         name='Rapport mensuel automatique (dernier jour du mois, 8h)',
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
+        send_weekly_store_report,
+        trigger=CronTrigger(day_of_week='mon', hour=8, minute=0, timezone=settings.TIME_ZONE),
+        id='send_weekly_store_report',
+        name='Rapport hebdo ventes store (lundi 8h)',
         replace_existing=True,
         misfire_grace_time=3600,
     )

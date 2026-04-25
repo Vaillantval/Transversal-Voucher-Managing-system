@@ -232,3 +232,68 @@ def build_monthly_report_html(month_label: str, sites_summary: list, date_from: 
       </div>
     </div>
     """
+
+
+def build_weekly_store_report_html(date_from: str, date_to: str, n_orders: int,
+                                    total_revenue: float, by_site: dict, by_tier: dict) -> str:
+    site_rows = ''.join(
+        f'<tr><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6">{name}</td>'
+        f'<td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:center">{v["count"]}</td>'
+        f'<td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:right">{v["revenue"]:,.2f} HTG</td></tr>'
+        for name, v in sorted(by_site.items())
+    )
+    tier_rows = ''.join(
+        f'<tr><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6">{label}</td>'
+        f'<td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:center">{v["count"]}</td>'
+        f'<td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:right">{v["revenue"]:,.2f} HTG</td></tr>'
+        for label, v in sorted(by_tier.items())
+    )
+    return f"""
+    <div style="font-family:system-ui,sans-serif;max-width:620px;margin:0 auto">
+      <div style="background:#111827;padding:20px 24px;border-radius:8px 8px 0 0">
+        <h2 style="color:#fff;margin:0;font-size:1.2rem">
+          Bon<span style="color:#1A56DB">Net</span>
+          <span style="color:#9ca3af;font-weight:400;font-size:.9rem;margin-left:8px">Rapport hebdomadaire des ventes</span>
+        </h2>
+      </div>
+      <div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+        <p style="margin:0 0 20px;color:#6b7280;font-size:.9rem">Période : <strong>{date_from}</strong> → <strong>{date_to}</strong></p>
+
+        <div style="display:flex;gap:12px;margin-bottom:24px">
+          <div style="flex:1;background:#eff6ff;border-radius:8px;padding:14px 18px;text-align:center">
+            <div style="font-size:1.8rem;font-weight:700;color:#1A56DB">{n_orders}</div>
+            <div style="font-size:.8rem;color:#6b7280">Commandes livrées</div>
+          </div>
+          <div style="flex:1;background:#ecfdf5;border-radius:8px;padding:14px 18px;text-align:center">
+            <div style="font-size:1.8rem;font-weight:700;color:#065F46">{total_revenue:,.2f}</div>
+            <div style="font-size:.8rem;color:#6b7280">HTG encaissés</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:.95rem;color:#1E40AF;margin:0 0 8px">Ventes par site</h3>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:.88rem">
+          <thead><tr style="background:#1E40AF;color:#fff">
+            <th style="padding:8px 12px;text-align:left">Site</th>
+            <th style="padding:8px 12px;text-align:center">Forfaits</th>
+            <th style="padding:8px 12px;text-align:right">Revenu</th>
+          </tr></thead>
+          <tbody>{site_rows}</tbody>
+        </table>
+
+        <h3 style="font-size:.95rem;color:#1E40AF;margin:0 0 8px">Ventes par forfait</h3>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:.88rem">
+          <thead><tr style="background:#1E40AF;color:#fff">
+            <th style="padding:8px 12px;text-align:left">Forfait</th>
+            <th style="padding:8px 12px;text-align:center">Qté</th>
+            <th style="padding:8px 12px;text-align:right">Revenu</th>
+          </tr></thead>
+          <tbody>{tier_rows}</tbody>
+        </table>
+
+        <p style="margin:0;font-size:.82rem;color:#9ca3af">Le rapport PDF détaillé est joint à cet email.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0 12px">
+        <p style="margin:0;color:#9ca3af;font-size:.8rem">BonNet — Gestion vouchers WiFi · Transversal Haïti</p>
+      </div>
+    </div>
+    """
+
