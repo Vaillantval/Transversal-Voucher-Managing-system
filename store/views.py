@@ -56,7 +56,9 @@ def _get_or_create_cart(request):
 
 
 def storefront(request):
+    from sites_mgmt.models import MobileAppRelease
     banners = StoreBanner.objects.filter(is_active=True).order_by('order')
+    mobile_app = MobileAppRelease.get()
     all_tiers = VoucherTier.objects.filter(
         is_active=True, is_replacement=False, is_admin_code=False, price_htg__gt=0
     ).prefetch_related('sites')
@@ -90,6 +92,7 @@ def storefront(request):
 
     return render(request, 'store/storefront.html', {
         'banners':        banners,
+        'mobile_app':     mobile_app,
         'plans':          plans,
         'sites':          sites,
         'sites_json':     sites_json,

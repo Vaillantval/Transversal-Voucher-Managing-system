@@ -310,11 +310,12 @@ def tier_remove_site(request, pk, site_pk):
 @login_required
 @superadmin_required
 def config_edit(request):
-    from .models import SiteConfig
+    from .models import SiteConfig, MobileAppRelease
     from notifications.models import AutoGenConfig
 
-    config = SiteConfig.get()
+    config  = SiteConfig.get()
     autogen = AutoGenConfig.get()
+    mobile  = MobileAppRelease.get()
     all_sites = HotspotSite.objects.filter(is_active=True).order_by('name')
 
     if request.method == 'POST':
@@ -332,6 +333,19 @@ def config_edit(request):
             config.logo2 = None
 
         config.save()
+
+        # Application mobile
+        mobile.version_name  = request.POST.get('mobile_version', '').strip()
+        mobile.release_notes = request.POST.get('mobile_notes', '').strip()
+        if request.FILES.get('apk_file'):
+            mobile.apk_file = request.FILES['apk_file']
+        elif request.POST.get('clear_apk'):
+            mobile.apk_file = None
+        if request.FILES.get('ios_file'):
+            mobile.ios_file = request.FILES['ios_file']
+        elif request.POST.get('clear_ios'):
+            mobile.ios_file = None
+        mobile.save()
 
         # Auto-gen
         autogen_enabled       = request.POST.get('autogen_enabled') == 'on'
@@ -364,6 +378,7 @@ def config_edit(request):
     return render(request, 'sites_mgmt/config.html', {
         'config':           config,
         'autogen':          autogen,
+        'mobile':           mobile,
         'all_sites':        all_sites,
         'autogen_site_ids': list(autogen.sites.values_list('pk', flat=True)),
         'pending_partners': pending_partners,

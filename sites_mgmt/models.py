@@ -88,6 +88,22 @@ class PartnerProductImage(models.Model):
         ordering = ['order', 'pk']
 
 
+class MobileAppRelease(models.Model):
+    apk_file      = models.FileField(upload_to='mobile_app/', blank=True, null=True, verbose_name='APK Android')
+    ios_file      = models.FileField(upload_to='mobile_app/', blank=True, null=True, verbose_name='Fichier iOS')
+    version_name  = models.CharField(max_length=50, blank=True, verbose_name='Version (ex: 1.0.0)')
+    release_notes = models.TextField(blank=True, verbose_name='Notes de mise à jour')
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Version application mobile'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class VoucherTier(models.Model):
     """
     Forfait tarifaire par site.

@@ -172,6 +172,37 @@
 </div>
 {% endif %}
 
+<!-- ── Bandeau téléchargement app ── -->
+{% if mobile_app.apk_file or mobile_app.ios_file %}
+<div style="background:#0d1f3c;border-bottom:1px solid rgba(59,130,246,.18)">
+  <div class="container py-3 d-flex align-items-center justify-content-center gap-3 flex-wrap">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-phone-fill text-primary" style="font-size:1.3rem"></i>
+      <span style="color:#e2e8f0;font-weight:600;font-size:.95rem">
+        Téléchargez l'application BonNet
+        {% if mobile_app.version_name %}<span style="color:#64748b;font-weight:400;font-size:.8rem"> — v{{ mobile_app.version_name }}</span>{% endif %}
+      </span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if mobile_app.apk_file %}
+      <a href="{{ mobile_app.apk_file.url }}" download
+         class="btn btn-sm d-flex align-items-center gap-2"
+         style="background:#16a34a;color:#fff;border-radius:8px;font-weight:600;font-size:.82rem">
+        <i class="bi bi-android2"></i> Android (.apk)
+      </a>
+      {% endif %}
+      {% if mobile_app.ios_file %}
+      <a href="{{ mobile_app.ios_file.url }}" download
+         class="btn btn-sm d-flex align-items-center gap-2"
+         style="background:#374151;color:#fff;border-radius:8px;font-weight:600;font-size:.82rem">
+        <i class="bi bi-apple"></i> iOS
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Plans ── -->
 <section id="plans" class="container py-5">
   <div class="text-center mb-4 reveal">
