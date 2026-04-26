@@ -14,6 +14,15 @@
 .dot-online  { background: #10b981; }
 .dot-offline { background: #ef4444; }
 .filter-label { font-size: .78rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+.tier-list-wrap { overflow-y: auto; max-height: 170px; margin-top: 8px; }
+.tier-list-wrap::-webkit-scrollbar { width: 4px; }
+.tier-list-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.search-result-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem; }
+[data-theme="dark"] .search-result-card { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .search-result-card code { background: #0f172a; color: #93c5fd; }
+[data-theme="dark"] .search-result-card .text-muted { color: #94a3b8 !important; }
+[data-theme="dark"] .search-result-card strong, [data-theme="dark"] .search-result-card .result-value { color: #e2e8f0; }
+[data-theme="dark"] .tier-list-wrap::-webkit-scrollbar-thumb { background: #475569; }
 </style>
 {% endblock %}
 
@@ -91,6 +100,26 @@
     </div>
 
   </div>
+</div>
+
+<!-- ══ Recherche voucher ══ -->
+<div class="card card-bn p-3 mb-4">
+  <div class="d-flex align-items-center gap-2 mb-2">
+    <i class="bi bi-search text-primary"></i>
+    <span class="fw-600" style="font-size:.95rem">Rechercher un voucher</span>
+  </div>
+  <div class="d-flex gap-2 align-items-start flex-wrap">
+    <div>
+      <input type="text" id="db-voucher-input" maxlength="10" inputmode="numeric"
+             pattern="\d{10}" placeholder="10 chiffres"
+             class="form-control form-control-sm" style="width:160px;letter-spacing:.1em;font-family:monospace">
+      <div id="db-search-error" class="text-danger" style="font-size:.78rem;display:none">10 chiffres requis.</div>
+    </div>
+    <button id="db-voucher-btn" class="btn btn-sm btn-primary">
+      <i class="bi bi-search me-1"></i>Rechercher
+    </button>
+  </div>
+  <div id="db-search-result" class="mt-3" style="display:none"></div>
 </div>
 
 <!-- ══ Modale d'export ══ -->
@@ -226,8 +255,13 @@
   </div>
   <div class="col-md-4">
     <div class="card card-bn p-3">
-      <h6 class="fw-600 mb-3">Répartition par forfait</h6>
-      <canvas id="tierChart" height="180"></canvas>
+      <h6 class="fw-600 mb-2">Répartition par forfait</h6>
+      <canvas id="tierChart" height="160"></canvas>
+      <div class="tier-list-wrap">
+        <table class="table table-sm mb-0" style="font-size:.82rem">
+          <tbody id="tier-list-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -546,14 +580,41 @@ new Chart(document.getElementById('revenueChart'), {
   options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } }, responsive: true }
 });
 
+// Cap chart à 6 tiers, groupe le reste en "Autres"
+const MAX_TIERS = 6;
+const chartTiers = tierData.length > MAX_TIERS
+  ? [...tierData.slice(0, MAX_TIERS), {
+      tier__label: 'Autres',
+      count: tierData.slice(MAX_TIERS).reduce((s, d) => s + d.count, 0)
+    }]
+  : tierData;
+
 new Chart(document.getElementById('tierChart'), {
   type: 'doughnut',
   data: {
-    labels: tierData.map(d => d.tier__label || 'Sans tranche'),
-    datasets: [{ data: tierData.map(d => d.count), backgroundColor: colors, borderWidth: 2 }]
+    labels: chartTiers.map(d => d.tier__label || 'Sans tranche'),
+    datasets: [{ data: chartTiers.map(d => d.count), backgroundColor: colors, borderWidth: 2 }]
   },
-  options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, cutout: '65%' }
+  options: { plugins: { legend: { display: false } }, cutout: '65%' }
 });
+
+// Liste scrollable — tous les tiers
+const tierListBody = document.getElementById('tier-list-body');
+if (tierListBody) {
+  tierData.forEach((d, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${colors[i % colors.length]};margin-right:6px;flex-shrink:0"></span>
+        ${d.tier__label || 'Sans tranche'}
+      </td>
+      <td class="text-end fw-600">${d.count}</td>`;
+    tierListBody.appendChild(tr);
+  });
+  if (!tierData.length) {
+    tierListBody.innerHTML = '<tr><td colspan="2" class="text-muted text-center">Aucune vente sur la période</td></tr>';
+  }
+}
 
 {% if not selected_site %}
 const siteChartEl = document.getElementById('siteChart');
@@ -569,6 +630,71 @@ if (siteChartEl) {
   });
 }
 {% endif %}
+
+// ── Recherche voucher ─────────────────────────────────────────────────────────
+(function() {
+  const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+  const input  = document.getElementById('db-voucher-input');
+  const btn    = document.getElementById('db-voucher-btn');
+  const errEl  = document.getElementById('db-search-error');
+  const result = document.getElementById('db-search-result');
+  if (!input) return;
+
+  input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 10); errEl.style.display = 'none'; });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+  btn.addEventListener('click', () => {
+    const code = input.value.trim();
+    if (!/^\d{10}$/.test(code)) { errEl.style.display = 'block'; result.style.display = 'none'; return; }
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
+
+    fetch(`{% url 'vouchers:search' %}?code=${code}`, { headers: {'X-CSRFToken': CSRF} })
+      .then(r => r.json())
+      .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-1"></i>Rechercher';
+        result.style.display = 'block';
+
+        if (!data.found) {
+          result.innerHTML = `<div class="search-result-card d-flex align-items-center gap-2">
+            <i class="bi bi-x-circle text-danger"></i>
+            <span>Aucun voucher trouvé pour <code>${code}</code>.</span></div>`;
+          return;
+        }
+
+        const statusColors = { active:'#D1FAE5;color:#065F46', used:'#DBEAFE;color:#1D4ED8', expired:'#FEF3C7;color:#92400E', revoked:'#FEE2E2;color:#991B1B' };
+        const sc = statusColors[data.status_key] || '#F3F4F6;color:#374151';
+        const dur = data.duration_minutes >= 1440 ? Math.round(data.duration_minutes/1440)+' jour(s)' : data.duration_minutes+' min';
+        const unifiTag = data.source === 'unifi'
+          ? `<span class="badge ms-1" style="background:#FEF3C7;color:#92400E;font-size:.7rem;padding:2px 8px;border-radius:20px"><i class="bi bi-exclamation-triangle me-1"></i>Hors BonNet</span>` : '';
+
+        result.innerHTML = `<div class="search-result-card">
+          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+            <i class="bi bi-ticket-perforated text-primary"></i>
+            <code class="fw-700" style="font-size:1.05rem;letter-spacing:.1em">${data.code}</code>
+            <span class="badge" style="background:${sc};font-size:.75rem;padding:2px 9px;border-radius:20px">${data.status}</span>
+            ${unifiTag}
+          </div>
+          <div class="row g-1" style="font-size:.85rem">
+            <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.73rem">Site</span><strong class="result-value">${data.site}</strong></div>
+            <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.73rem">Tranche</span><strong class="result-value">${data.tier}</strong></div>
+            <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.73rem">Durée</span><strong class="result-value">${dur}</strong></div>
+            <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.73rem">Prix</span><strong class="result-value">${data.price_htg !== '—' ? data.price_htg+' HTG' : '—'}</strong></div>
+            <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.73rem">Créé le</span><span class="result-value">${data.created_at}</span></div>
+            ${data.used_at ? `<div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.73rem">Utilisé le</span><span class="result-value">${data.used_at}</span></div>` : ''}
+          </div>
+        </div>`;
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-1"></i>Rechercher';
+        result.style.display = 'block';
+        result.innerHTML = '<div class="alert alert-danger py-2 mb-0">Erreur réseau.</div>';
+      });
+  });
+})();
 
 // ── Export modal ──────────────────────────────────────────────────────────────
 const EXPORT_URLS = {

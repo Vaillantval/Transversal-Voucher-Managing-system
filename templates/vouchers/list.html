@@ -13,6 +13,12 @@
 #search-result .status-badge-used    { background:#DBEAFE; color:#1D4ED8; }
 #search-result .status-badge-expired { background:#FEF3C7; color:#92400E; }
 #search-result .status-badge-revoked { background:#FEE2E2; color:#991B1B; }
+.search-result-card { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:1rem; }
+[data-theme="dark"] .search-result-card { background:#1e293b; border-color:#334155; }
+[data-theme="dark"] .search-result-card code { background:#0f172a; color:#93c5fd; }
+[data-theme="dark"] .search-result-card .text-muted { color:#94a3b8 !important; }
+[data-theme="dark"] .search-result-card strong,
+[data-theme="dark"] .search-result-card .result-value { color:#e2e8f0; }
 </style>
 {% endblock %}
 
@@ -392,9 +398,9 @@ searchBtn.addEventListener('click', () => {
 
     if (!data.found) {
       resultBox.innerHTML = `
-        <div class="d-flex align-items-center gap-2 text-muted p-3 border rounded" style="background:#f9fafb">
+        <div class="search-result-card d-flex align-items-center gap-2">
           <i class="bi bi-x-circle text-danger fs-5"></i>
-          <span>Aucun voucher trouvé pour le code <code class="text-dark">${code}</code>.</span>
+          <span>Aucun voucher trouvé pour le code <code>${code}</code>.</span>
         </div>`;
       return;
     }
@@ -417,7 +423,7 @@ searchBtn.addEventListener('click', () => {
       : '';
 
     resultBox.innerHTML = `
-      <div class="border rounded p-3" style="background:#f8fafc">
+      <div class="search-result-card">
         <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
           <i class="bi bi-ticket-perforated text-primary fs-5"></i>
           <code class="fw-700" style="font-size:1.15rem;letter-spacing:.12em">${data.code}</code>
@@ -425,14 +431,14 @@ searchBtn.addEventListener('click', () => {
           ${unifiWarning}
         </div>
         <div class="row g-2" style="font-size:.88rem">
-          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Site</span><strong>${data.site}</strong></div>
-          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Tranche</span><strong>${data.tier}</strong></div>
-          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Durée</span><strong>${durLabel}</strong></div>
-          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Prix</span><strong>${data.price_htg !== '—' ? data.price_htg + ' HTG' : '—'}</strong></div>
-          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Créé le</span>${data.created_at}</div>
-          ${data.used_at ? `<div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Utilisé le</span>${data.used_at}</div>` : ''}
-          ${data.expires_at ? `<div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Expire le</span>${data.expires_at}</div>` : ''}
-          ${data.note && data.note !== '—' ? `<div class="col-12"><span class="text-muted d-block" style="font-size:.75rem">Note</span>${data.note}</div>` : ''}
+          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Site</span><strong class="result-value">${data.site}</strong></div>
+          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Tranche</span><strong class="result-value">${data.tier}</strong></div>
+          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Durée</span><strong class="result-value">${durLabel}</strong></div>
+          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Prix</span><strong class="result-value">${data.price_htg !== '—' ? data.price_htg + ' HTG' : '—'}</strong></div>
+          <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Créé le</span><span class="result-value">${data.created_at}</span></div>
+          ${data.used_at ? `<div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Utilisé le</span><span class="result-value">${data.used_at}</span></div>` : ''}
+          ${data.expires_at ? `<div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Expire le</span><span class="result-value">${data.expires_at}</span></div>` : ''}
+          ${data.note && data.note !== '—' ? `<div class="col-12"><span class="text-muted d-block" style="font-size:.75rem">Note</span><span class="result-value">${data.note}</span></div>` : ''}
         </div>
       </div>`;
   })
