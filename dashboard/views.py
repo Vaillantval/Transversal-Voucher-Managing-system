@@ -4,10 +4,13 @@ from django.utils import timezone
 from datetime import timedelta, date, datetime
 from collections import defaultdict
 import json
+import logging
 
 from sites_mgmt.models import HotspotSite, VoucherTier
 from sites_mgmt.utils import find_tier, TZ_HAITI
 from unifi_api import client as unifi
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -74,16 +77,24 @@ def index(request):
     unifi_to_site_pk = {s.unifi_site_id: s.pk for s in all_sites}
 
     # ── Vouchers disponibles (non utilisés) ──────────────────────────────────
-    all_vouchers       = unifi.get_all_vouchers(sites)
+    try:
+        all_vouchers = unifi.get_all_vouchers(sites)
+    except Exception as e:
+        logger.error(f"get_all_vouchers failed: {e}")
+        all_vouchers = []
     period_vouchers    = [v for v in all_vouchers if v.get('create_time', 0) >= date_from_ts]
     # Stock total disponible : indépendant de la période (UniFi ne renvoie que les non-utilisés)
     available_vouchers = sum(1 for v in all_vouchers if v['is_available'])
     total_vouchers     = available_vouchers
 
     # ── Sessions voucher activées = source réelle des revenus ────────────────
-    # UniFi supprime les vouchers de /stat/voucher dès activation ;
-    # /stat/guest (POST with within=8760) est la seule source fiable.
-    all_guests = unifi.get_all_guests(sites)
+    # UniFi supprime les vouchers de /stat/voucher dès activation ;\n    # /stat/guest (POST with within=8760) est la seule source fiable.
+    try:
+        all_guests = unifi.get_all_guests(sites)
+    except Exception as e:
+        logger.error(f"get_all_guests failed: {e}")
+        all_guests = []
+
 
     for g in all_guests:
         _spk = unifi_to_site_pk.get(g.get('site_unifi_id', ''))
@@ -143,10 +154,15 @@ def index(request):
             {'site__name': k, 'revenue': r}
             for k, r in sorted(rev_site.items(), key=lambda x: -x[1])[:10]
         ]
-        all_stats = unifi.get_all_site_stats(all_sites)
+        try:
+            all_stats = unifi.get_all_site_stats(all_sites)
+        except Exception as e:
+            logger.error(f"get_all_site_stats failed: {e}")
+            all_stats = {}
         for site in all_sites:
             live_stats.append({'site': site, 'stats': all_stats.get(site.unifi_site_id, {})})
         live_stats.sort(key=lambda x: -x['stats'].get('client_count', 0))
+
 
     total_clients         = sum(s['stats'].get('client_count', 0)   for s in live_stats)
     total_devices_online  = sum(s['stats'].get('device_online', 0)  for s in live_stats)
