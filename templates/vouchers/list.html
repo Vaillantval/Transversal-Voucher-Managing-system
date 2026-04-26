@@ -51,13 +51,18 @@
   </div>
   <div class="d-flex gap-2 align-items-center flex-wrap">
     <div>
-      <div class="code-display-wrap">
-        <input type="text" id="voucher-search-input" maxlength="10" inputmode="numeric" autocomplete="off">
-        <div class="code-display" aria-hidden="true" id="voucher-code-display">
-          <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
-          <span class="code-sep">-</span>
-          <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+      <div class="d-flex align-items-center gap-1">
+        <div class="code-display-wrap">
+          <input type="text" id="voucher-search-input" maxlength="10" inputmode="numeric" autocomplete="off">
+          <div class="code-display" aria-hidden="true" id="voucher-code-display">
+            <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+            <span class="code-sep">-</span>
+            <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+          </div>
         </div>
+        <button id="voucher-clear-btn" class="btn btn-link p-0 text-muted" title="Effacer" style="display:none;font-size:1.2rem;line-height:1">
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
       </div>
       <div id="search-input-error" class="text-danger mt-1" style="font-size:.78rem;display:none">10 chiffres requis.</div>
     </div>
@@ -391,6 +396,7 @@ const searchBtn   = document.getElementById('voucher-search-btn');
 const searchError = document.getElementById('search-input-error');
 const resultBox   = document.getElementById('search-result');
 const codeSlots   = document.querySelectorAll('#voucher-code-display .code-slot');
+const clearBtn    = document.getElementById('voucher-clear-btn');
 
 function syncCodeDisplay(focused) {
   const val = searchInput.value;
@@ -399,6 +405,14 @@ function syncCodeDisplay(focused) {
     slot.classList.toggle('filled', i < val.length);
     slot.classList.toggle('cursor', !!focused && i === val.length && val.length < 10);
   });
+  clearBtn.style.display = val.length > 0 ? 'inline' : 'none';
+}
+
+function clearSearch() {
+  searchInput.value = '';
+  syncCodeDisplay(false);
+  searchError.style.display = 'none';
+  resultBox.style.display = 'none';
 }
 
 searchInput.addEventListener('input', () => {
@@ -409,6 +423,7 @@ searchInput.addEventListener('input', () => {
 searchInput.addEventListener('focus', () => syncCodeDisplay(true));
 searchInput.addEventListener('blur',  () => syncCodeDisplay(false));
 searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchBtn.click(); });
+clearBtn.addEventListener('click', clearSearch);
 syncCodeDisplay(false);
 
 searchBtn.addEventListener('click', () => {

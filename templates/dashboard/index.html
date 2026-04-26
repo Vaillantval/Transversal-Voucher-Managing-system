@@ -128,13 +128,18 @@
   </div>
   <div class="d-flex gap-2 align-items-center flex-wrap">
     <div>
-      <div class="code-display-wrap">
-        <input type="text" id="db-voucher-input" maxlength="10" inputmode="numeric" autocomplete="off">
-        <div class="code-display" aria-hidden="true" id="db-code-display">
-          <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
-          <span class="code-sep">-</span>
-          <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+      <div class="d-flex align-items-center gap-1">
+        <div class="code-display-wrap">
+          <input type="text" id="db-voucher-input" maxlength="10" inputmode="numeric" autocomplete="off">
+          <div class="code-display" aria-hidden="true" id="db-code-display">
+            <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+            <span class="code-sep">-</span>
+            <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+          </div>
         </div>
+        <button id="db-clear-btn" class="btn btn-link p-0 text-muted" title="Effacer" style="display:none;font-size:1.2rem;line-height:1">
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
       </div>
       <div id="db-search-error" class="text-danger mt-1" style="font-size:.78rem;display:none">10 chiffres requis.</div>
     </div>
@@ -663,7 +668,8 @@ if (siteChartEl) {
   const result = document.getElementById('db-search-result');
   if (!input) return;
 
-  const dbSlots = document.querySelectorAll('#db-code-display .code-slot');
+  const dbSlots   = document.querySelectorAll('#db-code-display .code-slot');
+  const clearBtn  = document.getElementById('db-clear-btn');
   function syncDb(focused) {
     const val = input.value;
     dbSlots.forEach((slot, i) => {
@@ -671,11 +677,19 @@ if (siteChartEl) {
       slot.classList.toggle('filled', i < val.length);
       slot.classList.toggle('cursor', !!focused && i === val.length && val.length < 10);
     });
+    clearBtn.style.display = val.length > 0 ? 'inline' : 'none';
+  }
+  function clearDb() {
+    input.value = '';
+    syncDb(false);
+    errEl.style.display = 'none';
+    result.style.display = 'none';
   }
   input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 10); syncDb(true); errEl.style.display = 'none'; });
   input.addEventListener('focus', () => syncDb(true));
   input.addEventListener('blur',  () => syncDb(false));
   input.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+  clearBtn.addEventListener('click', clearDb);
   syncDb(false);
 
   btn.addEventListener('click', () => {
