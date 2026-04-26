@@ -332,29 +332,60 @@ def voucher_search(request):
     if not code or not code.isdigit() or len(code) != 10:
         return JsonResponse({'error': 'Format invalide — 10 chiffres requis.'}, status=400)
 
+    # ── 1. Recherche dans VoucherLog (BonNet) ─────────────────────────────────
+    if request.user.is_superadmin:
+        sites = HotspotSite.objects.filter(is_active=True)
+    else:
+        sites = request.user.managed_sites.filter(is_active=True)
+
     try:
-        log = VoucherLog.objects.select_related('site', 'tier', 'created_by').get(code=code)
+        log = VoucherLog.objects.select_related('site', 'tier').get(code=code)
+        if not request.user.is_superadmin:
+            allowed_pks = set(sites.values_list('pk', flat=True))
+            if log.site_id not in allowed_pks:
+                raise VoucherLog.DoesNotExist
+        return JsonResponse({
+            'found': True,
+            'source': 'bonnet',
+            'code': log.code,
+            'site': log.site.name if log.site else '—',
+            'tier': log.tier.label if log.tier else '—',
+            'status': log.get_status_display(),
+            'status_key': log.status,
+            'price_htg': str(log.price_htg) if log.price_htg is not None else '—',
+            'duration_minutes': log.duration_minutes,
+            'created_at': log.created_at.strftime('%d/%m/%Y %H:%M') if log.created_at else '—',
+            'used_at': log.used_at.strftime('%d/%m/%Y %H:%M') if log.used_at else None,
+            'expires_at': log.expires_at.strftime('%d/%m/%Y %H:%M') if log.expires_at else None,
+            'note': log.note or '—',
+        })
     except VoucherLog.DoesNotExist:
+        pass
+
+    # ── 2. Fallback : recherche sur UniFi (hors BonNet) ───────────────────────
+    all_unifi = unifi.get_all_vouchers(sites)
+    match = next((v for v in all_unifi if v.get('code', '') == code), None)
+    if not match:
         return JsonResponse({'found': False})
 
-    if not request.user.is_superadmin:
-        allowed = request.user.managed_sites.values_list('pk', flat=True)
-        if log.site_id not in allowed:
-            return JsonResponse({'found': False})
+    dur = match.get('duration_minutes', 0)
+    dur_label = f"{round(dur / 1440)} jour(s)" if dur >= 1440 else f"{dur} min"
+    created_dt = match.get('created_dt')
 
     return JsonResponse({
         'found': True,
-        'code': log.code,
-        'site': log.site.name if log.site else '—',
-        'tier': log.tier.label if log.tier else '—',
-        'status': log.get_status_display(),
-        'status_key': log.status,
-        'price_htg': str(log.price_htg) if log.price_htg is not None else '—',
-        'duration_minutes': log.duration_minutes,
-        'created_at': log.created_at.strftime('%d/%m/%Y %H:%M') if log.created_at else '—',
-        'used_at': log.used_at.strftime('%d/%m/%Y %H:%M') if log.used_at else None,
-        'expires_at': log.expires_at.strftime('%d/%m/%Y %H:%M') if log.expires_at else None,
-        'note': log.note or '—',
+        'source': 'unifi',
+        'code': code,
+        'site': match.get('site_name', '—'),
+        'tier': '—',
+        'status': match.get('status_label', '—'),
+        'status_key': 'active' if match.get('is_available') else 'used',
+        'price_htg': '—',
+        'duration_minutes': dur,
+        'created_at': created_dt.strftime('%d/%m/%Y %H:%M') if created_dt else '—',
+        'used_at': None,
+        'expires_at': None,
+        'note': match.get('note') or '—',
     })
 
 

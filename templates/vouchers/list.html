@@ -410,12 +410,19 @@ searchBtn.addEventListener('click', () => {
       ? (data.duration_minutes / 1440) + ' jour(s)'
       : data.duration_minutes + ' min';
 
+    const unifiWarning = data.source === 'unifi'
+      ? `<span class="badge ms-2" style="background:#FEF3C7;color:#92400E;font-size:.72rem;padding:3px 9px;border-radius:20px">
+           <i class="bi bi-exclamation-triangle me-1"></i>Créé hors BonNet (contrôleur UniFi)
+         </span>`
+      : '';
+
     resultBox.innerHTML = `
       <div class="border rounded p-3" style="background:#f8fafc">
-        <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
           <i class="bi bi-ticket-perforated text-primary fs-5"></i>
           <code class="fw-700" style="font-size:1.15rem;letter-spacing:.12em">${data.code}</code>
           <span class="badge ${statusClass} ms-1" style="font-size:.78rem;padding:3px 10px;border-radius:20px">${data.status}</span>
+          ${unifiWarning}
         </div>
         <div class="row g-2" style="font-size:.88rem">
           <div class="col-6 col-md-3"><span class="text-muted d-block" style="font-size:.75rem">Site</span><strong>${data.site}</strong></div>
