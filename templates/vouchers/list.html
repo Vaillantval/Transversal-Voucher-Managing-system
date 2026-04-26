@@ -19,6 +19,25 @@
 [data-theme="dark"] .search-result-card .text-muted { color:#94a3b8 !important; }
 [data-theme="dark"] .search-result-card strong,
 [data-theme="dark"] .search-result-card .result-value { color:#e2e8f0; }
+
+.code-display-wrap { position:relative; display:inline-flex; }
+.code-display-wrap input { position:absolute; inset:0; opacity:0; cursor:text; width:100%; height:100%; z-index:1; }
+.code-display {
+  display:inline-flex; align-items:center; gap:5px;
+  background:#fff; border:1.5px solid #d1d5db; border-radius:8px;
+  padding:8px 14px; font-family:monospace; font-size:1.25rem;
+  cursor:text; user-select:none; transition:border-color .15s, box-shadow .15s;
+}
+.code-display-wrap input:focus ~ .code-display { border-color:#1A56DB; box-shadow:0 0 0 3px rgba(26,86,219,.12); }
+.code-slot { color:#d1d5db; min-width:.6em; text-align:center; transition:color .1s; }
+.code-slot.filled { color:#111827; }
+.code-slot.cursor { border-bottom:2px solid #1A56DB; animation:slot-blink 1s step-end infinite; }
+.code-sep { color:#9ca3af; margin:0 3px; font-size:1rem; }
+@keyframes slot-blink { 50% { border-color:transparent; } }
+[data-theme="dark"] .code-display { background:#1e293b; border-color:#475569; }
+[data-theme="dark"] .code-slot { color:#475569; }
+[data-theme="dark"] .code-slot.filled { color:#e2e8f0; }
+[data-theme="dark"] .code-display-wrap input:focus ~ .code-display { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
 </style>
 {% endblock %}
 
@@ -30,14 +49,17 @@
     <i class="bi bi-search text-primary"></i>
     <span class="fw-600" style="font-size:.95rem">Rechercher un voucher</span>
   </div>
-  <div class="d-flex gap-2 align-items-start flex-wrap">
+  <div class="d-flex gap-2 align-items-center flex-wrap">
     <div>
-      <input type="text" id="voucher-search-input" maxlength="10" inputmode="numeric"
-             pattern="\d{10}" placeholder="10 chiffres"
-             class="form-control form-control-sm" style="width:160px; letter-spacing:.1em; font-family:monospace">
-      <div id="search-input-error" class="text-danger" style="font-size:.78rem;display:none">
-        10 chiffres requis (pas de lettres).
+      <div class="code-display-wrap">
+        <input type="text" id="voucher-search-input" maxlength="10" inputmode="numeric" autocomplete="off">
+        <div class="code-display" aria-hidden="true" id="voucher-code-display">
+          <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+          <span class="code-sep">-</span>
+          <span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span><span class="code-slot">•</span>
+        </div>
       </div>
+      <div id="search-input-error" class="text-danger mt-1" style="font-size:.78rem;display:none">10 chiffres requis.</div>
     </div>
     <button id="voucher-search-btn" class="btn btn-sm btn-primary">
       <i class="bi bi-search me-1"></i>Rechercher
@@ -368,13 +390,26 @@ const searchInput = document.getElementById('voucher-search-input');
 const searchBtn   = document.getElementById('voucher-search-btn');
 const searchError = document.getElementById('search-input-error');
 const resultBox   = document.getElementById('search-result');
+const codeSlots   = document.querySelectorAll('#voucher-code-display .code-slot');
+
+function syncCodeDisplay(focused) {
+  const val = searchInput.value;
+  codeSlots.forEach((slot, i) => {
+    slot.textContent = i < val.length ? val[i] : '•';
+    slot.classList.toggle('filled', i < val.length);
+    slot.classList.toggle('cursor', !!focused && i === val.length && val.length < 10);
+  });
+}
 
 searchInput.addEventListener('input', () => {
   searchInput.value = searchInput.value.replace(/\D/g, '').slice(0, 10);
+  syncCodeDisplay(true);
   searchError.style.display = 'none';
 });
-
+searchInput.addEventListener('focus', () => syncCodeDisplay(true));
+searchInput.addEventListener('blur',  () => syncCodeDisplay(false));
 searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchBtn.click(); });
+syncCodeDisplay(false);
 
 searchBtn.addEventListener('click', () => {
   const code = searchInput.value.trim();
