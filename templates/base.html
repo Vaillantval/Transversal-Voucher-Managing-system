@@ -384,7 +384,7 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 
     <div class="nav-section">Boutique</div>
     <a href="{% url 'boutique:orders' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' and ('commandes' in request.path or request.path == '/boutique/') %}active{% endif %}">
+       class="{% if request.resolver_match.app_name == 'boutique' and 'commandes' in request.path or request.resolver_match.app_name == 'boutique' and request.path == '/boutique/' %}active{% endif %}">
       <i class="bi bi-cart3"></i> Commandes
     </a>
     <a href="{% url 'boutique:customers' %}"
