@@ -69,27 +69,14 @@ class OrderItemInline(admin.TabularInline):
         return format_html(badges)
 
 
-class VoucherCodeSearch(admin.SimpleListFilter):
-    title        = 'code voucher'
-    parameter_name = 'voucher_code'
-
-    def lookups(self, request, model_admin):
-        return []
-
-    def queryset(self, request, queryset):
-        val = self.value()
-        if val:
-            return queryset.filter(items__voucher_codes__contains=val)
-        return queryset
-
-
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display    = ('reference', 'client_name', 'client_phone', 'sites_display',
                        'payment_method', 'total_htg', 'status', 'created_at')
-    list_filter     = ('status', 'payment_method', 'items__site', VoucherCodeSearch)
+    list_filter     = ('status', 'payment_method', 'items__site')
     search_fields   = ('reference', 'customer__full_name', 'customer__phone',
                        'plopplop_transaction_id')
+    search_help_text = 'Référence, nom client, téléphone, transaction PlopPlop ou code voucher (10 chiffres)'
     date_hierarchy  = 'created_at'
     readonly_fields = ('reference', 'plopplop_transaction_id', 'created_at', 'store_user_link')
     inlines         = [OrderItemInline]
@@ -127,6 +114,15 @@ class OrderAdmin(admin.ModelAdmin):
         su = obj.customer.store_user
         url = reverse('admin:store_storeuser_change', args=[su.pk])
         return format_html('<a href="{}">{} ({})</a>', url, su.full_name, su.email)
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, may_have_duplicates = super().get_search_results(request, queryset, search_term)
+        # Si le terme ressemble à un code voucher (10 chiffres), chercher dans les JSONField
+        if search_term and search_term.isdigit() and len(search_term) == 10:
+            voucher_qs = Order.objects.filter(items__voucher_codes__contains=search_term)
+            queryset |= voucher_qs
+            may_have_duplicates = True
+        return queryset, may_have_duplicates
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(

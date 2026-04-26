@@ -55,7 +55,7 @@ JAZZMIN_SETTINGS = {
     "hide_apps": [],
     "hide_models": [],
     "order_with_respect_to": [
-        "accounts", "sites_mgmt", "vouchers", "dashboard", "reports",
+        "accounts", "sites_mgmt", "vouchers", "dashboard", "reports", "store",
     ],
     "icons": {
         "accounts":                    "fas fa-users-cog",
@@ -66,6 +66,12 @@ JAZZMIN_SETTINGS = {
         "vouchers":                    "fas fa-ticket-alt",
         "auth":                        "fas fa-lock",
         "auth.Group":                  "fas fa-users",
+        "store":                       "fas fa-store",
+        "store.Order":                 "fas fa-shopping-cart",
+        "store.StoreUser":             "fas fa-user-circle",
+        "store.CustomerProfile":       "fas fa-address-card",
+        "store.StoreBanner":           "fas fa-images",
+        "store.Cart":                  "fas fa-shopping-basket",
     },
     "default_icon_parents": "fas fa-folder",
     "default_icon_children": "fas fa-circle",
