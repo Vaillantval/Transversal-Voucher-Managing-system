@@ -62,7 +62,7 @@ JAZZMIN_SETTINGS = {
         "accounts.User":               "fas fa-user",
         "sites_mgmt":                  "fas fa-network-wired",
         "sites_mgmt.HotspotSite":      "fas fa-wifi",
-        "sites_mgmt.PricingTier":      "fas fa-tags",
+        "sites_mgmt.VoucherTier":      "fas fa-tags",
         "vouchers":                    "fas fa-ticket-alt",
         "auth":                        "fas fa-lock",
         "auth.Group":                  "fas fa-users",

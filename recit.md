@@ -36,13 +36,14 @@ Accès limité aux sites qui lui sont assignés. Synchronisé depuis les admins 
 - KPIs en temps réel : sessions vendues, sessions actives, stock disponible, revenus (HTG)
 - Période configurable : 7j / 30j / 90j / 12 mois, ou valeur+unité personnalisée
 - Graphique des revenus par jour (Chart.js)
-- Répartition par forfait (camembert)
-- Tableau par site : sessions, stock, revenus, clients live
+- Répartition par forfait : camembert (max 6 tranches + "Autres") + liste scrollable complète
+- Tableau par site : sessions, stock, revenus, clients live — trié par revenus décroissants
 - Revenus par site (top 10, histogramme)
 - Liste des clients connectés live (mode site unique)
 - Liste des devices UniFi (online / offline) avec statut en couleur
 - Admins assignés au site sélectionné
 - Avertissement si le contrôleur UniFi est inaccessible
+- **Widget recherche voucher** : saisie PIN 10 chiffres (10 points visuels séparés par un tiret, chaque point remplacé par le chiffre saisi, bouton ×), résultat en carte colorée par statut
 
 ### Forfaits (VoucherTier)
 Trois types de forfaits, gérés depuis la page **Tarifs** :
@@ -67,6 +68,7 @@ Trois types de forfaits, gérés depuis la page **Tarifs** :
 - Synchronisation avec UniFi en temps réel
 - Affichage du stock disponible par site
 - Filtrage par site
+- **Widget recherche voucher** (identique au tableau de bord) : saisie PIN 10 chiffres, recherche d'abord dans VoucherLog (source BonNet), puis fallback UniFi pour les codes créés directement sur le contrôleur (badge "Créé hors BonNet"). Respecte les droits sites de l'utilisateur connecté.
 
 ### Exports & Rapports
 - **CSV** : données brutes, compatible tout tableur
@@ -139,6 +141,21 @@ Configurée depuis **Configuration → Génération automatique**, avec deux tog
 - Option "Se souvenir de moi" (session 30 jours) ou session 8h par défaut
 - Déconnexion depuis la page Profil
 - Redirection vers la page demandée après login
+
+### Boutique en ligne — Espace admin custom
+
+Accessible depuis le drawer custom sous la section **Boutique**. Visible par tous les admins (superadmin voit tout, site_admin filtre automatiquement sur ses sites assignés).
+
+| Page | Accès | Contenu |
+|------|-------|---------|
+| **Commandes** | Tous | Liste avec KPIs (total commandes, revenus), filtre statut, recherche (référence, client, téléphone, code voucher 10 chiffres), pagination |
+| **Détail commande** | Tous | Informations commande + client + items avec codes en chips |
+| **Clients** | Tous | Liste des CustomerProfile avec compteur commandes + liens |
+| **Comptes Google** | Tous | Liste des StoreUser (comptes Google) avec avatars |
+| **Paniers actifs** | Tous | Paniers en cours avec contenu (site, forfait, quantité) |
+| **Bannières** | Superadmin uniquement | CRUD complet — créer / modifier / supprimer / activer-désactiver sans passer par l'admin Django |
+
+**Bannières (StoreBanner)** : image, titre, sous-titre, texte bouton CTA, ordre d'affichage, statut actif. Formulaire avec aperçu image live (JS FileReader). Toggle actif/inactif via bouton inline (POST).
 
 ### Thème
 - Mode clair / sombre basculable depuis la barre de navigation

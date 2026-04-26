@@ -103,12 +103,12 @@ python manage.py runserver
 |-----|------|
 | `accounts` | Auth UniFi backend + rôles + gestion utilisateurs + formulaire partenaire public |
 | `sites_mgmt` | HotspotSite (GPS) + VoucherTier + SiteConfig + PartnerProduct |
-| `vouchers` | VoucherLog — stock de vouchers actifs (source prioritaire pour le store) |
-| `dashboard` | KPIs + charts temps réel |
+| `vouchers` | VoucherLog — stock de vouchers actifs (source prioritaire pour le store) + recherche code PIN |
+| `dashboard` | KPIs + charts temps réel + widget recherche voucher + répartition forfaits scrollable |
 | `reports` | Export PDF / Excel / CSV |
 | `unifi_api` | Client pyunifi avec cache Redis (TTL 3–6min, pre-warm /2min) |
 | `notifications` | Alertes stock, génération auto, rapports mensuels, AdminVoucherGenLog |
-| `store` | Store public : StoreUser, Cart, Order, PlopPlop, Celery delivery, Google OAuth |
+| `store` | Store public + espace admin boutique (commandes, clients, bannières, paniers) |
 
 ---
 
@@ -226,6 +226,24 @@ https://bon.net.ht/commande/
 |------|--------|
 | **superadmin** | Tous les sites, tarifs, rapports complets, gestion utilisateurs, partenaires |
 | **site_admin** | Sites assignés uniquement, vouchers, export filtré |
+
+---
+
+## Espace admin boutique (`/boutique/`)
+
+Section du dashboard custom dédiée à la gestion du store public, accessible depuis le drawer.
+
+| Page | URL | Accès |
+|------|-----|-------|
+| Commandes | `/boutique/` | Tous admins |
+| Détail commande | `/boutique/commandes/<ref>/` | Tous admins |
+| Clients | `/boutique/clients/` | Tous admins |
+| Comptes Google | `/boutique/utilisateurs/` | Tous admins |
+| Paniers actifs | `/boutique/paniers/` | Tous admins |
+| Bannières | `/boutique/bannieres/` | Superadmin |
+
+Les vues site_admin filtrent automatiquement sur `user.managed_sites`.  
+Fichiers : `store/boutique_views.py` + `store/boutique_urls.py` (namespace `boutique`).
 
 ---
 
