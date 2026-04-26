@@ -91,6 +91,7 @@ urlpatterns = [
     path('vouchers/', include('vouchers.urls')),
     path('reports/', include('reports.urls')),
     path('notifications/', include('notifications.urls')),
+    path('boutique/', include('store.boutique_urls')),
     path('', include('store.urls')),
 ]
 

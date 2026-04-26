@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Bannières — Boutique{% endblock %}
+{% block page_title %}Bannières{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3">
+  <a href="/admin/store/storebanner/add/" class="btn btn-sm btn-success">
+    <i class="bi bi-plus-circle me-1"></i>Ajouter une bannière
+  </a>
+</div>
+
+{% if banners %}
+<div class="row g-3">
+  {% for banner in banners %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-bn overflow-hidden">
+      {% if banner.image %}
+      <img src="{{ banner.image.url }}" class="card-img-top" style="height:140px;object-fit:cover">
+      {% else %}
+      <div class="d-flex align-items-center justify-content-center" style="height:140px;background:#f1f5f9">
+        <i class="bi bi-image text-muted" style="font-size:2.5rem"></i>
+      </div>
+      {% endif %}
+      <div class="p-3">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <div class="fw-700">{{ banner.title }}</div>
+            {% if banner.subtitle %}
+            <div class="text-muted small">{{ banner.subtitle }}</div>
+            {% endif %}
+            <div class="mt-2 d-flex gap-2 align-items-center">
+              <span class="badge {% if banner.is_active %}bg-success{% else %}bg-secondary{% endif %}" style="font-size:.7rem">
+                {% if banner.is_active %}Actif{% else %}Inactif{% endif %}
+              </span>
+              <span class="text-muted small">Ordre {{ banner.order }}</span>
+            </div>
+          </div>
+          <a href="/admin/store/storebanner/{{ banner.pk }}/change/" class="btn btn-sm btn-outline-secondary" title="Modifier">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-images text-muted" style="font-size:3rem"></i>
+  <p class="text-muted mt-3">Aucune bannière configurée.</p>
+  <a href="/admin/store/storebanner/add/" class="btn btn-sm btn-primary">Créer la première bannière</a>
+</div>
+{% endif %}
+{% endblock %}

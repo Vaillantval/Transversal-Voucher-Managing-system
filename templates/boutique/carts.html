@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Paniers — Boutique{% endblock %}
+{% block page_title %}Paniers actifs{% endblock %}
+
+{% block content %}
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th class="d-none d-md-table-cell">Session</th>
+          <th class="text-center">Articles</th>
+          <th class="text-end d-none d-sm-table-cell">Total</th>
+          <th class="d-none d-lg-table-cell">Contenu</th>
+          <th class="d-none d-md-table-cell">Créé le</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for cart in carts %}
+      <tr>
+        <td>
+          {% if cart.store_user %}
+          <div class="fw-600">{{ cart.store_user.full_name }}</div>
+          <div class="text-muted" style="font-size:.78rem">{{ cart.store_user.email }}</div>
+          {% else %}
+          <span class="text-muted small">Anonyme</span>
+          {% endif %}
+        </td>
+        <td class="d-none d-md-table-cell text-muted" style="font-size:.78rem">
+          {{ cart.session_key|default:'—'|slice:":12" }}…
+        </td>
+        <td class="text-center">
+          <span class="badge bg-secondary">{{ cart.item_count }}</span>
+        </td>
+        <td class="text-end fw-600 d-none d-sm-table-cell">{{ cart.total|floatformat:0 }} HTG</td>
+        <td class="d-none d-lg-table-cell text-muted small">
+          {% for item in cart.items.all %}
+          {{ item.quantity }}× {{ item.tier.label }} @ {{ item.site.name }}{% if not forloop.last %} · {% endif %}
+          {% endfor %}
+        </td>
+        <td class="d-none d-md-table-cell text-muted small">{{ cart.created_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-muted py-4">Aucun panier actif.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if carts.has_other_pages %}
+  <div class="d-flex justify-content-center py-3 gap-1">
+    {% if carts.has_previous %}
+    <a href="?page={{ carts.previous_page_number }}" class="btn btn-sm btn-outline-secondary">‹</a>
+    {% endif %}
+    <span class="btn btn-sm btn-primary disabled">{{ carts.number }} / {{ carts.paginator.num_pages }}</span>
+    {% if carts.has_next %}
+    <a href="?page={{ carts.next_page_number }}" class="btn btn-sm btn-outline-secondary">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

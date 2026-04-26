@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.reference }}{% endblock %}
+{% block page_title %}{{ order.reference }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.status-badge { font-size:.78rem; padding:3px 11px; border-radius:20px; font-weight:600; }
+.status-pending    { background:#FEF3C7; color:#92400E; }
+.status-paid       { background:#DBEAFE; color:#1D4ED8; }
+.status-processing { background:#E0E7FF; color:#3730A3; }
+.status-delivered  { background:#D1FAE5; color:#065F46; }
+.status-failed     { background:#FEE2E2; color:#991B1B; }
+.code-chip { background:#f3f4f6; padding:2px 8px; border-radius:5px; font-family:monospace; font-size:.85em; letter-spacing:.06em; }
+[data-theme="dark"] .code-chip { background:#1e293b; color:#93c5fd; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'boutique:orders' %}" class="btn btn-sm btn-outline-secondary mb-3">
+  <i class="bi bi-arrow-left me-1"></i>Retour aux commandes
+</a>
+
+<div class="row g-3">
+
+  <!-- Infos commande -->
+  <div class="col-md-6">
+    <div class="card card-bn p-3">
+      <h6 class="fw-700 mb-3"><i class="bi bi-receipt me-2 text-primary"></i>Commande</h6>
+      <table class="table table-sm mb-0">
+        <tr><td class="text-muted" style="width:40%">Référence</td><td><code class="fw-600">{{ order.reference }}</code></td></tr>
+        <tr><td class="text-muted">Statut</td><td><span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span></td></tr>
+        <tr><td class="text-muted">Paiement</td><td>{{ order.get_payment_method_display }}</td></tr>
+        <tr><td class="text-muted">Total</td><td class="fw-700">{{ order.total_htg|floatformat:0 }} HTG</td></tr>
+        <tr><td class="text-muted">Date</td><td>{{ order.created_at|date:"d/m/Y H:i" }}</td></tr>
+        {% if order.plopplop_transaction_id %}
+        <tr><td class="text-muted">Transaction</td><td><code style="font-size:.8rem">{{ order.plopplop_transaction_id }}</code></td></tr>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Infos client -->
+  <div class="col-md-6">
+    <div class="card card-bn p-3">
+      <h6 class="fw-700 mb-3"><i class="bi bi-person me-2 text-primary"></i>Client</h6>
+      <table class="table table-sm mb-0">
+        <tr><td class="text-muted" style="width:40%">Nom</td><td>{{ order.customer.full_name|default:'—' }}</td></tr>
+        <tr><td class="text-muted">Téléphone</td><td>{{ order.customer.phone|default:'—' }}</td></tr>
+        {% if order.customer.store_user %}
+        <tr><td class="text-muted">Compte Google</td>
+            <td>
+              <a href="{% url 'boutique:store_users' %}?q={{ order.customer.store_user.email }}">
+                {{ order.customer.store_user.email }}
+              </a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td class="text-muted">Compte Google</td><td class="text-muted">Anonyme</td></tr>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Articles -->
+  <div class="col-12">
+    <div class="card card-bn p-3">
+      <h6 class="fw-700 mb-3"><i class="bi bi-bag me-2 text-primary"></i>Articles</h6>
+      <div class="table-responsive">
+        <table class="table table-bn table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th>Forfait</th>
+              <th class="text-center">Qté</th>
+              <th class="text-end">Prix unit.</th>
+              <th class="text-end">Sous-total</th>
+              <th>Codes livrés</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for item in order.items.all %}
+          <tr>
+            <td>{{ item.site.name|default:'—' }}</td>
+            <td>{{ item.tier.label|default:'—' }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-end">{{ item.unit_price|floatformat:0 }} HTG</td>
+            <td class="text-end fw-600">{{ item.quantity|floatformat:0 }}×{{ item.unit_price|floatformat:0 }} HTG</td>
+            <td>
+              {% if item.voucher_codes %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for code in item.voucher_codes %}
+                  <span class="code-chip">{{ code }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

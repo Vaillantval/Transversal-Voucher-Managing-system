@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Profils clients — Boutique{% endblock %}
+{% block page_title %}Profils clients{% endblock %}
+
+{% block content %}
+<!-- Recherche -->
+<div class="card card-bn p-3 mb-3">
+  <form method="get" class="d-flex gap-2 align-items-end flex-wrap">
+    <div>
+      <div style="font-size:.78rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">Recherche</div>
+      <input type="text" name="q" value="{{ search }}" placeholder="Nom ou téléphone…"
+             class="form-control form-control-sm" style="width:220px">
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Filtrer</button>
+    {% if search %}<a href="{% url 'boutique:customers' %}" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>{% endif %}
+  </form>
+</div>
+
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Téléphone</th>
+          <th class="d-none d-md-table-cell">Site préféré</th>
+          <th class="d-none d-lg-table-cell">Compte Google</th>
+          <th class="text-center d-none d-sm-table-cell">Commandes</th>
+          <th class="d-none d-md-table-cell">Inscrit le</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for cp in customers %}
+      <tr>
+        <td class="fw-600">{{ cp.full_name }}</td>
+        <td>{{ cp.phone }}</td>
+        <td class="d-none d-md-table-cell text-muted small">{{ cp.preferred_site.name|default:'—' }}</td>
+        <td class="d-none d-lg-table-cell">
+          {% if cp.store_user %}
+          <a href="{% url 'boutique:store_users' %}?q={{ cp.store_user.email }}" class="text-decoration-none small">
+            <i class="bi bi-google me-1"></i>{{ cp.store_user.email }}
+          </a>
+          {% else %}
+          <span class="text-muted small">Anonyme</span>
+          {% endif %}
+        </td>
+        <td class="text-center d-none d-sm-table-cell">
+          {% with count=cp.orders.count %}
+          {% if count %}
+          <a href="{% url 'boutique:orders' %}?q={{ cp.phone }}" class="badge bg-primary text-decoration-none">{{ count }}</a>
+          {% else %}
+          <span class="text-muted">0</span>
+          {% endif %}
+          {% endwith %}
+        </td>
+        <td class="d-none d-md-table-cell text-muted small">{{ cp.created_at|date:"d/m/Y" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-muted py-4">Aucun profil trouvé.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if customers.has_other_pages %}
+  <div class="d-flex justify-content-center py-3 gap-1">
+    {% if customers.has_previous %}
+    <a href="?page={{ customers.previous_page_number }}&q={{ search }}" class="btn btn-sm btn-outline-secondary">‹</a>
+    {% endif %}
+    <span class="btn btn-sm btn-primary disabled">{{ customers.number }} / {{ customers.paginator.num_pages }}</span>
+    {% if customers.has_next %}
+    <a href="?page={{ customers.next_page_number }}&q={{ search }}" class="btn btn-sm btn-outline-secondary">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

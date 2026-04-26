@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Commandes — Boutique{% endblock %}
+{% block page_title %}Commandes{% endblock %}
+
+{% block extra_css %}
+<style>
+.filter-label { font-size:.78rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem; }
+.status-badge { font-size:.72rem; padding:2px 9px; border-radius:20px; font-weight:600; }
+.status-pending    { background:#FEF3C7; color:#92400E; }
+.status-paid       { background:#DBEAFE; color:#1D4ED8; }
+.status-processing { background:#E0E7FF; color:#3730A3; }
+.status-delivered  { background:#D1FAE5; color:#065F46; }
+.status-failed     { background:#FEE2E2; color:#991B1B; }
+[data-theme="dark"] .status-pending    { background:#451a03; color:#fcd34d; }
+[data-theme="dark"] .status-paid       { background:#1e3a5f; color:#93c5fd; }
+[data-theme="dark"] .status-processing { background:#1e1b4b; color:#a5b4fc; }
+[data-theme="dark"] .status-delivered  { background:#022c22; color:#6ee7b7; }
+[data-theme="dark"] .status-failed     { background:#450a0a; color:#fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card card-bn p-3 text-center">
+      <div class="fw-700" style="font-size:1.5rem">{{ total_count }}</div>
+      <div class="text-muted small">Commande{{ total_count|pluralize }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-bn p-3 text-center">
+      <div class="fw-700" style="font-size:1.5rem">{{ total_revenue|floatformat:0 }} HTG</div>
+      <div class="text-muted small">Revenu total</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card card-bn p-3 mb-3">
+  <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+    <div>
+      <div class="filter-label">Recherche</div>
+      <input type="text" name="q" value="{{ search }}" placeholder="Réf, nom, tél, code voucher…"
+             class="form-control form-control-sm" style="width:220px">
+    </div>
+    <div>
+      <div class="filter-label">Statut</div>
+      <select name="status" class="form-select form-select-sm" style="width:auto">
+        <option value="">Tous</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Filtrer</button>
+    {% if search or status_filter %}
+    <a href="{% url 'boutique:orders' %}" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Table -->
+<div class="card card-bn">
+  <div class="table-responsive">
+    <table class="table table-bn table-hover table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Client</th>
+          <th class="d-none d-md-table-cell">Téléphone</th>
+          <th class="d-none d-lg-table-cell">Site(s)</th>
+          <th class="d-none d-sm-table-cell">Paiement</th>
+          <th class="text-end">Total</th>
+          <th class="text-center">Statut</th>
+          <th class="d-none d-md-table-cell">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for order in orders %}
+      <tr style="cursor:pointer" onclick="location.href='{% url 'boutique:order_detail' order.reference %}'">
+        <td><code class="fw-600" style="font-size:.82rem">{{ order.reference }}</code></td>
+        <td>{{ order.customer.full_name|default:'—' }}</td>
+        <td class="d-none d-md-table-cell text-muted small">{{ order.customer.phone|default:'—' }}</td>
+        <td class="d-none d-lg-table-cell text-muted small">
+          {% for item in order.items.all %}{{ item.site.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </td>
+        <td class="d-none d-sm-table-cell text-muted small">{{ order.get_payment_method_display }}</td>
+        <td class="text-end fw-600">{{ order.total_htg|floatformat:0 }} HTG</td>
+        <td class="text-center">
+          <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+        </td>
+        <td class="d-none d-md-table-cell text-muted small">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Aucune commande trouvée.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if orders.has_other_pages %}
+  <div class="d-flex justify-content-center py-3 gap-1">
+    {% if orders.has_previous %}
+    <a href="?page={{ orders.previous_page_number }}&q={{ search }}&status={{ status_filter }}" class="btn btn-sm btn-outline-secondary">‹</a>
+    {% endif %}
+    <span class="btn btn-sm btn-primary disabled">{{ orders.number }} / {{ orders.paginator.num_pages }}</span>
+    {% if orders.has_next %}
+    <a href="?page={{ orders.next_page_number }}&q={{ search }}&status={{ status_filter }}" class="btn btn-sm btn-outline-secondary">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
