@@ -1,9 +1,26 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum
+from django.forms import ModelForm
 from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.http import require_POST
 
 from .models import Order, OrderItem, CustomerProfile, StoreUser, StoreBanner, Cart
+
+
+class StoreBannerForm(ModelForm):
+    class Meta:
+        model  = StoreBanner
+        fields = ('title', 'subtitle', 'image', 'cta_text', 'order', 'is_active')
+        labels = {
+            'title':    'Titre',
+            'subtitle': 'Sous-titre',
+            'image':    'Image',
+            'cta_text': 'Texte bouton',
+            'order':    'Ordre d\'affichage',
+            'is_active':'Active',
+        }
 
 
 def _site_ids(user):
@@ -132,18 +149,83 @@ def boutique_store_users(request):
     })
 
 
-@login_required
-def boutique_banners(request):
+def _superadmin_required(request):
     if not request.user.is_superadmin:
-        from django.contrib import messages
         messages.error(request, "Accès réservé au super-admin.")
         return redirect('boutique:orders')
+    return None
 
+
+@login_required
+def boutique_banners(request):
+    guard = _superadmin_required(request)
+    if guard:
+        return guard
     banners = StoreBanner.objects.all().order_by('order')
     return render(request, 'boutique/banners.html', {
         'banners':    banners,
         'page_title': 'Bannières',
     })
+
+
+@login_required
+def boutique_banner_create(request):
+    guard = _superadmin_required(request)
+    if guard:
+        return guard
+    form = StoreBannerForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, "Bannière créée.")
+        return redirect('boutique:banners')
+    return render(request, 'boutique/banner_form.html', {
+        'form':       form,
+        'page_title': 'Nouvelle bannière',
+        'action':     'Créer',
+    })
+
+
+@login_required
+def boutique_banner_edit(request, pk):
+    guard = _superadmin_required(request)
+    if guard:
+        return guard
+    banner = get_object_or_404(StoreBanner, pk=pk)
+    form = StoreBannerForm(request.POST or None, request.FILES or None, instance=banner)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, "Bannière mise à jour.")
+        return redirect('boutique:banners')
+    return render(request, 'boutique/banner_form.html', {
+        'form':       form,
+        'banner':     banner,
+        'page_title': f'Modifier — {banner.title}',
+        'action':     'Enregistrer',
+    })
+
+
+@login_required
+@require_POST
+def boutique_banner_delete(request, pk):
+    guard = _superadmin_required(request)
+    if guard:
+        return guard
+    banner = get_object_or_404(StoreBanner, pk=pk)
+    banner.delete()
+    messages.success(request, "Bannière supprimée.")
+    return redirect('boutique:banners')
+
+
+@login_required
+@require_POST
+def boutique_banner_toggle(request, pk):
+    guard = _superadmin_required(request)
+    if guard:
+        return guard
+    banner = get_object_or_404(StoreBanner, pk=pk)
+    banner.is_active = not banner.is_active
+    banner.save(update_fields=['is_active'])
+    return redirect('boutique:banners')
 
 
 @login_required

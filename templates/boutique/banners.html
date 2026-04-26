@@ -4,10 +4,18 @@
 
 {% block content %}
 <div class="d-flex justify-content-end mb-3">
-  <a href="/admin/store/storebanner/add/" class="btn btn-sm btn-success">
-    <i class="bi bi-plus-circle me-1"></i>Ajouter une bannière
+  <a href="{% url 'boutique:banner_create' %}" class="btn btn-sm btn-success">
+    <i class="bi bi-plus-circle me-1"></i>Nouvelle bannière
   </a>
 </div>
+
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible py-2 mb-3" role="alert">
+    {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endif %}
 
 {% if banners %}
 <div class="row g-3">
@@ -23,21 +31,38 @@
       {% endif %}
       <div class="p-3">
         <div class="d-flex align-items-start justify-content-between gap-2">
-          <div>
+          <div class="min-w-0">
             <div class="fw-700">{{ banner.title }}</div>
             {% if banner.subtitle %}
-            <div class="text-muted small">{{ banner.subtitle }}</div>
+            <div class="text-muted small text-truncate">{{ banner.subtitle }}</div>
             {% endif %}
-            <div class="mt-2 d-flex gap-2 align-items-center">
+            <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
               <span class="badge {% if banner.is_active %}bg-success{% else %}bg-secondary{% endif %}" style="font-size:.7rem">
                 {% if banner.is_active %}Actif{% else %}Inactif{% endif %}
               </span>
               <span class="text-muted small">Ordre {{ banner.order }}</span>
+              <span class="text-muted small">{{ banner.cta_text }}</span>
             </div>
           </div>
-          <a href="/admin/store/storebanner/{{ banner.pk }}/change/" class="btn btn-sm btn-outline-secondary" title="Modifier">
-            <i class="bi bi-pencil"></i>
-          </a>
+          <div class="d-flex flex-column gap-1 flex-shrink-0">
+            <a href="{% url 'boutique:banner_edit' banner.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Modifier">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{% url 'boutique:banner_toggle' banner.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm {% if banner.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %} py-0 px-2 w-100"
+                      title="{% if banner.is_active %}Désactiver{% else %}Activer{% endif %}">
+                <i class="bi bi-{% if banner.is_active %}eye-slash{% else %}eye{% endif %}"></i>
+              </button>
+            </form>
+            <form method="post" action="{% url 'boutique:banner_delete' banner.pk %}"
+                  onsubmit="return confirm('Supprimer cette bannière ?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 w-100" title="Supprimer">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -48,7 +73,7 @@
 <div class="text-center py-5">
   <i class="bi bi-images text-muted" style="font-size:3rem"></i>
   <p class="text-muted mt-3">Aucune bannière configurée.</p>
-  <a href="/admin/store/storebanner/add/" class="btn btn-sm btn-primary">Créer la première bannière</a>
+  <a href="{% url 'boutique:banner_create' %}" class="btn btn-sm btn-primary">Créer la première bannière</a>
 </div>
 {% endif %}
 {% endblock %}
