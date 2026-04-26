@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Boutique{% endblock %}
+{% block page_title %}Boutique{% endblock %}
+
+{% block extra_css %}
+<style>
+.hub-card {
+  display:flex; flex-direction:column; align-items:flex-start;
+  border-radius:14px; padding:1.5rem 1.5rem 1.25rem;
+  text-decoration:none; transition:transform .15s, box-shadow .15s;
+  border:1px solid var(--bn-border, rgba(255,255,255,.08));
+}
+.hub-card:hover { transform:translateY(-3px); box-shadow:0 8px 28px rgba(0,0,0,.18); }
+.hub-icon {
+  width:48px; height:48px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.35rem; margin-bottom:1rem;
+}
+.hub-count { font-size:2rem; font-weight:800; line-height:1; margin-bottom:.2rem; }
+.hub-label { font-size:.9rem; font-weight:600; }
+.hub-sub   { font-size:.78rem; opacity:.6; margin-top:.15rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Commandes -->
+  <div class="col-6 col-md-4 col-lg-3">
+    <a href="{% url 'boutique:orders' %}" class="hub-card card-bn">
+      <div class="hub-icon" style="background:rgba(59,130,246,.15);color:#3b82f6">
+        <i class="bi bi-cart3"></i>
+      </div>
+      <div class="hub-count" style="color:#3b82f6">{{ orders_count }}</div>
+      <div class="hub-label">Commandes</div>
+      <div class="hub-sub">Historique des achats</div>
+    </a>
+  </div>
+
+  <!-- Clients -->
+  <div class="col-6 col-md-4 col-lg-3">
+    <a href="{% url 'boutique:customers' %}" class="hub-card card-bn">
+      <div class="hub-icon" style="background:rgba(16,185,129,.15);color:#10b981">
+        <i class="bi bi-people"></i>
+      </div>
+      <div class="hub-count" style="color:#10b981">{{ customers_count }}</div>
+      <div class="hub-label">Clients</div>
+      <div class="hub-sub">Profils enregistrés</div>
+    </a>
+  </div>
+
+  <!-- Comptes Google -->
+  <div class="col-6 col-md-4 col-lg-3">
+    <a href="{% url 'boutique:store_users' %}" class="hub-card card-bn">
+      <div class="hub-icon" style="background:rgba(251,191,36,.15);color:#f59e0b">
+        <i class="bi bi-person-circle"></i>
+      </div>
+      <div class="hub-count" style="color:#f59e0b">{{ users_count }}</div>
+      <div class="hub-label">Comptes Google</div>
+      <div class="hub-sub">Utilisateurs authentifiés</div>
+    </a>
+  </div>
+
+  <!-- Paniers -->
+  <div class="col-6 col-md-4 col-lg-3">
+    <a href="{% url 'boutique:carts' %}" class="hub-card card-bn">
+      <div class="hub-icon" style="background:rgba(139,92,246,.15);color:#8b5cf6">
+        <i class="bi bi-basket3"></i>
+      </div>
+      <div class="hub-count" style="color:#8b5cf6">{{ carts_count }}</div>
+      <div class="hub-label">Paniers actifs</div>
+      <div class="hub-sub">En cours d'achat</div>
+    </a>
+  </div>
+
+  <!-- Bannières (superadmin) -->
+  {% if user.is_superadmin %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <a href="{% url 'boutique:banners' %}" class="hub-card card-bn">
+      <div class="hub-icon" style="background:rgba(239,68,68,.15);color:#ef4444">
+        <i class="bi bi-images"></i>
+      </div>
+      <div class="hub-count" style="color:#ef4444">{{ banners_count }}</div>
+      <div class="hub-label">Bannières actives</div>
+      <div class="hub-sub">Slider du store public</div>
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

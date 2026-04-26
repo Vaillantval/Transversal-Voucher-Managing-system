@@ -382,29 +382,10 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
       {% endif %}
     </a>
 
-    <div class="nav-section">Boutique</div>
-    <a href="{% url 'boutique:orders' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' and 'commandes' in request.path or request.resolver_match.app_name == 'boutique' and request.path == '/boutique/' %}active{% endif %}">
-      <i class="bi bi-cart3"></i> Commandes
+    <a href="{% url 'boutique:hub' %}"
+       class="{% if request.resolver_match.app_name == 'boutique' %}active{% endif %}">
+      <i class="bi bi-shop"></i> Boutique
     </a>
-    <a href="{% url 'boutique:customers' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' and 'clients' in request.path %}active{% endif %}">
-      <i class="bi bi-people"></i> Clients
-    </a>
-    <a href="{% url 'boutique:store_users' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' and 'utilisateurs' in request.path %}active{% endif %}">
-      <i class="bi bi-person-circle"></i> Comptes Google
-    </a>
-    <a href="{% url 'boutique:carts' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' and 'paniers' in request.path %}active{% endif %}">
-      <i class="bi bi-basket3"></i> Paniers
-    </a>
-    {% if user.is_superadmin %}
-    <a href="{% url 'boutique:banners' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' and 'bannieres' in request.path %}active{% endif %}">
-      <i class="bi bi-images"></i> Bannières
-    </a>
-    {% endif %}
 
     {% if user.is_superadmin %}
     <div class="nav-section">Super Admin</div>

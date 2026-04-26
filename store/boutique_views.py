@@ -6,7 +6,7 @@ from django.forms import ModelForm
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
-from .models import Order, OrderItem, CustomerProfile, StoreUser, StoreBanner, Cart
+from .models import Order, OrderItem, CustomerProfile, StoreUser, StoreBanner, Cart, CartItem
 
 
 class StoreBannerForm(ModelForm):
@@ -25,6 +25,37 @@ class StoreBannerForm(ModelForm):
 
 def _site_ids(user):
     return user.managed_sites.values_list('pk', flat=True)
+
+
+@login_required
+def boutique_hub(request):
+    is_super = request.user.is_superadmin
+    if is_super:
+        orders_count    = Order.objects.count()
+        customers_count = CustomerProfile.objects.count()
+        users_count     = StoreUser.objects.count()
+        carts_count     = Cart.objects.count()
+        banners_count   = StoreBanner.objects.filter(is_active=True).count()
+    else:
+        ids = _site_ids(request.user)
+        orders_count    = Order.objects.filter(items__site_id__in=ids).distinct().count()
+        customers_count = (CustomerProfile.objects
+                           .filter(Q(orders__items__site_id__in=ids) | Q(preferred_site_id__in=ids))
+                           .distinct().count())
+        users_count     = (StoreUser.objects
+                           .filter(profiles__orders__items__site_id__in=ids)
+                           .distinct().count())
+        carts_count     = Cart.objects.filter(items__site_id__in=ids).distinct().count()
+        banners_count   = None
+
+    return render(request, 'boutique/hub.html', {
+        'page_title':     'Boutique',
+        'orders_count':   orders_count,
+        'customers_count': customers_count,
+        'users_count':    users_count,
+        'carts_count':    carts_count,
+        'banners_count':  banners_count,
+    })
 
 
 @login_required
@@ -246,4 +277,24 @@ def boutique_carts(request):
     return render(request, 'boutique/carts.html', {
         'carts':      carts,
         'page_title': 'Paniers actifs',
+    })
+
+
+@login_required
+def boutique_cart_detail(request, pk):
+    if request.user.is_superadmin:
+        cart = get_object_or_404(
+            Cart.objects.select_related('store_user').prefetch_related('items__tier', 'items__site'),
+            pk=pk,
+        )
+    else:
+        ids  = _site_ids(request.user)
+        cart = get_object_or_404(
+            Cart.objects.filter(items__site_id__in=ids).distinct()
+                .select_related('store_user').prefetch_related('items__tier', 'items__site'),
+            pk=pk,
+        )
+    return render(request, 'boutique/cart_detail.html', {
+        'cart':       cart,
+        'page_title': f'Panier #{cart.pk}',
     })

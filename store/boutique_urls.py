@@ -4,7 +4,8 @@ from . import boutique_views
 app_name = 'boutique'
 
 urlpatterns = [
-    path('',                                  boutique_views.boutique_orders,         name='orders'),
+    path('',                                  boutique_views.boutique_hub,             name='hub'),
+    path('commandes/',                        boutique_views.boutique_orders,          name='orders'),
     path('commandes/<str:order_ref>/',        boutique_views.boutique_order_detail,    name='order_detail'),
     path('clients/',                          boutique_views.boutique_customers,       name='customers'),
     path('utilisateurs/',                     boutique_views.boutique_store_users,     name='store_users'),
@@ -14,4 +15,5 @@ urlpatterns = [
     path('bannieres/<int:pk>/supprimer/',     boutique_views.boutique_banner_delete,   name='banner_delete'),
     path('bannieres/<int:pk>/toggle/',        boutique_views.boutique_banner_toggle,   name='banner_toggle'),
     path('paniers/',                          boutique_views.boutique_carts,           name='carts'),
+    path('paniers/<int:pk>/',                 boutique_views.boutique_cart_detail,     name='cart_detail'),
 ]
