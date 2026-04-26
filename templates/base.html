@@ -48,6 +48,23 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
   background: rgba(255,255,255,.07); color: #fff;
 }
 .sidebar-nav a.active { border-left: 3px solid var(--bn-blue); color: #fff; }
+
+/* Boutique submenu */
+.nav-submenu-toggle {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .55rem 1.5rem; color: #9ca3af;
+  cursor: pointer; font-size: .9rem; user-select: none;
+  transition: background .15s, color .15s;
+}
+.nav-submenu-toggle:hover { background: rgba(255,255,255,.07); color: #fff; }
+.nav-submenu-toggle.open   { background: rgba(255,255,255,.05); color: #fff; }
+.nav-submenu-chevron { margin-left: auto; font-size: .7rem; transition: transform .2s; }
+.nav-submenu-toggle.open .nav-submenu-chevron { transform: rotate(180deg); }
+.sidebar-nav a.nav-sub {
+  padding-left: 2.8rem; font-size: .85rem;
+  border-left: none;
+}
+.sidebar-nav a.nav-sub.active { border-left: 3px solid var(--bn-blue); color: #fff; }
 .sidebar-user {
   padding: 1rem 1.5rem; border-top: 1px solid #1f2937;
   color: #9ca3af; font-size: .82rem; flex-shrink: 0;
@@ -382,10 +399,39 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
       {% endif %}
     </a>
 
-    <a href="{% url 'boutique:hub' %}"
-       class="{% if request.resolver_match.app_name == 'boutique' %}active{% endif %}">
+    {% with in_boutique=request.resolver_match.app_name %}
+    <div class="nav-submenu-toggle {% if in_boutique == 'boutique' %}open{% endif %}"
+         id="boutique-nav-toggle"
+         data-bs-toggle="collapse" data-bs-target="#boutique-nav-sub" aria-controls="boutique-nav-sub"
+         aria-expanded="{% if in_boutique == 'boutique' %}true{% else %}false{% endif %}">
       <i class="bi bi-shop"></i> Boutique
-    </a>
+      <i class="bi bi-chevron-down nav-submenu-chevron"></i>
+    </div>
+    <div class="collapse {% if in_boutique == 'boutique' %}show{% endif %}" id="boutique-nav-sub">
+      <a href="{% url 'boutique:orders' %}"
+         class="nav-sub {% if in_boutique == 'boutique' and 'commandes' in request.path %}active{% endif %}">
+        <i class="bi bi-cart3"></i> Commandes
+      </a>
+      <a href="{% url 'boutique:customers' %}"
+         class="nav-sub {% if in_boutique == 'boutique' and 'clients' in request.path %}active{% endif %}">
+        <i class="bi bi-people"></i> Clients
+      </a>
+      <a href="{% url 'boutique:store_users' %}"
+         class="nav-sub {% if in_boutique == 'boutique' and 'utilisateurs' in request.path %}active{% endif %}">
+        <i class="bi bi-person-circle"></i> Comptes Google
+      </a>
+      <a href="{% url 'boutique:carts' %}"
+         class="nav-sub {% if in_boutique == 'boutique' and 'paniers' in request.path %}active{% endif %}">
+        <i class="bi bi-basket3"></i> Paniers
+      </a>
+      {% if user.is_superadmin %}
+      <a href="{% url 'boutique:banners' %}"
+         class="nav-sub {% if in_boutique == 'boutique' and 'bannieres' in request.path %}active{% endif %}">
+        <i class="bi bi-images"></i> Bannières
+      </a>
+      {% endif %}
+    </div>
+    {% endwith %}
 
     {% if user.is_superadmin %}
     <div class="nav-section">Super Admin</div>
