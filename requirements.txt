@@ -33,3 +33,9 @@ pypdf==6.10.2
 
 # Store e-commerce
 twilio>=8.0.0
+
+# API Mobile
+django-ninja>=1.2.0
+PyJWT>=2.8.0
+google-auth>=2.28.0
+firebase-admin>=6.0.0

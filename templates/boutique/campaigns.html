@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Campagnes push{% endblock %}
+{% block page_title %}Campagnes push{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Formulaire nouvelle campagne -->
+  <div class="col-12 col-lg-5">
+    <div class="card-bn p-4">
+      <h6 class="fw-700 mb-3"><i class="bi bi-send me-2 text-primary"></i>Nouvelle campagne</h6>
+      <form method="post" action="{% url 'boutique:campaign_create' %}">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label small fw-600">Titre</label>
+          <input type="text" name="title" class="form-control" maxlength="100" required placeholder="Ex : Promo weekend 🔥">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-600">Message</label>
+          <textarea name="body" class="form-control" rows="3" required placeholder="Corps de la notification push…"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-600">Cible</label>
+          <select name="target" id="targetSelect" class="form-select" onchange="toggleSite(this.value)">
+            <option value="all">Tous les clients</option>
+            <option value="site">Par site</option>
+          </select>
+        </div>
+
+        <div class="mb-3 d-none" id="siteField">
+          <label class="form-label small fw-600">Site</label>
+          <select name="target_site" class="form-select">
+            <option value="">-- Choisir un site --</option>
+            {% for s in sites %}
+            <option value="{{ s.pk }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-4 form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="notif_promo_only" id="promoOnly" checked>
+          <label class="form-check-label small" for="promoOnly">
+            Uniquement les clients ayant activé les notifs promo
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-send-fill me-1"></i> Envoyer maintenant
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Historique -->
+  <div class="col-12 col-lg-7">
+    <div class="card-bn p-0">
+      <div class="px-4 py-3 border-bottom border-secondary border-opacity-25">
+        <span class="fw-700">Historique</span>
+        <span class="badge bg-secondary ms-2">{{ campaigns|length }}</span>
+      </div>
+
+      {% if campaigns %}
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0" style="font-size:.87rem">
+          <thead class="table-dark">
+            <tr>
+              <th>Titre</th>
+              <th>Cible</th>
+              <th class="text-center">Destinataires</th>
+              <th>Envoyée</th>
+              <th>Par</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in campaigns %}
+            <tr>
+              <td class="fw-600">{{ c.title }}</td>
+              <td>
+                {% if c.target == 'site' and c.target_site %}
+                  <span class="badge bg-info bg-opacity-25 text-info">{{ c.target_site.name }}</span>
+                {% else %}
+                  <span class="badge bg-secondary bg-opacity-25 text-secondary">Tous</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if c.is_sent %}
+                  <span class="badge bg-success bg-opacity-25 text-success">{{ c.recipients_count }}</span>
+                {% else %}
+                  <span class="badge bg-warning bg-opacity-25 text-warning">En cours…</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c.sent_at %}
+                  {{ c.sent_at|date:"d/m/Y H:i" }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="text-muted">{{ c.created_by.username|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
+        Aucune campagne envoyée.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSite(val) {
+  document.getElementById('siteField').classList.toggle('d-none', val !== 'site');
+}
+</script>
+{% endblock %}

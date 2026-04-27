@@ -80,7 +80,10 @@ def unifi_debug(request):
     return JsonResponse(result)
 
 
+from api_mobile.urls import api as mobile_api
+
 urlpatterns = [
+    path('api/mobile/v1/', mobile_api.urls),
     path('health/', health_check),
     path('debug/unifi/', unifi_debug),
     path('debug/vouchers/', debug_vouchers),

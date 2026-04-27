@@ -85,6 +85,18 @@
       <div class="hub-sub">Slider du store public</div>
     </a>
   </div>
+
+  <!-- Campagnes push (superadmin) -->
+  <div class="col-6 col-md-4 col-lg-3">
+    <a href="{% url 'boutique:campaigns' %}" class="hub-card card-bn">
+      <div class="hub-icon" style="background:rgba(249,115,22,.15);color:#f97316">
+        <i class="bi bi-bell-fill"></i>
+      </div>
+      <div class="hub-count" style="color:#f97316">{{ campaigns_count }}</div>
+      <div class="hub-label">Campagnes push</div>
+      <div class="hub-sub">Notifications mobiles</div>
+    </a>
+  </div>
   {% endif %}
 
 </div>

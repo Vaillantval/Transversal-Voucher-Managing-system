@@ -12,8 +12,10 @@ class StoreUser(models.Model):
     full_name  = models.CharField(max_length=100, verbose_name='Nom complet')
     phone      = models.CharField(max_length=20, blank=True, verbose_name='Téléphone')
     address    = models.TextField(blank=True, verbose_name='Adresse')
-    avatar_url = models.URLField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    avatar_url   = models.URLField(blank=True)
+    notif_promo  = models.BooleanField(default=True, verbose_name='Notifications promos')
+    notif_transac = models.BooleanField(default=True, verbose_name='Notifications transactions')
+    created_at   = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Utilisateur store'

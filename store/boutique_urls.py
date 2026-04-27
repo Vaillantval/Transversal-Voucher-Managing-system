@@ -16,4 +16,6 @@ urlpatterns = [
     path('bannieres/<int:pk>/toggle/',        boutique_views.boutique_banner_toggle,   name='banner_toggle'),
     path('paniers/',                          boutique_views.boutique_carts,           name='carts'),
     path('paniers/<int:pk>/',                 boutique_views.boutique_cart_detail,     name='cart_detail'),
+    path('campagnes/',                        boutique_views.boutique_campaigns,       name='campaigns'),
+    path('campagnes/envoyer/',               boutique_views.boutique_campaign_create, name='campaign_create'),
 ]

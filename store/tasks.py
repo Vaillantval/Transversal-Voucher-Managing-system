@@ -93,3 +93,22 @@ def deliver_order(self, order_id):
         send_voucher_sms(order.customer.phone, codes, site_name)
     except Exception as e:
         logger.warning(f'SMS failed for order {order.reference}: {e}')
+
+    # Push notification vers l'app mobile (si le client a des device tokens)
+    try:
+        if order.customer.store_user_id:
+            from api_mobile.firebase import send_push
+            from api_mobile.models import DeviceToken
+            tokens = list(
+                DeviceToken.objects
+                .filter(store_user_id=order.customer.store_user_id)
+                .values_list('fcm_token', flat=True)
+            )
+            send_push(
+                tokens,
+                title='Tes codes sont prêts ✅',
+                body=f'Ta commande {order.reference} est livrée. Ouvre l\'app pour voir tes codes.',
+                data={'order_ref': order.reference},
+            )
+    except Exception as e:
+        logger.warning(f'Push failed for order {order.reference}: {e}')
