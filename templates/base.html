@@ -49,22 +49,54 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
 }
 .sidebar-nav a.active { border-left: 3px solid var(--bn-blue); color: #fff; }
 
-/* Boutique submenu */
+/* Boutique flyout toggle */
 .nav-submenu-toggle {
   display: flex; align-items: center; gap: .6rem;
   padding: .55rem 1.5rem; color: #9ca3af;
   cursor: pointer; font-size: .9rem; user-select: none;
   transition: background .15s, color .15s;
 }
-.nav-submenu-toggle:hover { background: rgba(255,255,255,.07); color: #fff; }
-.nav-submenu-toggle.open   { background: rgba(255,255,255,.05); color: #fff; }
-.nav-submenu-chevron { margin-left: auto; font-size: .7rem; transition: transform .2s; }
-.nav-submenu-toggle.open .nav-submenu-chevron { transform: rotate(180deg); }
-.sidebar-nav a.nav-sub {
-  padding-left: 2.8rem; font-size: .85rem;
-  border-left: none;
+.nav-submenu-toggle:hover,
+.nav-submenu-toggle.open { background: rgba(255,255,255,.07); color: #fff; }
+.nav-submenu-chevron { margin-left: auto; font-size: .72rem; transition: transform .2s; }
+.nav-submenu-toggle.open .nav-submenu-chevron { transform: rotate(90deg); }
+
+/* Boutique flyout panel */
+.boutique-flyout {
+  position: fixed;
+  left: var(--bn-sidebar-w);
+  top: 0; bottom: 0;
+  width: 190px;
+  background: #1a2333;
+  border-right: 1px solid rgba(255,255,255,.08);
+  z-index: 1050;
+  padding: .75rem 0;
+  transform: translateX(-10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .18s ease, opacity .15s ease;
+  display: flex; flex-direction: column;
 }
-.sidebar-nav a.nav-sub.active { border-left: 3px solid var(--bn-blue); color: #fff; }
+.boutique-flyout.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.boutique-flyout-title {
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
+  color: #6b7280; padding: .2rem 1.25rem .6rem;
+}
+.boutique-flyout a {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .5rem 1.25rem; color: #9ca3af;
+  text-decoration: none; font-size: .88rem;
+  transition: background .15s, color .15s;
+}
+.boutique-flyout a:hover { background: rgba(255,255,255,.07); color: #fff; }
+.boutique-flyout a.active {
+  background: rgba(255,255,255,.07); color: #fff;
+  border-left: 3px solid var(--bn-blue);
+}
 .sidebar-user {
   padding: 1rem 1.5rem; border-top: 1px solid #1f2937;
   color: #9ca3af; font-size: .82rem; flex-shrink: 0;
@@ -399,39 +431,12 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
       {% endif %}
     </a>
 
-    {% with in_boutique=request.resolver_match.app_name %}
-    <div class="nav-submenu-toggle {% if in_boutique == 'boutique' %}open{% endif %}"
+    <div class="nav-submenu-toggle {% if request.resolver_match.app_name == 'boutique' %}open{% endif %}"
          id="boutique-nav-toggle"
-         data-bs-toggle="collapse" data-bs-target="#boutique-nav-sub" aria-controls="boutique-nav-sub"
-         aria-expanded="{% if in_boutique == 'boutique' %}true{% else %}false{% endif %}">
+         onclick="toggleBoutiqueMenu(event)">
       <i class="bi bi-shop"></i> Boutique
-      <i class="bi bi-chevron-down nav-submenu-chevron"></i>
+      <i class="bi bi-chevron-right nav-submenu-chevron"></i>
     </div>
-    <div class="collapse {% if in_boutique == 'boutique' %}show{% endif %}" id="boutique-nav-sub">
-      <a href="{% url 'boutique:orders' %}"
-         class="nav-sub {% if in_boutique == 'boutique' and 'commandes' in request.path %}active{% endif %}">
-        <i class="bi bi-cart3"></i> Commandes
-      </a>
-      <a href="{% url 'boutique:customers' %}"
-         class="nav-sub {% if in_boutique == 'boutique' and 'clients' in request.path %}active{% endif %}">
-        <i class="bi bi-people"></i> Clients
-      </a>
-      <a href="{% url 'boutique:store_users' %}"
-         class="nav-sub {% if in_boutique == 'boutique' and 'utilisateurs' in request.path %}active{% endif %}">
-        <i class="bi bi-person-circle"></i> Comptes Google
-      </a>
-      <a href="{% url 'boutique:carts' %}"
-         class="nav-sub {% if in_boutique == 'boutique' and 'paniers' in request.path %}active{% endif %}">
-        <i class="bi bi-basket3"></i> Paniers
-      </a>
-      {% if user.is_superadmin %}
-      <a href="{% url 'boutique:banners' %}"
-         class="nav-sub {% if in_boutique == 'boutique' and 'bannieres' in request.path %}active{% endif %}">
-        <i class="bi bi-images"></i> Bannières
-      </a>
-      {% endif %}
-    </div>
-    {% endwith %}
 
     {% if user.is_superadmin %}
     <div class="nav-section">Super Admin</div>
@@ -468,6 +473,35 @@ body { background: #F3F4F6; font-family: 'Segoe UI', system-ui, sans-serif; }
     </a>
   </div>
 </nav>
+
+<!-- Boutique flyout -->
+{% with in_boutique=request.resolver_match.app_name %}
+<div class="boutique-flyout {% if in_boutique == 'boutique' %}open{% endif %}" id="boutique-flyout">
+  <div class="boutique-flyout-title">Boutique</div>
+  <a href="{% url 'boutique:orders' %}"
+     class="{% if in_boutique == 'boutique' and 'commandes' in request.path %}active{% endif %}">
+    <i class="bi bi-cart3"></i> Commandes
+  </a>
+  <a href="{% url 'boutique:customers' %}"
+     class="{% if in_boutique == 'boutique' and 'clients' in request.path %}active{% endif %}">
+    <i class="bi bi-people"></i> Clients
+  </a>
+  <a href="{% url 'boutique:store_users' %}"
+     class="{% if in_boutique == 'boutique' and 'utilisateurs' in request.path %}active{% endif %}">
+    <i class="bi bi-person-circle"></i> Comptes Google
+  </a>
+  <a href="{% url 'boutique:carts' %}"
+     class="{% if in_boutique == 'boutique' and 'paniers' in request.path %}active{% endif %}">
+    <i class="bi bi-basket3"></i> Paniers
+  </a>
+  {% if user.is_superadmin %}
+  <a href="{% url 'boutique:banners' %}"
+     class="{% if in_boutique == 'boutique' and 'bannieres' in request.path %}active{% endif %}">
+    <i class="bi bi-images"></i> Bannières
+  </a>
+  {% endif %}
+</div>
+{% endwith %}
 
 <!-- ══ Main ══ -->
 <div class="main-content">
@@ -602,6 +636,34 @@ function closeSidebar() {
     applyTheme(!isDark);
   });
 })();
+
+// Boutique flyout
+function toggleBoutiqueMenu(e) {
+  e.stopPropagation();
+  var flyout = document.getElementById('boutique-flyout');
+  var toggle = document.getElementById('boutique-nav-toggle');
+  var opening = !flyout.classList.contains('open');
+  flyout.classList.toggle('open', opening);
+  toggle.classList.toggle('open', opening);
+}
+document.addEventListener('click', function(e) {
+  var flyout = document.getElementById('boutique-flyout');
+  var toggle = document.getElementById('boutique-nav-toggle');
+  if (!flyout || !toggle) return;
+  if (!flyout.contains(e.target) && !toggle.contains(e.target)) {
+    flyout.classList.remove('open');
+    toggle.classList.remove('open');
+  }
+});
+// Fermer le flyout quand le sidebar mobile se ferme
+var _origCloseSidebar = window.closeSidebar;
+window.closeSidebar = function() {
+  _origCloseSidebar && _origCloseSidebar();
+  var flyout = document.getElementById('boutique-flyout');
+  var toggle = document.getElementById('boutique-nav-toggle');
+  if (flyout) flyout.classList.remove('open');
+  if (toggle) toggle.classList.remove('open');
+};
 </script>
 {% block extra_js %}{% endblock %}
 </body>
