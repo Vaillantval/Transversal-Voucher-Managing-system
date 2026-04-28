@@ -10,7 +10,7 @@ from .schemas import (
     OrderDetailOut, OrderItemOut, OrderStatusOut,
     OrderSummaryOut, PaginatedOrdersOut,
 )
-from .security import mobile_auth
+from .security import mobile_auth, get_optional_user
 
 logger = logging.getLogger(__name__)
 router = Router(tags=['Orders'])
@@ -23,7 +23,7 @@ def _assert_owner(order, store_user):
         raise HttpError(403, 'Accès interdit')
 
 
-@router.post('/checkout/', auth=mobile_auth, response={200: CheckoutOut, 400: dict, 422: dict})
+@router.post('/checkout/', response={200: CheckoutOut, 400: dict, 422: dict})
 def checkout(request, data: CheckoutIn):
     from sites_mgmt.models import HotspotSite, VoucherTier
     from store.models import CustomerProfile, Order, OrderItem
@@ -36,7 +36,7 @@ def checkout(request, data: CheckoutIn):
         return 400, {'detail': 'La commande doit contenir au moins un article'}
 
     site = get_object_or_404(HotspotSite, pk=data.site_id, is_active=True)
-    store_user = request.auth
+    store_user = get_optional_user(request)  # None si non connecté
 
     # Validate items + compute total
     order_items_data = []
@@ -56,10 +56,16 @@ def checkout(request, data: CheckoutIn):
         order_items_data.append({'tier': tier, 'quantity': qty, 'unit_price': tier.price_htg})
 
     with transaction.atomic():
-        profile, _ = CustomerProfile.objects.update_or_create(
-            store_user=store_user,
-            defaults={'full_name': data.full_name, 'phone': data.phone},
-        )
+        if store_user:
+            profile, _ = CustomerProfile.objects.update_or_create(
+                store_user=store_user,
+                defaults={'full_name': data.full_name, 'phone': data.phone},
+            )
+        else:
+            profile = CustomerProfile.objects.create(
+                full_name=data.full_name,
+                phone=data.phone,
+            )
         order = Order.objects.create(
             customer=profile,
             total_htg=total,
@@ -93,13 +99,16 @@ def checkout(request, data: CheckoutIn):
     return 200, CheckoutOut(order_ref=order.reference, payment_url=result['url'])
 
 
-@router.get('/orders/{order_ref}/status/', auth=mobile_auth, response={200: OrderStatusOut, 403: dict, 404: dict})
+@router.get('/orders/{order_ref}/status/', response={200: OrderStatusOut, 403: dict, 404: dict})
 def order_status(request, order_ref: str):
     from store.models import Order
     from store.services.plopplop import verify_transaction
 
     order = get_object_or_404(Order, reference=order_ref)
-    _assert_owner(order, request.auth)
+    store_user = get_optional_user(request)
+    if store_user and order.customer.store_user_id != store_user.pk:
+        from ninja.errors import HttpError
+        raise HttpError(403, 'Accès interdit')
 
     if order.status == Order.STATUS_DELIVERED:
         return 200, OrderStatusOut(status='delivered', voucher_codes=order.get_all_codes())
